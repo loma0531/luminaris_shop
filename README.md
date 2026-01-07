@@ -11,6 +11,7 @@
 - [MySQL](https://www.mysql.com/) หรือ MariaDB (สำหรับดึงข้อมูลจากเซิร์ฟเวอร์ Minecraft)
 - [MongoDB](https://www.mongodb.com/) (สำหรับเก็บข้อมูลของผู้ใช้)
 - [Redis](https://redis.io/) (สำหรับ Caching และ Queue)
+- [SlipOK](https://slipok.com) (สำหรับการจัดการการชำระเงินหลังบ้าน)
 
 ---
 
