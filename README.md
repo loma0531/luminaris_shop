@@ -78,7 +78,7 @@ npx prisma db push
 bun scripts/create-admin.ts
 ```
 
-## Username และ Password จะใช้จาก .env ที่ตั้งไว้
+Username และ Password จะใช้จาก .env ที่ตั้งไว้
 
 ## 🚀 การรันโปรเจกต์ (Running)
 
