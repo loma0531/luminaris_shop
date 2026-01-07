@@ -1,0 +1,166 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { logger } from '@/lib/logger'
+import { getRateLimitConfigForPath, type RateLimitConfig } from '@/lib/rateLimitConfig'
+
+// In-memory fallback for when Redis is unavailable
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
+let cleanupCounter = 0
+
+function cleanupRateLimitStore() {
+  const now = Date.now()
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now > entry.resetTime) {
+      rateLimitStore.delete(key)
+    }
+  }
+}
+
+function checkRateLimitInMemory(ip: string, pathname: string): { allowed: boolean; remaining: number } {
+  const config = getRateLimitConfigForPath(pathname)
+  const endpointGroup = pathname.split('/').slice(0, 4).join('/')
+  const key = `${ip}:${endpointGroup}`
+  const now = Date.now()
+  
+  cleanupCounter++
+  if (cleanupCounter >= 100) {
+    cleanupCounter = 0
+    cleanupRateLimitStore()
+  }
+
+  const entry = rateLimitStore.get(key)
+
+  if (!entry || now > entry.resetTime) {
+    rateLimitStore.set(key, { count: 1, resetTime: now + config.windowMs })
+    return { allowed: true, remaining: config.maxRequests - 1 }
+  }
+
+  if (entry.count >= config.maxRequests) {
+    return { allowed: false, remaining: 0 }
+  }
+
+  entry.count++
+  return { allowed: true, remaining: config.maxRequests - entry.count }
+}
+
+function getClientIP(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  if (forwarded) return forwarded.split(',')[0].trim()
+  const realIP = request.headers.get('x-real-ip')
+  if (realIP) return realIP.trim()
+  return 'unknown'
+}
+
+// Format timestamp: DD/MM/YYYY HH:MM:SS
+function formatTimestamp(): string {
+  const now = new Date()
+  const day = String(now.getDate()).padStart(2, '0')
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const year = now.getFullYear()
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  const seconds = String(now.getSeconds()).padStart(2, '0')
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
+}
+
+// Color codes for terminal output
+const COLORS = {
+  reset: '\x1b[0m',
+  green: '\x1b[32m',      // 2xx success / INFO
+  yellow: '\x1b[33m',     // 3xx redirect / WARN
+  red: '\x1b[31m',        // 4xx/5xx error
+  cyan: '\x1b[36m',       // DEBUG
+  magenta: '\x1b[35m',    // SECURITY
+}
+
+function getStatusColor(status: number): string {
+  if (status >= 200 && status < 300) return COLORS.green
+  if (status >= 300 && status < 400) return COLORS.yellow
+  return COLORS.red
+}
+
+
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const method = request.method
+  const ip = getClientIP(request)
+  
+  // Generate Request ID for tracking
+  const requestId = crypto.randomUUID()
+  
+  // Only apply to /api routes
+  if (pathname.startsWith('/api')) {
+    // Log API request with Request ID
+    logger.api.request(method, pathname)
+
+    // Get rate limit config
+    const config = getRateLimitConfigForPath(pathname)
+    const endpointGroup = pathname.split('/').slice(0, 4).join('/')
+    const rateLimitKey = `${ip}:${endpointGroup}`
+    
+    let rateCheck = { allowed: true, remaining: config.maxRequests }
+    
+    // Try Redis rate limiting first
+    try {
+      // Dynamic import to avoid edge runtime issues
+      const { checkRateLimitRedis } = await import('@/lib/redis')
+      const redisResult = await checkRateLimitRedis(rateLimitKey, config.maxRequests, config.windowMs)
+      rateCheck = { allowed: redisResult.allowed, remaining: redisResult.remaining }
+    } catch {
+      // Fallback to in-memory rate limiting
+      rateCheck = checkRateLimitInMemory(ip, pathname)
+    }
+    
+    if (!rateCheck.allowed) {
+      logger.security.rateLimitExceeded(pathname)
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': '60',
+            'X-RateLimit-Remaining': '0',
+            'X-Request-ID': requestId
+          }
+        }
+      )
+    }
+
+    // We rely on rate limiting for public endpoints and 
+    // requireAdminAuth() within specific sensitive admin routes.
+    
+    // Add headers to successful responses
+    const response = NextResponse.next()
+    response.headers.set('X-RateLimit-Remaining', String(rateCheck.remaining))
+    response.headers.set('X-Request-ID', requestId)
+    
+    // Add API version header
+    response.headers.set('X-API-Version', '1.0')
+    
+    // Add security headers
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('X-XSS-Protection', '1; mode=block')
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+    
+    return response
+  }
+
+  // For non-API routes, just add security headers
+  const response = NextResponse.next()
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('X-Request-ID', requestId)
+  
+  return response
+}
+
+export const config = {
+  matcher: [
+    '/api/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|uploads).*)',
+  ],
+}

@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
+import { requireAdminAuth, generateShopToken } from '@/lib/adminAuth'
+import { validatePagination } from '@/lib/inputValidation'
+import { CACHE_HEADERS } from '@/lib/cache'
+import { logger, createTimer } from '@/lib/logger'
+import { z } from 'zod'
+
+// Zod Schema for User Creation
+const UserCreateSchema = z.object({
+  minecraftName: z.string()
+    .min(3, 'Name too short')
+    .max(16, 'Name too long')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Invalid characters in Minecraft name')
+})
+
+export async function GET(request: NextRequest) {
+  const timer = createTimer()
+  const authError = requireAdminAuth(request)
+  if (authError) return authError
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const { page, limit, skip } = validatePagination(searchParams.get('page'), searchParams.get('limit'), 50)
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        skip, take: limit,
+        select: { id: true, minecraftName: true, lastLogin: true, totalSpent: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.user.count(),
+    ])
+
+    // Get minecraftNames for the current page of users
+    const minecraftNames = users.map(u => u.minecraftName)
+
+    // Single groupBy query to get all totalSpent values at once
+    const spentByUser = await prisma.order.groupBy({
+      by: ['minecraftName'],
+      where: { 
+        minecraftName: { in: minecraftNames },
+        status: 'COMPLETED' 
+      },
+      _sum: { total: true },
+    })
+
+    // Create a map for O(1) lookup
+    const spentMap = new Map(
+      spentByUser.map(item => [item.minecraftName, item._sum.total || 0])
+    )
+
+    // Map users with their totalSpent
+    const usersWithSpent = users.map(user => ({
+      ...user,
+      totalSpent: spentMap.get(user.minecraftName) || 0
+    }))
+
+    logger.info(`Admin viewed users list: ${users.length} users`, 200, timer())
+
+    return NextResponse.json({
+      users: usersWithSpent, total, page, totalPages: Math.ceil(total / limit),
+    }, { headers: CACHE_HEADERS.NONE })
+  } catch {
+    logger.system.error('Failed to fetch users')
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const timer = createTimer()
+  try {
+    const json = await request.json()
+    
+    // Zod Validation
+    const validation = UserCreateSchema.safeParse(json)
+    if (!validation.success) {
+      const errorMsg = validation.error.issues.map(e => `${e.path}: ${e.message}`).join(', ')
+      logger.security.invalidInput('minecraftName_login', errorMsg)
+      return NextResponse.json({ error: errorMsg }, { status: 400 })
+    }
+
+    const { minecraftName } = validation.data
+
+    let user = await prisma.user.findUnique({
+      where: { minecraftName },
+      select: { id: true, minecraftName: true, createdAt: true },
+    })
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: { minecraftName },
+        select: { id: true, minecraftName: true, createdAt: true },
+      })
+      logger.auth.userCreated(minecraftName, timer())
+    } else {
+      await prisma.user.update({
+        where: { minecraftName },
+        data: { lastLogin: new Date() }
+      })
+      logger.auth.userLogin(minecraftName, timer())
+    }
+
+    // Generate shop session token
+    const shopToken = generateShopToken(minecraftName)
+
+    return NextResponse.json({ ...user, shopToken })
+  } catch {
+    logger.system.error('Failed to process user login')
+    return NextResponse.json({ error: 'Failed to process login' }, { status: 500 })
+  }
+}

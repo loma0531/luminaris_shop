@@ -1,0 +1,251 @@
+'use client'
+
+import React, { useState, useEffect, useCallback } from 'react'
+import { SearchIcon, PackageIcon, CheckCircleIcon } from '@/components/Icons'
+import { adminGet } from '@/lib/adminFetch'
+import { logger } from '@/lib/logger'
+
+interface OrderItem {
+  productId: string
+  name: string
+  price: number
+  quantity: number
+}
+
+interface Order {
+  id: string
+  orderId: number
+  total: number
+  status: string
+  createdAt: string
+  items: OrderItem[]
+}
+
+interface User {
+  id: string
+  minecraftName: string
+  totalSpent: number
+  createdAt: string
+  orders?: Order[]
+}
+
+export default function AdminUsersPage() {
+  const [users, setUsers] = useState<User[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [expandedUser, setExpandedUser] = useState<string | null>(null)
+  const [userOrders, setUserOrders] = useState<Map<string, Order[]>>(new Map())
+  const [loadingOrders, setLoadingOrders] = useState<string | null>(null)
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const res = await adminGet(`/api/users?page=${page}&limit=10`)
+      const data = await res.json()
+      setUsers(data.users || [])
+      setTotalPages(data.totalPages || 1)
+    } catch (error) {
+      logger.error(`Error fetching users: ${error}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [page])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
+  const fetchUserOrders = async (minecraftName: string) => {
+    if (userOrders.has(minecraftName)) {
+      setExpandedUser(expandedUser === minecraftName ? null : minecraftName)
+      return
+    }
+
+    setLoadingOrders(minecraftName)
+    try {
+      const res = await adminGet(`/api/orders?minecraftName=${encodeURIComponent(minecraftName)}&limit=50`)
+      const data = await res.json()
+      const completedOrders = (data.orders || []).filter((o: Order) => o.status === 'COMPLETED')
+      setUserOrders(prev => new Map(prev).set(minecraftName, completedOrders))
+      setExpandedUser(minecraftName)
+    } catch (error) {
+      logger.error(`Error fetching user orders: ${error}`)
+    } finally {
+      setLoadingOrders(null)
+    }
+  }
+
+  const filteredUsers = users.filter((u) =>
+    u.minecraftName.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div>
+      <h1 className="admin-title" style={{ marginBottom: '1.5rem' }}>จัดการผู้ใช้</h1>
+
+      <div className="search-box" style={{ marginBottom: '1.5rem' }}>
+        <span className="search-icon"><SearchIcon size={16} /></span>
+        <input
+          type="text"
+          className="input"
+          placeholder="ค้นหาผู้ใช้"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {loading ? (
+        <div className="empty-state">
+          <div className="spinner" />
+        </div>
+      ) : (
+        <>
+          <div className="table-container">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Minecraft Name</th>
+                  <th>ยอดซื้อสะสม</th>
+                  <th>วันที่ลงทะเบียน</th>
+                  <th>ประวัติการซื้อ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>
+                      ไม่พบผู้ใช้
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <React.Fragment key={user.id}>
+                      <tr>
+                        <td style={{ fontWeight: 600 }}>{user.minecraftName}</td>
+                        <td>{(user.totalSpent || 0).toLocaleString()} ฿</td>
+                        <td style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                          {new Date(user.createdAt).toLocaleDateString('th-TH')}
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-sm"
+                            onClick={() => fetchUserOrders(user.minecraftName)}
+                            disabled={loadingOrders === user.minecraftName}
+                          >
+                            {loadingOrders === user.minecraftName ? (
+                              <div className="spinner" style={{ width: 14, height: 14 }} />
+                            ) : (
+                              <PackageIcon size={14} />
+                            )}
+                            {expandedUser === user.minecraftName ? 'ซ่อน' : 'ดูประวัติ'}
+                          </button>
+                        </td>
+                      </tr>
+                      {/* Expanded Order History */}
+                      {expandedUser === user.minecraftName && (
+                        <tr>
+                          <td colSpan={4} style={{ background: 'var(--muted)', padding: '1rem' }}>
+                            {userOrders.get(user.minecraftName)?.length === 0 ? (
+                              <p style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                                ยังไม่มีประวัติการซื้อ
+                              </p>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {userOrders.get(user.minecraftName)?.map((order) => (
+                                  <div 
+                                    key={order.id} 
+                                    style={{ 
+                                      background: 'var(--card)', 
+                                      padding: '0.75rem 1rem',
+                                      borderRadius: '0.5rem',
+                                      border: '1px solid var(--border)',
+                                    }}
+                                  >
+                                    <div style={{ 
+                                      display: 'flex', 
+                                      justifyContent: 'space-between', 
+                                      alignItems: 'center',
+                                      marginBottom: '0.5rem',
+                                    }}>
+                                      <span style={{ fontWeight: 600 }}>Order #{order.orderId}</span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span className="badge badge-success">
+                                          <CheckCircleIcon size={12} /> สำเร็จ
+                                        </span>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
+                                          {new Date(order.createdAt).toLocaleString('th-TH')}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                      {order.items.map((item, idx) => (
+                                        <span
+                                          key={idx}
+                                          style={{
+                                            fontSize: '0.75rem',
+                                            padding: '0.25rem 0.5rem',
+                                            background: 'var(--muted)',
+                                            borderRadius: '0.25rem',
+                                          }}
+                                        >
+                                          {item.name} x{item.quantity}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    <div style={{ 
+                                      textAlign: 'right', 
+                                      marginTop: '0.5rem',
+                                      fontWeight: 600,
+                                      color: 'var(--primary)',
+                                    }}>
+                                      {order.total.toLocaleString()} ฿
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <span>หน้า</span>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  className={`pagination-btn ${page === p ? 'active' : ''}`}
+                  onClick={() => setPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+              {totalPages > 5 && <span>...{totalPages}</span>}
+              <button
+                className="pagination-btn"
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+              >
+                {'<'}
+              </button>
+              <button
+                className="pagination-btn"
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages}
+              >
+                {'>'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}

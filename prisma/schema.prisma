@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================================================
+// Core Domain
+// =========================================================================
+
+model User {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  minecraftName String   @unique
+  lastLogin     DateTime @default(now())
+  totalSpent    Float    @default(0.0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model AdminUser {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  email        String   @unique
+  passwordHash String
+  tokenHash    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// =========================================================================
+// Product Domain
+// =========================================================================
+
+model Category {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  icon        String?
+  sortOrder   Int       @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  price       Float
+  image       String?
+  categoryId  String   @db.ObjectId
+  category    Category @relation(fields: [categoryId], references: [id])
+  commands         String[]
+  requiresInput    Boolean  @default(false)  // สินค้าต้องการ input เพิ่มเติมหรือไม่
+  inputLabel       String?                   // ชื่อ field input เช่น "โค้ดสี"
+  inputPlaceholder String?                   // placeholder เช่น "&a&lYourName"
+  soldCount        Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([createdAt(sort: Desc)])
+}
+
+// =========================================================================
+// Shopping Domain
+// =========================================================================
+
+model Cart {
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  minecraftName String     @unique
+  items         CartItem[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+type CartItem {
+  productId   String  @db.ObjectId
+  quantity    Int
+  customInput String?  // เก็บ input ที่ผู้ใช้กรอก เช่น โค้ดสี
+}
+
+// =========================================================================
+// Order & Payment Domain
+// =========================================================================
+
+model Order {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderId       Int         @unique
+  minecraftName String
+  items         OrderItem[] // Embedded Document
+  total         Float
+  status        OrderStatus @default(PENDING)
+  paymentId     String?     @unique @db.ObjectId // One-to-One
+  payment         Payment?    @relation(fields: [paymentId], references: [id])
+  isDelivered     Boolean     @default(false)
+  deliveryAttempts Int        @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  commandQueue    CommandQueue[]
+
+  @@index([minecraftName])
+  @@index([status])
+  @@index([minecraftName, status])
+  @@index([createdAt(sort: Desc)])
+}
+
+type OrderItem {
+  productId   String   @db.ObjectId
+  name        String
+  price       Float
+  quantity    Int
+  commands    String[]
+  customInput String?  // โค้ดสีหรือ input อื่นๆ
+}
+
+model Payment {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  paymentId     Int           @unique
+  minecraftName String
+  amount        Float
+  slipImage     String?
+  slipRef       String?
+  status        PaymentStatus @default(PENDING)
+  verifiedAt    DateTime?
+  order         Order?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([minecraftName])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
+
+enum OrderStatus {
+  PENDING
+  AWAITING_PAYMENT
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// =========================================================================
+// System
+// =========================================================================
+
+model Counter {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+  seq  Int    @default(0)
+}
+
+model Settings {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CommandQueue {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  command       String
+  minecraftName String
+  orderId       String      @db.ObjectId
+  order         Order       @relation(fields: [orderId], references: [id])
+  status        QueueStatus @default(PENDING)
+  retryCount    Int         @default(0)
+  maxRetries    Int         @default(5)
+  lastError     String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum QueueStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}

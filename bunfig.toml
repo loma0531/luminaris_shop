@@ -1,0 +1,6 @@
+# Bun Configuration
+# https://bun.sh/docs/runtime/bunfig
+
+[install]
+# Install optional dependencies
+optional = true
