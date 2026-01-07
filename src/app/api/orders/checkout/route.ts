@@ -30,16 +30,19 @@ export async function POST(request: NextRequest) {
 
     const { minecraftName, items, total, sessionId, csrfToken } = validation.data
 
-    // CSRF Protection: Validate token if provided
-    if (sessionId && csrfToken) {
-      const isValidCSRF = await validateCSRFToken(sessionId, csrfToken)
-      if (!isValidCSRF) {
-        logger.security.suspiciousActivity('Invalid CSRF token', minecraftName)
-        return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 })
-      }
-      // Delete token after successful validation (one-time use)
-      await deleteCSRFToken(sessionId)
+    // CSRF Protection: Token is required for checkout
+    if (!sessionId || !csrfToken) {
+      logger.security.suspiciousActivity('Missing CSRF token', minecraftName)
+      return NextResponse.json({ error: 'CSRF token required' }, { status: 403 })
     }
+    
+    const isValidCSRF = await validateCSRFToken(sessionId, csrfToken)
+    if (!isValidCSRF) {
+      logger.security.suspiciousActivity('Invalid CSRF token', minecraftName)
+      return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 })
+    }
+    // Delete token after successful validation (one-time use)
+    await deleteCSRFToken(sessionId)
 
     /* 
        Manual validation removed as Zod handles specific formats.

@@ -9,6 +9,10 @@ import { validatePrice } from '@/lib/inputValidation'
  */
 
 describe('Checkout API Logic', () => {
+  // Base payload with required CSRF fields
+  const csrfSessionId = 'a'.repeat(32)
+  const csrfToken = 'b'.repeat(64)
+
   describe('Checkout Schema Validation (Zod)', () => {
     it('should validate a correct checkout payload', () => {
       const validPayload = {
@@ -24,6 +28,8 @@ describe('Checkout API Logic', () => {
         ],
         total: 200,
         action: 'create',
+        sessionId: csrfSessionId,
+        csrfToken: csrfToken,
       }
       
       const result = CheckoutSchema.safeParse(validPayload)

@@ -12,8 +12,11 @@ export const RATE_LIMIT = {
   // File uploads - 10 requests per minute
   UPLOAD: { windowMs: 60000, maxRequests: 10 },
   
-  // Login attempts - 5 per 5 minutes (prevent brute force)
-  LOGIN: { windowMs: 300000, maxRequests: 5 },
+  // Login attempts - 20 per minutes (prevent brute force)
+  LOGIN: { windowMs: 60000, maxRequests: 20 },
+  
+  // Admin login - stricter limit (3 per 5 minutes)
+  ADMIN_LOGIN: { windowMs: 300000, maxRequests: 3 },
   
   // Checkout - 20 per minute
   CHECKOUT: { windowMs: 60000, maxRequests: 20 },

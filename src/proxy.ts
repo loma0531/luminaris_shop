@@ -1,10 +1,63 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { logger } from '@/lib/logger'
-import { getRateLimitConfigForPath, type RateLimitConfig } from '@/lib/rateLimitConfig'
+import { getRateLimitConfigForPath } from '@/lib/rateLimitConfig'
 
-// In-memory fallback for when Redis is unavailable
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>()
+// LRU Cache implementation for rate limiting (max 10,000 entries to prevent memory leak)
+const MAX_CACHE_SIZE = 10000
+
+interface RateLimitEntry {
+  count: number
+  resetTime: number
+}
+
+class LRUCache<K, V> {
+  private cache: Map<K, V>
+  private maxSize: number
+
+  constructor(maxSize: number) {
+    this.cache = new Map()
+    this.maxSize = maxSize
+  }
+
+  get(key: K): V | undefined {
+    const value = this.cache.get(key)
+    if (value !== undefined) {
+      // Move to end (most recently used)
+      this.cache.delete(key)
+      this.cache.set(key, value)
+    }
+    return value
+  }
+
+  set(key: K, value: V): void {
+    // Delete existing to update position
+    if (this.cache.has(key)) {
+      this.cache.delete(key)
+    }
+    // Evict oldest entries if at capacity
+    while (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey)
+      } else {
+        break
+      }
+    }
+    this.cache.set(key, value)
+  }
+
+  delete(key: K): boolean {
+    return this.cache.delete(key)
+  }
+
+  entries(): IterableIterator<[K, V]> {
+    return this.cache.entries()
+  }
+}
+
+// In-memory fallback with LRU eviction
+const rateLimitStore = new LRUCache<string, RateLimitEntry>(MAX_CACHE_SIZE)
 let cleanupCounter = 0
 
 function cleanupRateLimitStore() {
@@ -40,6 +93,7 @@ function checkRateLimitInMemory(ip: string, pathname: string): { allowed: boolea
   }
 
   entry.count++
+  rateLimitStore.set(key, entry) // Update position in LRU
   return { allowed: true, remaining: config.maxRequests - entry.count }
 }
 

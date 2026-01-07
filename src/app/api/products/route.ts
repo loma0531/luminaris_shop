@@ -20,9 +20,39 @@ interface ProductWithCategory {
   category: { id: string; name: string }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const timer = createTimer()
   try {
+    const { searchParams } = new URL(request.url)
+    const cursor = searchParams.get('cursor')
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '50')))
+    
+    // For cursor-based pagination (more efficient for large datasets)
+    if (cursor) {
+      const products = await prisma.product.findMany({
+        take: limit,
+        skip: 1, // Skip the cursor itself
+        cursor: { id: cursor },
+        select: {
+          id: true, name: true, description: true, price: true, image: true, isActive: true,
+          soldCount: true, categoryId: true, createdAt: true, commands: true,
+          requiresInput: true, inputLabel: true, inputPlaceholder: true,
+          category: { select: { id: true, name: true } }
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+      
+      const nextCursor = products.length === limit ? products[products.length - 1]?.id : null
+      
+      logger.product.listViewed(products.length, timer())
+      return NextResponse.json({
+        products,
+        nextCursor,
+        hasMore: !!nextCursor
+      }, { headers: CACHE_HEADERS.NONE }) // No cache for paginated requests
+    }
+    
+    // Default: Return all products (with cache)
     // Try cache first (1-5ms)
     const cached = await getCachedProducts<ProductWithCategory>()
     if (cached) {

@@ -3,10 +3,6 @@
  * ตรวจสอบและ sanitize โค้ดสีสำหรับ CMI nick command
  */
 
-// Pattern ที่อนุญาต: &, #, ตัวอักษร a-f, k-o, r, 0-9 (Minecraft color codes)
-// รวมถึง hex codes เช่น &x&F&F&F&F&F&F
-const ALLOWED_PATTERN = /^[&\#a-fA-Fk-oK-OrR0-9]+$/
-
 // Pattern อันตรายที่ต้องบล็อก
 const DANGEROUS_PATTERNS = [
   /;/,           // Command separator

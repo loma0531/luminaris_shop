@@ -19,29 +19,103 @@ const getRconConfig = (): RconConfig => ({
   password: process.env.RCON_PASSWORD || '',
 })
 
+// Connection pool configuration
+const RCON_CONFIG = {
+  maxIdleTime: 30000,      // Close idle connections after 30 seconds
+  connectionTimeout: 30000, // 30 second connection timeout
+  maxRetries: 3,           // Max reconnection attempts
+}
+
+// Connection pool state
+let pooledConnection: Rcon | null = null
+let lastUsed: number = 0
+let connectionPromise: Promise<Rcon> | null = null
 
 /**
- * Execute a single RCON command with per-request connection
- * Used for item delivery after purchase (not for login verification)
+ * Get a pooled RCON connection (reuses existing if available)
  */
-export async function executeRconCommand(command: string): Promise<string> {
-  const config = getRconConfig()
+async function getPooledConnection(): Promise<Rcon> {
+  const now = Date.now()
   
-  const rcon = await Rcon.connect({
+  // Return existing connection if still valid
+  if (pooledConnection && (now - lastUsed) < RCON_CONFIG.maxIdleTime) {
+    try {
+      // Test connection is still alive
+      await pooledConnection.send('list')
+      lastUsed = now
+      return pooledConnection
+    } catch {
+      // Connection dead, will create new one
+      pooledConnection = null
+    }
+  }
+  
+  // If already connecting, wait for that connection
+  if (connectionPromise) {
+    return connectionPromise
+  }
+  
+  // Create new connection
+  const config = getRconConfig()
+  connectionPromise = Rcon.connect({
     host: config.host,
     port: config.port,
     password: config.password,
-    timeout: 30000, // 30 second timeout for slow servers
+    timeout: RCON_CONFIG.connectionTimeout,
   })
-
+  
   try {
-    const response = await rcon.send(command)
-    return response || ''
+    pooledConnection = await connectionPromise
+    lastUsed = now
+    
+    // Set up auto-close on idle
+    pooledConnection.on('end', () => {
+      pooledConnection = null
+      connectionPromise = null
+    })
+    
+    logger.rcon.connected(config.host)
+    return pooledConnection
+  } catch (error) {
+    connectionPromise = null
+    throw error
   } finally {
+    connectionPromise = null
+  }
+}
+
+/**
+ * Execute a single RCON command using pooled connection
+ * Falls back to per-request connection if pool fails
+ */
+export async function executeRconCommand(command: string): Promise<string> {
+  try {
+    // Try pooled connection first
+    const rcon = await getPooledConnection()
+    const response = await rcon.send(command)
+    lastUsed = Date.now()
+    return response || ''
+  } catch {
+    // Fallback to per-request connection
+    logger.debug('RCON pool failed, using per-request connection', 200)
+    const config = getRconConfig()
+    
+    const rcon = await Rcon.connect({
+      host: config.host,
+      port: config.port,
+      password: config.password,
+      timeout: RCON_CONFIG.connectionTimeout,
+    })
+  
     try {
-      await rcon.end()
-    } catch {
-      // Ignore disconnect errors
+      const response = await rcon.send(command)
+      return response || ''
+    } finally {
+      try {
+        await rcon.end()
+      } catch {
+        // Ignore disconnect errors
+      }
     }
   }
 }

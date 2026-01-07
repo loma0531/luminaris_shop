@@ -16,7 +16,7 @@ interface TokenPayload {
   type: string
   createdAt: number
   nonce: string
-  [key: string]: any
+  minecraftName?: string
 }
 
 /**

@@ -65,9 +65,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get and sanitize crop parameters
+    // Get and sanitize crop parameters (limit size to prevent DoS)
     const rawCrop = formData.get('crop') as string | null
-    const processOptions = rawCrop ? sanitizeProcessOptions(JSON.parse(rawCrop)) : {}
+    let processOptions: ReturnType<typeof sanitizeProcessOptions> = {}
+    if (rawCrop) {
+      if (rawCrop.length > 1000) {
+        logger.security.suspiciousActivity('Oversized crop JSON', rawCrop.length.toString())
+        return NextResponse.json({ success: false, error: 'Invalid crop data' }, { status: 400 })
+      }
+      try {
+        processOptions = sanitizeProcessOptions(JSON.parse(rawCrop))
+      } catch {
+        return NextResponse.json({ success: false, error: 'Invalid crop format' }, { status: 400 })
+      }
+    }
 
     // Get and validate rotation
     let rotation = Number(formData.get('rotation') || 0)

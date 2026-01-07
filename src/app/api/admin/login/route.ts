@@ -2,10 +2,49 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { generateAdminToken } from '@/lib/adminAuth'
-import { logger, createTimer } from '@/lib/logger'
+import { logger, createTimer, getClientIP } from '@/lib/logger'
+import { RATE_LIMIT } from '@/lib/rateLimitConfig'
+
+// In-memory rate limit fallback for admin login
+const loginAttempts = new Map<string, { count: number; resetTime: number }>()
 
 export async function POST(request: NextRequest) {
   const timer = createTimer()
+  const ip = getClientIP(request.headers)
+  
+  // Rate limiting check for admin login
+  try {
+    const { checkRateLimitRedis } = await import('@/lib/redis')
+    const rateCheck = await checkRateLimitRedis(
+      `admin_login:${ip}`,
+      RATE_LIMIT.ADMIN_LOGIN.maxRequests,
+      RATE_LIMIT.ADMIN_LOGIN.windowMs
+    )
+    if (!rateCheck.allowed) {
+      logger.security.rateLimitExceeded('/api/admin/login')
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': '300' } }
+      )
+    }
+  } catch {
+    // Fallback to in-memory rate limiting
+    const now = Date.now()
+    const entry = loginAttempts.get(ip)
+    if (entry && now < entry.resetTime && entry.count >= RATE_LIMIT.ADMIN_LOGIN.maxRequests) {
+      logger.security.rateLimitExceeded('/api/admin/login')
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': '300' } }
+      )
+    }
+    if (!entry || now >= entry.resetTime) {
+      loginAttempts.set(ip, { count: 1, resetTime: now + RATE_LIMIT.ADMIN_LOGIN.windowMs })
+    } else {
+      entry.count++
+    }
+  }
+
   try {
     const body = await request.json()
     const { email, password, token } = body
