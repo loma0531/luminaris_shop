@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Luminaris Shop 🛒
 
-## Getting Started
+ระบบร้านค้าออนไลน์สำหรับเซิร์ฟเวอร์ Minecraft รองรับการเชื่อมต่อ RCON, ระบบตะกร้าสินค้า, และการจัดการหลังบ้านครบวงจร
 
-First, run the development server:
+## 📋 สิ่งที่ต้องมีเบื้องต้น (Prerequisites)
+
+ก่อนเริ่มติดตั้ง โปรดตรวจสอบว่าเครื่องของคุณได้ติดตั้งสิ่งเหล่านี้แล้ว:
+
+- [Node.js](https://nodejs.org/) (เวอร์ชัน 18 ขึ้นไป recommended)
+- [Bun](https://bun.sh/) (Runtime หลักของโปรเจกต์นี้)
+- [MySQL](https://www.mysql.com/) หรือ MariaDB (สำหรับดึงข้อมูลจากเซิร์ฟเวอร์ Minecraft)
+- [MongoDB](https://www.mongodb.com/) (สำหรับเก็บข้อมูลของผู้ใช้)
+- [Redis](https://redis.io/) (สำหรับ Caching และ Queue)
+
+---
+
+## 🛠️ ขั้นตอนการติดตั้ง (Installation)
+
+### 1. Clone Repository
+
+ดึงโค้ดจาก Git ลงมาที่เครื่องของคุณ:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+git clone https://github.com/loma0531/luminaris_shop.git
+cd luminaris_shop
+```
+
+### 2. ติดตั้งแพ็กเกจ (Install Dependencies)
+
+ใช้ Bun ในการลงแพ็กเกจต่างๆ:
+
+```bash
+bun install
+```
+
+### 3. ตั้งค่า Environment Variables
+
+คัดลอกไฟล์ `.env.template` ไปเป็น `.env` และแก้ไขข้อมูลให้ตรงกับเครื่องของคุณ:
+
+```bash
+cp .env.template .env
+```
+
+**สิ่งที่ต้องแก้ไขใน .env:**
+
+- `DATABASE_URL`: ลิงก์เชื่อมต่อ MySQL (เช่น `mysql://user:pass@localhost:3306/luminaris_shop`)
+- `REDIS_URL`: ลิงก์เชื่อมต่อ Redis (เช่น `redis://localhost:6379`)
+- `RCON_HOST`, `RCON_PORT`, `RCON_PASSWORD`: ข้อมูลเชื่อมต่อ RCON ของเซิร์ฟเวอร์ Minecraft
+- `NEXT_PUBLIC_BASE_URL`: URL ของเว็บ (เช่น `http://localhost:3000` หรือโดเมนจริง)
+
+### 4. ตั้งค่าฐานข้อมูล (Database Setup)
+
+สร้างตารางในฐานข้อมูลด้วย Prisma:
+
+```bash
+# สร้าง Prisma Client
+bun x prisma generate
+
+# อัปเดตตารางใน Database ให้ตรงกับ Schema
+bun x prisma db push
+```
+
+หากใช้เวลานาน ลองเปลี่ยนไปใช้ npx แทน
+
+```bash
+npx prisma generate
+```
+
+```bash
+npx prisma db push
+```
+
+### 5. สร้าง Admin (Create Admin)
+
+รันสคริปต์เพื่อสร้างบัญชีผู้ดูแลระบบ (สำหรับเข้าหน้า Admin Panel):
+
+```bash
+bun scripts/create-admin.ts
+```
+
+## Username และ Password จะใช้จาก .env ที่ตั้งไว้
+
+## 🚀 การรันโปรเจกต์ (Running)
+
+### แบบ Development (สำหรับแก้ไขโค้ด)
+
+```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+เข้าเว็บที่: `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### แบบ Production (สำหรับใช้งานจริง)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. **Build โปรเจกต์:**
+   ```bash
+   bun run build
+   ```
+2. **Start Server:**
+   ```bash
+   bun start
+   ```
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 📂 โครงสร้างโปรเจกต์ (Structure)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/app`: หน้าเว็บและ API ทั้งหมด (Next.js App Router)
+- `src/lib`: ฟังก์ชันตัวช่วยต่างๆ (Database, RCON, Auth)
+- `prisma`: Schema ของฐานข้อมูล
+- `scripts`: สคริปต์สำหรับจัดการระบบ (Clear Cache, Create Admin)
+- `public`: ไฟล์รูปภาพและ Static Files
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 คำสั่งอื่นๆ ที่ควรรู้
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **ล้าง Cache (Redis):** `bun scripts/clear-cache.ts`
+- **ล้างฐานข้อมูล (Reset DB):** `bun scripts/reset-database.ts` (⚠️ ข้อมูลหายหมด)
