@@ -215,6 +215,34 @@ export default function ShopPage() {
     }, 800)
   }, []) // Empty deps - uses refs for latest values
 
+  // Ensure pending changes are saved when navigating away
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+      
+      // If there are pending changes, save them immediately
+      if (pendingCartRef.current && userRef.current) {
+        const cartToSave = pendingCartRef.current
+        const currentUser = userRef.current
+        
+        // Use fetch directly for “fire and forget” during unmount
+        // Note: keeping keepalive: true might help in some browsers but strictly fetch is okay
+        // We use apiFetch but need to catch errors to avoid unhandled rejections
+        apiFetch('/api/cart?quick=true', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              minecraftName: currentUser.minecraftName, 
+              items: cartToSave.map(i => ({ productId: i.product.id, quantity: i.quantity, customInput: i.customInput })) 
+            }),
+            keepalive: true // Important for ensuring request completes after unload
+        }).catch(err => console.error('Failed to save cart on unmount', err))
+      }
+    }
+  }, [])
+
   const addToCart = useCallback((product: Product, customInput?: string) => {
     // If not logged in, show login modal
     if (!user) {

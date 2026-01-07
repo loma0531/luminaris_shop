@@ -176,48 +176,52 @@ export default function CartPage() {
     }
   }, [])
 
-  const toggleSelectItem = (productId: string) => {
+  // Helper to generate unique key for cart items
+  const getCartKey = (item: CartItem) => {
+    return `${item.product.id}|${item.customInput || ''}`
+  }
+
+  const toggleSelectItem = (key: string) => {
     setSelectedItems(prev => {
       const newSet = new Set(prev)
-      if (newSet.has(productId)) {
-        newSet.delete(productId)
+      if (newSet.has(key)) {
+        newSet.delete(key)
       } else {
-        newSet.add(productId)
+        newSet.add(key)
       }
       return newSet
     })
   }
 
   const selectAll = () => {
-    setSelectedItems(new Set(cart.map(item => item.product.id)))
+    setSelectedItems(new Set(cart.map(item => getCartKey(item))))
   }
 
   const selectNone = () => {
     setSelectedItems(new Set())
   }
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const updateQuantity = (key: string, delta: number) => {
+    const itemToUpdate = cart.find(i => getCartKey(i) === key)
+    
     // Check limits when increasing
-    if (delta > 0) {
-      const item = cart.find(i => i.product.id === productId)
-      if (item) {
-        const limitCheck = canAddToCart(cart, item.quantity, delta)
-        if (!limitCheck.allowed) {
-          toastWarning(limitCheck.reason || 'เกินขีดจำกัด')
-          return
-        }
+    if (delta > 0 && itemToUpdate) {
+      const limitCheck = canAddToCart(cart, itemToUpdate.quantity, delta)
+      if (!limitCheck.allowed) {
+        toastWarning(limitCheck.reason || 'เกินขีดจำกัด')
+        return
       }
     }
 
     const newCart = cart
       .map((item) =>
-        item.product.id === productId
+        getCartKey(item) === key
           ? { ...item, quantity: Math.max(0, item.quantity + delta) }
           : item
       )
       .filter((item) => item.quantity > 0)
 
-    const removedItem = !newCart.find(item => item.product.id === productId)
+    const removedItem = !newCart.find(item => getCartKey(item) === key)
     setCart(newCart)
     
     // Update cart count in header immediately
@@ -238,15 +242,15 @@ export default function CartPage() {
     if (removedItem) {
       setSelectedItems(prev => {
         const newSet = new Set(prev)
-        newSet.delete(productId)
+        newSet.delete(key)
         return newSet
       })
     }
   }
 
-  const removeItem = async (productId: string) => {
-    const removedProduct = cart.find(item => item.product.id === productId)
-    const newCart = cart.filter((item) => item.product.id !== productId)
+  const removeItem = async (key: string) => {
+    const removedItem = cart.find(item => getCartKey(item) === key)
+    const newCart = cart.filter((item) => getCartKey(item) !== key)
     setCart(newCart)
     
     // Update cart count in header immediately
@@ -258,21 +262,21 @@ export default function CartPage() {
       await saveCartImmediately(newCart, user.minecraftName)
       
       // Toast notification
-      if (removedProduct) {
-        toastSuccess(`ลบ "${removedProduct.product.name}" ออกจากตะกร้าแล้ว`)
+      if (removedItem) {
+        toastSuccess(`ลบ "${removedItem.product.name}" ออกจากตะกร้าแล้ว`)
       }
     }
     
     // Remove from selected
     setSelectedItems(prev => {
       const newSet = new Set(prev)
-      newSet.delete(productId)
+      newSet.delete(key)
       return newSet
     })
   }
 
   // Calculate total for selected items only
-  const selectedCart = cart.filter(item => selectedItems.has(item.product.id))
+  const selectedCart = cart.filter(item => selectedItems.has(getCartKey(item)))
   const selectedTotal = selectedCart.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0
@@ -338,7 +342,7 @@ export default function CartPage() {
       }
 
       // Remove selected items from cart
-      const remainingCart = cart.filter(item => !selectedItems.has(item.product.id))
+      const remainingCart = cart.filter(item => !selectedItems.has(getCartKey(item)))
       setCart(remainingCart)
       await saveCartImmediately(remainingCart, user.minecraftName)
       setSelectedItems(new Set())
@@ -422,11 +426,11 @@ export default function CartPage() {
 
               {cart.map((item) => (
                 <div
-                  key={item.product.id}
+                  key={getCartKey(item)}
                   className="card cart-item-card"
                   style={{ 
-                    opacity: selectedItems.has(item.product.id) ? 1 : 0.6,
-                    border: selectedItems.has(item.product.id) ? '2px solid var(--primary)' : '2px solid transparent',
+                    opacity: selectedItems.has(getCartKey(item)) ? 1 : 0.6,
+                    border: selectedItems.has(getCartKey(item)) ? '2px solid var(--primary)' : '2px solid transparent',
                     transition: 'all 0.2s',
                   }}
                 >
@@ -439,8 +443,8 @@ export default function CartPage() {
                   }}>
                     <input
                       type="checkbox"
-                      checked={selectedItems.has(item.product.id)}
-                      onChange={() => toggleSelectItem(item.product.id)}
+                      checked={selectedItems.has(getCartKey(item))}
+                      onChange={() => toggleSelectItem(getCartKey(item))}
                       style={{
                         width: 20,
                         height: 20,
@@ -513,21 +517,21 @@ export default function CartPage() {
                     <div className="cart-qty-controls">
                       <button
                         className="btn btn-icon btn-sm"
-                        onClick={() => updateQuantity(item.product.id, -1)}
+                        onClick={() => updateQuantity(getCartKey(item), -1)}
                       >
                         <MinusIcon size={16} />
                       </button>
                       <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 500 }}>{item.quantity}</span>
                       <button
                         className="btn btn-icon btn-sm"
-                        onClick={() => updateQuantity(item.product.id, 1)}
+                        onClick={() => updateQuantity(getCartKey(item), 1)}
                       >
                         <PlusIcon size={16} />
                       </button>
                     </div>
                     <button
                       className="btn btn-danger btn-icon btn-sm"
-                      onClick={() => removeItem(item.product.id)}
+                      onClick={() => removeItem(getCartKey(item))}
                     >
                       <TrashIcon size={16} />
                     </button>
