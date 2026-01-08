@@ -1,4 +1,13 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it, vi } from 'vitest'
+
+// Mock env before importing adminAuth
+vi.mock('@/lib/env', () => ({
+  env: {
+    NEXTAUTH_SECRET: 'test-secret-key-for-testing-purposes',
+    DATABASE_URL: 'file:./test.db',
+  }
+}))
+
 import { 
   generateAdminToken, 
   verifyAdminToken, 
@@ -33,7 +42,7 @@ describe('Admin Authentication Logic', () => {
 
   it('should REJECT a manipulated/fake token', () => {
     const token = generateAdminToken()
-    const [payload, signature] = token.split('.')
+    const [payload] = token.split('.')
     const fakeToken = `${payload}.fakesignature`
     
     const result = verifyAdminToken(fakeToken)

@@ -1,42 +1,46 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { GET as AdminOrdersGET } from '../route'
-import { GET as UserOrdersGET } from '../user/route'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
 
-// Mock admin auth
+// Create mock functions at factory level
 vi.mock('@/lib/adminAuth', () => ({
-  requireAdminAuth: vi.fn(() => null), // Always authorised
-  requireUserAuth: vi.fn(() => null), // Always authorised
+  requireAdminAuth: vi.fn(() => null),
+  requireUserAuth: vi.fn(() => null),
   generateAdminToken: vi.fn(() => 'mock_token'),
 }))
 
-// Mock Prisma
-const mockPrisma = vi.hoisted(() => ({
-  order: {
-    findMany: vi.fn(),
-    count: vi.fn(),
-    deleteMany: vi.fn(),
-    create: vi.fn(),
-  },
-  payment: {
-    deleteMany: vi.fn(),
-    create: vi.fn(),
+// Mock Prisma with inline factory
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    order: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+      create: vi.fn(),
+    },
+    payment: {
+      deleteMany: vi.fn(),
+      create: vi.fn(),
+    }
   }
 }))
 
-vi.mock('@/lib/prisma', () => ({
-  default: mockPrisma
-}))
+// Import after mocks are set up
+import prisma from '@/lib/prisma'
+import { GET as AdminOrdersGET } from '../route'
+import { GET as UserOrdersGET } from '../user/route'
 
 describe('Order Management API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('GET /api/orders (Admin)', () => {
     it('should return all orders with pagination', async () => {
-      mockPrisma.order.findMany.mockResolvedValue([
-        { id: '1', orderId: 1001, minecraftName: 'P1', status: 'PENDING', items: [], payment: null },
-        { id: '2', orderId: 1002, minecraftName: 'P2', status: 'COMPLETED', items: [], payment: null }
+      vi.mocked(prisma.order.findMany).mockResolvedValue([
+        { id: '1', orderId: 1001, minecraftName: 'P1', status: 'PENDING', items: [], payment: null } as never,
+        { id: '2', orderId: 1002, minecraftName: 'P2', status: 'COMPLETED', items: [], payment: null } as never
       ])
-      mockPrisma.order.count.mockResolvedValue(2)
+      vi.mocked(prisma.order.count).mockResolvedValue(2)
 
       const req = new NextRequest('http://localhost:3000/api/orders')
       const res = await AdminOrdersGET(req)
@@ -50,8 +54,8 @@ describe('Order Management API', () => {
 
   describe('GET /api/orders/user (User)', () => {
     it('should return orders for specific user', async () => {
-      mockPrisma.order.findMany.mockResolvedValue([
-        { id: '1', minecraftName: 'TestPlayer1', status: 'PENDING' }
+      vi.mocked(prisma.order.findMany).mockResolvedValue([
+        { id: '1', minecraftName: 'TestPlayer1', status: 'PENDING' } as never
       ])
 
       const req = new NextRequest('http://localhost:3000/api/orders/user?minecraftName=TestPlayer1&status=pending')

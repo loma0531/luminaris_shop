@@ -193,7 +193,7 @@ function ShopSidebar({
       <aside className={`shop-sidebar ${mobileOpen ? 'open' : ''}`}>
         {/* Logo */}
         <div className="shop-sidebar-logo">
-          <PackageIcon size={24} />
+          {/* <PackageIcon size={24} /> */}
           <span>Luminaris Shop</span>
         </div>
 
@@ -377,6 +377,8 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const lastHashRef = useRef<string>('')
+
   const initShopData = useCallback(async (force = false) => {
     // Cache logic: 5 mins cache or if already has data and not forced
     const now = Date.now()
@@ -384,7 +386,11 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
       return
     }
 
-    setIsLoadingData(true)
+    // Only show loading on first load, not on background refresh
+    if (products.length === 0) {
+      setIsLoadingData(true)
+    }
+    
     const storedUser = localStorage.getItem('user')
     let userQuery = ''
     
@@ -400,8 +406,26 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     }
 
     try {
-      const res = await apiFetch(`/api/shop/init${userQuery}`)
+      // Use conditional request with hash
+      const headers: HeadersInit = {}
+      if (lastHashRef.current && force) {
+        headers['If-None-Match'] = `"${lastHashRef.current}"`
+      }
+      
+      const res = await apiFetch(`/api/shop/init${userQuery}`, { headers })
+      
+      // 304 Not Modified = data hasn't changed, no need to update UI
+      if (res.status === 304) {
+        lastFetchedRef.current = Date.now()
+        return
+      }
+      
       const data = await res.json()
+      
+      // Store new hash for next request
+      if (data.hash) {
+        lastHashRef.current = data.hash
+      }
       
       if (data.products) setProducts(data.products)
       if (data.categories) setCategories(data.categories)

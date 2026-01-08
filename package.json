@@ -17,7 +17,17 @@
     "create-admin": "bun scripts/create-admin.ts",
     "audit": "bun scripts/audit_api.ts",
     "queue:process": "bun scripts/process-queue.ts",
-    "queue:once": "bun scripts/process-queue.ts --once"
+    "queue:once": "bun scripts/process-queue.ts --once",
+    "k6:smoke": "k6 run k6/scenarios/smoke.test.js",
+    "k6:load": "k6 run k6/scenarios/load.test.js",
+    "k6:stress": "k6 run k6/scenarios/stress.test.js",
+    "k6:spike": "k6 run k6/scenarios/spike.test.js",
+    "k6:soak": "k6 run k6/scenarios/soak.test.js",
+    "k6:products": "k6 run k6/endpoints/products.test.js",
+    "k6:cart": "k6 run k6/endpoints/cart.test.js",
+    "k6:orders": "k6 run k6/endpoints/orders.test.js",
+    "k6:health": "k6 run k6/endpoints/health.test.js",
+    "k6:all": "k6 run k6/scenarios/smoke.test.js && k6 run k6/scenarios/load.test.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

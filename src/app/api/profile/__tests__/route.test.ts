@@ -1,9 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
-import { POST } from '../route'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
-import { getPlayerProfile } from '@/lib/mysql'
 
-// Mocks
+// Mock MySQL
 vi.mock('@/lib/mysql', () => ({
   getPlayerProfile: vi.fn(),
 }))
@@ -12,7 +10,15 @@ vi.mock('@/lib/adminAuth', () => ({
   requireUserAuth: vi.fn(() => null),
 }))
 
+// Import after mocks
+import { getPlayerProfile } from '@/lib/mysql'
+import { POST } from '../route'
+
 describe('Profile API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('should return 400 if minecraftName missing', async () => {
     const req = new NextRequest('http://localhost:3000/api/profile', {
       method: 'POST',
@@ -43,7 +49,7 @@ describe('Profile API', () => {
       lastLogoffTime: Date.now(),
       totalPlayTime: 3600
     }
-    vi.mocked(getPlayerProfile).mockResolvedValue(mockProfile)
+    vi.mocked(getPlayerProfile).mockResolvedValue(mockProfile as never)
 
     const req = new NextRequest('http://localhost:3000/api/profile', {
       method: 'POST',

@@ -1,7 +1,5 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { GET } from '../route'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
 
 // Mock auth
 vi.mock('@/lib/adminAuth', () => ({
@@ -9,31 +7,37 @@ vi.mock('@/lib/adminAuth', () => ({
   requireUserAuth: vi.fn(() => null),
 }))
 
-// Mock Prisma
-const mockPrisma = vi.hoisted(() => ({
-  payment: {
-    findMany: vi.fn(),
-    count: vi.fn(),
-    deleteMany: vi.fn(),
-    create: vi.fn(),
-  },
-  order: {
-    deleteMany: vi.fn(),
+// Mock Prisma with inline factory
+vi.mock('@/lib/prisma', () => ({
+  default: {
+    payment: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+      create: vi.fn(),
+    },
+    order: {
+      deleteMany: vi.fn(),
+    }
   }
 }))
 
-vi.mock('@/lib/prisma', () => ({
-  default: mockPrisma
-}))
+// Import after mocks
+import prisma from '@/lib/prisma'
+import { GET } from '../route'
 
 describe('Payment Management API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   describe('GET /api/payments', () => {
     it('should return all payments', async () => {
-      mockPrisma.payment.findMany.mockResolvedValue([
-        { id: '1', paymentId: 2001, status: 'VERIFIED' },
-        { id: '2', paymentId: 2002, status: 'PENDING' }
+      vi.mocked(prisma.payment.findMany).mockResolvedValue([
+        { id: '1', paymentId: 2001, status: 'VERIFIED' } as never,
+        { id: '2', paymentId: 2002, status: 'PENDING' } as never
       ])
-      mockPrisma.payment.count.mockResolvedValue(2)
+      vi.mocked(prisma.payment.count).mockResolvedValue(2)
 
       const req = new NextRequest('http://localhost:3000/api/payments')
       const res = await GET(req)

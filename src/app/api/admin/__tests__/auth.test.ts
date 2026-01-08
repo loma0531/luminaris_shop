@@ -1,11 +1,7 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { POST as LoginPOST } from '../login/route'
-import { POST as VerifyPOST } from '../verify/route'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { NextRequest } from 'next/server'
-import prisma from '@/lib/prisma'
-import bcrypt from 'bcryptjs'
 
-// Mock bcrypt
+// Mock bcrypt with inline factory
 vi.mock('bcryptjs', () => ({
   default: {
     compare: vi.fn(),
@@ -13,17 +9,15 @@ vi.mock('bcryptjs', () => ({
   }
 }))
 
-// Mock Prisma
-const mockPrisma = vi.hoisted(() => ({
-  adminUser: {
-    findUnique: vi.fn(),
-    deleteMany: vi.fn(),
-    create: vi.fn(),
-  }
-}))
-
+// Mock Prisma with inline factory
 vi.mock('@/lib/prisma', () => ({
-  default: mockPrisma
+  default: {
+    adminUser: {
+      findUnique: vi.fn(),
+      deleteMany: vi.fn(),
+      create: vi.fn(),
+    }
+  }
 }))
 
 // Mock env to avoid Zod validation issues
@@ -34,13 +28,15 @@ vi.mock('@/lib/env', () => ({
   }
 }))
 
-describe('Admin Authentication API', () => {
-  beforeAll(async () => {
-    // No DB setup needed with mocks
-  })
+// Import after mocks
+import prisma from '@/lib/prisma'
+import bcrypt from 'bcryptjs'
+import { POST as LoginPOST } from '../login/route'
+import { POST as VerifyPOST } from '../verify/route'
 
-  afterAll(async () => {
-    // No DB cleanup needed
+describe('Admin Authentication API', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
   describe('POST /api/admin/login', () => {
@@ -50,14 +46,11 @@ describe('Admin Authentication API', () => {
         body: JSON.stringify({ email: 'test@admin.com' })
       })
       const res = await LoginPOST(req)
-      const data = await res.json()
-
       expect(res.status).toBe(400)
     })
 
     it('should return 401 for invalid email', async () => {
-      // Mock findUnique to return null
-      mockPrisma.adminUser.findUnique.mockResolvedValue(null)
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(null)
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never)
 
       const req = new NextRequest('http://localhost:3000/api/admin/login', {
@@ -73,13 +66,12 @@ describe('Admin Authentication API', () => {
     })
 
     it('should return 401 for invalid password', async () => {
-      // Mock findUnique to return user
-      mockPrisma.adminUser.findUnique.mockResolvedValue({
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
         id: 'admin-1',
         email: 'test@admin.com',
         passwordHash: 'hash',
         tokenHash: 'hash'
-      })
+      } as never)
       vi.mocked(bcrypt.compare).mockResolvedValue(false as never)
 
       const req = new NextRequest('http://localhost:3000/api/admin/login', {
@@ -95,13 +87,12 @@ describe('Admin Authentication API', () => {
     })
 
     it('should return 200 and session token for valid credentials', async () => {
-      // Mock findUnique success
-      mockPrisma.adminUser.findUnique.mockResolvedValue({
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
         id: 'admin-1',
         email: 'test@admin.com',
         passwordHash: 'hash',
         tokenHash: 'hash'
-      })
+      } as never)
       vi.mocked(bcrypt.compare).mockResolvedValue(true as never)
 
       const req = new NextRequest('http://localhost:3000/api/admin/login', {
@@ -119,7 +110,6 @@ describe('Admin Authentication API', () => {
       expect(data.sessionToken).toBeDefined()
     })
   })
-
 
   describe('POST /api/admin/verify', () => {
     it('should return 401 if no token provided', async () => {
@@ -140,8 +130,5 @@ describe('Admin Authentication API', () => {
       const res = await VerifyPOST(req)
       expect(res.status).toBe(401)
     })
-    
-    // Note: Valid token test is hard without knowing the secret key used in env (NEXTAUTH_SECRET).
-    // In integration test environment, we might rely on the generateAdminToken from lib if available.
   })
 })

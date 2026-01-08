@@ -2,16 +2,28 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getRedis, getCachedProducts } from '@/lib/redis'
-import { isValidMinecraftName, isValidObjectId } from '@/lib/inputValidation'
+import { isValidMinecraftName } from '@/lib/inputValidation'
 import { CACHE_HEADERS } from '@/lib/cache'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic' // Ensure dynamic execution
 
+// Simple hash function for change detection
+function simpleHash(str: string): string {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(36)
+}
+
 export async function GET(request: NextRequest) {
   const start = Date.now()
   const { searchParams } = new URL(request.url)
   const minecraftName = searchParams.get('minecraftName')
+  const clientHash = request.headers.get('If-None-Match')?.replace(/"/g, '')
   
   // 1. Parallel Data Fetching
   // We use Promise.all to fetch everything at once
@@ -71,22 +83,44 @@ export async function GET(request: NextRequest) {
     // Await all data
     const results = await Promise.all(promises)
     
+    // Generate hash for change detection (based on products + categories)
+    const products = results[0] || []
+    const categories = results[1] || []
+    const hashSource = JSON.stringify({
+      pCount: products.length,
+      pIds: products.slice(0, 10).map((p: any) => p.id),
+      cCount: categories.length,
+      cIds: categories.map((c: any) => c.id),
+    })
+    const serverHash = simpleHash(hashSource)
+    
+    // Check if data hasn't changed (conditional request)
+    if (clientHash && clientHash === serverHash) {
+      return new NextResponse(null, { 
+        status: 304,
+        headers: {
+          'ETag': `"${serverHash}"`,
+          'Cache-Control': 'private, max-age=30',
+        }
+      })
+    }
+    
     // Construct response
     const response: any = {
-      products: results[0] || [],
-      categories: results[1] || [],
-      timestamp: Date.now()
+      products: products,
+      categories: categories,
+      timestamp: Date.now(),
+      hash: serverHash, // Include hash for client-side caching
     }
 
     if (minecraftName) {
       // Process cart items to include product details
-      const cartItems = results[2] || []
-      const products = response.products as any[]
-      const productMap = new Map(products.map((p) => [p.id, p]))
+       const cartItems = results[2] || []
+      const productMap = new Map(products.map((p: any) => [p.id, p]))
       
       response.cart = cartItems
         .map((item: any) => {
-           const product = productMap.get(item.productId)
+           const product = productMap.get(item.productId) as any
            if (!product) return null
            return {
              product: { 
@@ -113,6 +147,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { 
       headers: {
         ...CACHE_HEADERS.SHORT, // Cache this response for short time
+        'ETag': `"${serverHash}"`,
         'X-Response-Time': `${duration}ms`
       }
     })
