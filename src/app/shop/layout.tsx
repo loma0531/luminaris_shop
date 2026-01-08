@@ -406,13 +406,10 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Use conditional request with hash
-      const headers: HeadersInit = {}
-      if (lastHashRef.current && force) {
-        headers['If-None-Match'] = `"${lastHashRef.current}"`
-      }
+      // Cache-busting: add timestamp when force refresh to bypass browser/CDN cache
+      const cacheBuster = force ? `${userQuery ? '&' : '?'}_t=${Date.now()}` : ''
       
-      const res = await apiFetch(`/api/shop/init${userQuery}`, { headers })
+      const res = await apiFetch(`/api/shop/init${userQuery}${cacheBuster}`)
       
       // 304 Not Modified = data hasn't changed, no need to update UI
       if (res.status === 304) {

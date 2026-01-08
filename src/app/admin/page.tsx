@@ -97,7 +97,7 @@ export default function AdminProductsPage() {
       setShowModal(false)
       setEditingProduct(null)
       resetForm()
-      fetchProducts()
+      fetchProducts(true) // Force refresh to get updated data
     } catch (error) {
       logger.error(`Error saving product: ${error}`)
       const err = error as Error
@@ -162,7 +162,7 @@ export default function AdminProductsPage() {
     try {
       await adminDelete(`/api/products/${id}`)
       success('ลบสินค้าเรียบร้อยแล้ว')
-      fetchProducts()
+      fetchProducts(true) // Force refresh to get updated data
     } catch (error) {
       logger.error(`Error deleting product: ${error}`)
       toastError('ไม่สามารถลบสินค้าได้')

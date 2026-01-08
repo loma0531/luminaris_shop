@@ -411,17 +411,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
     
     try {
-      // Use hash-based conditional request for products
-      const headers: HeadersInit = {}
-      if (lastHashRef.current && force) {
-        headers['If-None-Match'] = `"${lastHashRef.current}"`
-      }
+      // Cache-busting: add timestamp when force refresh to bypass browser cache
+      const cacheBuster = force ? `?_t=${Date.now()}` : ''
       
       // Fetch core admin data in parallel (use public APIs for cached data)
       const [statsRes, productsRes, categoriesRes] = await Promise.all([
-        apiFetch('/api/stats'),
-        apiFetch('/api/products'),
-        apiFetch('/api/categories')
+        apiFetch(`/api/stats${cacheBuster}`),
+        apiFetch(`/api/products${cacheBuster}`),
+        apiFetch(`/api/categories${cacheBuster}`)
       ])
 
       // Handle Products - support both array and object format

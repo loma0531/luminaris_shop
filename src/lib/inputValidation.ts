@@ -48,12 +48,12 @@ export function sanitizeString(input: string, maxLength = 500): string {
 
 /**
  * Validate and sanitize price
- * Returns null if invalid, rounded to 2 decimals if valid
+ * Returns null if invalid, integer if valid (no decimal points for Thai Baht)
  */
 export function validatePrice(price: unknown): number | null {
   const parsed = typeof price === 'number' ? price : parseFloat(String(price))
   if (isNaN(parsed) || !isFinite(parsed) || parsed <= 0 || parsed > 1000000) return null
-  return Math.round(parsed * 100) / 100 // Round to 2 decimals
+  return Math.round(parsed) // Round to integer (Thai Baht doesn't use decimals typically)
 }
 
 /**
