@@ -16,7 +16,7 @@ import { logger } from '@/lib/logger'
 import { validateNickColorCode } from '@/lib/nickColorValidation'
 
 // Product Image with error handling and fallback
-function ProductImage({ src, alt }: { src: string | null; alt: string }) {
+function ProductImage({ src, alt, priority = false }: { src: string | null; alt: string; priority?: boolean }) {
   const [error, setError] = useState(false)
   
   if (!src || error) {
@@ -35,6 +35,7 @@ function ProductImage({ src, alt }: { src: string | null; alt: string }) {
       style={{ objectFit: 'cover' }}
       unoptimized={src.startsWith('/uploads/')} // Skip optimization for local images
       onError={() => setError(true)}
+      priority={priority}
     />
   )
 }
@@ -348,11 +349,11 @@ export default function ShopPage() {
         </div>
       ) : (
         <div className="product-grid">
-          {filteredProducts.map((product) => {
+          {filteredProducts.map((product, index) => {
             return (
               <div key={product.id} className="product-card">
                 <div className="product-image">
-                  <ProductImage src={product.image} alt={product.name} />
+                  <ProductImage src={product.image} alt={product.name} priority={index < 4} />
                   <span className="category-badge">{product.category.name}</span>
                 </div>
                 <div className="product-info">
