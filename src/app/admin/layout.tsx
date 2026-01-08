@@ -396,7 +396,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [categories, setCategories] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const lastFetchedRef = useRef<number>(0)
-
+  const lastHashRef = useRef<string>('')
+  
   const refreshData = useCallback(async (force = false) => {
     // Cache: 1 minute for admin (more frequent)
     const now = Date.now()
@@ -404,34 +405,55 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       return
     }
 
-    setIsLoading(true)
+    // Only show loading on initial load, not on background refresh
+    if (!stats) {
+      setIsLoading(true)
+    }
+    
     try {
-      // Fetch core admin data in parallel
-      const [statsRes, ordersRes, productsRes, categoriesRes] = await Promise.all([
+      // Use hash-based conditional request for products
+      const headers: HeadersInit = {}
+      if (lastHashRef.current && force) {
+        headers['If-None-Match'] = `"${lastHashRef.current}"`
+      }
+      
+      // Fetch core admin data in parallel (use public APIs for cached data)
+      const [statsRes, productsRes, categoriesRes] = await Promise.all([
         apiFetch('/api/stats'),
-        apiFetch('/api/orders/latest'),
         apiFetch('/api/products'),
         apiFetch('/api/categories')
       ])
 
-      const [statsData, ordersData, prodData, catData] = await Promise.all([
+      // Handle Products - support both array and object format
+      let prodData: any[] = []
+      if (productsRes.status !== 304) {
+        const rawProdData = await productsRes.json()
+        // Handle both formats: array or { products: [...] }
+        prodData = Array.isArray(rawProdData) ? rawProdData : (rawProdData.products || [])
+        
+        // Filter to only active products for display
+        prodData = prodData.filter((p: any) => p.isActive !== false)
+      } else {
+        // 304 = no change, keep existing products
+        prodData = products
+      }
+
+      const [statsData, catData] = await Promise.all([
         statsRes.json(),
-        ordersRes.json(),
-        productsRes.json(),
         categoriesRes.json()
       ])
 
       setStats(statsData)
-      setRecentOrders(ordersData.orders || [])
+      setRecentOrders([]) // Orders will be fetched by the orders page itself with admin auth
       setProducts(prodData)
-      setCategories(catData)
+      setCategories(Array.isArray(catData) ? catData : [])
       lastFetchedRef.current = Date.now()
     } catch (error) {
       logger.error(`Admin Data Fetch Failed: ${error}`)
     } finally {
       setIsLoading(false)
     }
-  }, [stats])
+  }, [stats, products])
 
   useEffect(() => {
     // We only poll if authenticated
