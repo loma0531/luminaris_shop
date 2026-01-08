@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
-import { useShop } from './layout'
+import { useShop, type Product, type Category, type CartItem } from './layout'
 import { 
   CartIcon, 
   PackageIcon, 
-  GridIcon,
   TagIcon,
+  CheckIcon,
 } from '@/components/Icons'
 import { apiFetch } from '@/lib/apiFetch'
 import { useToast } from '@/context/ToastContext'
@@ -15,41 +15,16 @@ import { CART_LIMITS, canAddToCart } from '@/lib/cartLimits'
 import { logger } from '@/lib/logger'
 import { validateNickColorCode } from '@/lib/nickColorValidation'
 
-interface Product {
-  id: string
-  name: string
-  description: string | null
-  price: number
-  image: string | null
-  commands: string[]
-  requiresInput?: boolean
-  inputLabel?: string | null
-  inputPlaceholder?: string | null
-  category: {
-    id: string
-    name: string
-  }
-}
-
-interface CartItem {
-  product: Product
-  quantity: number
-  customInput?: string | null
-}
-
-interface Category {
-  id: string
-  name: string
-  image?: string | null
-  icon?: string | null
-}
-
 // Product Image with error handling and fallback
 function ProductImage({ src, alt }: { src: string | null; alt: string }) {
   const [error, setError] = useState(false)
   
   if (!src || error) {
-    return <PackageIcon size={40} />
+    return (
+      <div className="product-image-placeholder">
+        <PackageIcon size={32} />
+      </div>
+    )
   }
   
   return (
@@ -65,12 +40,18 @@ function ProductImage({ src, alt }: { src: string | null; alt: string }) {
 }
 
 export default function ShopPage() {
-  const { user, setCartCount, setShowLoginModal, triggerCartAnimation } = useShop()
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
+  const { 
+    user, 
+    setCartCount, 
+    setShowLoginModal, 
+    triggerCartAnimation,
+    products,
+    categories,
+    isLoadingData: loading
+  } = useShop()
+  
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [cart, setCart] = useState<CartItem[]>([])
-  const [loading, setLoading] = useState(true)
   const { warning: toastWarning, success: toastSuccess, error: toastError } = useToast()
   
   // State สำหรับ custom input modal
@@ -78,58 +59,28 @@ export default function ShopPage() {
   const [pendingProduct, setPendingProduct] = useState<Product | null>(null)
   const [customInputValue, setCustomInputValue] = useState('')
   
+  // State สำหรับ custom dropdown
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   // Debounce timer ref for batching cart saves
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const pendingCartRef = useRef<CartItem[] | null>(null)
 
   useEffect(() => {
-    initShopData()
+    loadCart()
   }, [])
-
-  const initShopData = async () => {
-    setLoading(true)
-    const storedUser = localStorage.getItem('user')
-    let userQuery = ''
-    
-    if (storedUser) {
-      try {
-        const userObj = JSON.parse(storedUser)
-        if (userObj.minecraftName) {
-           userQuery = `?minecraftName=${userObj.minecraftName}`
-        }
-      } catch (e) {
-        logger.error(`User parse error: ${e}`)
-        localStorage.removeItem('user')
-        localStorage.removeItem('shopToken')
-      }
-    }
-
-    try {
-      // ⚡ SUPER FAST: 1 Request for EVERYTHING
-      const res = await apiFetch(`/api/shop/init${userQuery}`)
-      const data = await res.json()
-      
-      if (data.products) setProducts(data.products)
-      if (data.categories) setCategories(data.categories)
-      if (data.cart) {
-        setCart(data.cart)
-        setCartCount(data.cart.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0))
-      }
-      if (data.pendingOrders !== undefined) {
-          // Update via context if simple method exists, otherwise ignore for now
-          // The sidebar will fetch its own pending count separate or we can expose a setter
-      }
-
-    } catch (error) {
-       logger.error(`Fast Init Failed, falling back to slow init: ${error}`)
-       // Fallback
-       fetchProducts()
-       fetchCategories()
-       if(userQuery) loadCart()
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Fallback methods kept for robustness
   const loadCart = async () => {
@@ -143,28 +94,6 @@ export default function ShopPage() {
       } catch (error) {
         logger.error(`Error loading cart: ${error}`)
       }
-    }
-  }
-
-  const fetchProducts = async () => {
-    try {
-      const res = await apiFetch('/api/products')
-      const data = await res.json()
-      setProducts(data.filter((p: Product & { isActive: boolean }) => p.isActive))
-    } catch (error) {
-      logger.error(`Error fetching products: ${error}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchCategories = async () => {
-    try {
-      const res = await apiFetch('/api/categories')
-      const data = await res.json()
-      setCategories(data)
-    } catch (error) {
-      logger.error(`Error fetching categories: ${error}`)
     }
   }
 
@@ -347,25 +276,57 @@ export default function ShopPage() {
         สินค้าทั้งหมด
       </h1>
 
-      {/* Category Filter */}
-      <div className="category-filter">
-        <button
-          className={`category-btn ${!selectedCategory ? 'active' : ''}`}
-          onClick={() => setSelectedCategory('')}
-        >
-          <GridIcon size={18} />
-          ทั้งหมด
-        </button>
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            className={`category-btn ${selectedCategory === cat.id ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(cat.id)}
+      {/* Custom Category Filter Dropdown */}
+      <div className="category-filter-wrapper">
+        <div className="filter-label">
+          <TagIcon size={18} />
+          <span>หมวดหมู่:</span>
+        </div>
+        
+        <div className="custom-dropdown" ref={dropdownRef}>
+          <button 
+            className={`dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
-            <TagIcon size={18} />
-            {cat.name}
+            <span>
+              {selectedCategory 
+                ? categories.find(c => c.id === selectedCategory)?.name || 'เลือกหมวดหมู่' 
+                : 'ทุกหมวดหมู่'}
+            </span>
+            <div className="dropdown-arrow">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
           </button>
-        ))}
+          
+          <div className={`dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
+            <button
+              className={`dropdown-item ${!selectedCategory ? 'selected' : ''}`}
+              onClick={() => {
+                setSelectedCategory('')
+                setIsDropdownOpen(false)
+              }}
+            >
+              <span>ทุกหมวดหมู่</span>
+              <div className="item-check"><CheckIcon size={14} /></div>
+            </button>
+            
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                className={`dropdown-item ${selectedCategory === cat.id ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedCategory(cat.id)
+                  setIsDropdownOpen(false)
+                }}
+              >
+                <span>{cat.name}</span>
+                <div className="item-check"><CheckIcon size={14} /></div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Products Grid */}
@@ -392,6 +353,7 @@ export default function ShopPage() {
               <div key={product.id} className="product-card">
                 <div className="product-image">
                   <ProductImage src={product.image} alt={product.name} />
+                  <span className="category-badge">{product.category.name}</span>
                 </div>
                 <div className="product-info">
                   <h3 className="product-name">{product.name}</h3>

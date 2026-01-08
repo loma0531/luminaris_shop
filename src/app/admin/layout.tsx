@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ReactNode } from 'react'
+import { ReactNode, createContext, useContext, useCallback, useEffect, useRef } from 'react'
 import { AdminAuthProvider, useAdminAuth } from '@/context/AdminAuthContext'
+import { apiFetch } from '@/lib/apiFetch'
+import { logger } from '@/lib/logger'
 import {
   CartIcon,
   FolderIcon,
@@ -48,6 +50,23 @@ const navItems = [
   { href: '/admin/sales', label: 'สรุปยอดเติมเงิน', Icon: ChartIcon },
   { href: '/admin/rcon', label: 'RCON Console', Icon: TerminalIcon },
 ]
+
+interface AdminDataContextType {
+  stats: any
+  recentOrders: any[]
+  products: any[]
+  categories: any[]
+  isLoading: boolean
+  refreshData: (force?: boolean) => Promise<void>
+}
+
+const AdminDataContext = createContext<AdminDataContextType | null>(null)
+
+export function useAdminData() {
+  const context = useContext(AdminDataContext)
+  if (!context) throw new Error('useAdminData must be used within AdminLayout')
+  return context
+}
 
 function AdminLoginForm() {
   const [email, setEmail] = useState('')
@@ -173,8 +192,22 @@ function AdminLoginForm() {
 function AdminContent({ children }: AdminLayoutProps) {
   const pathname = usePathname()
   const { isAuthenticated, loading, logout } = useAdminAuth()
+  const { refreshData } = useAdminData()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshData()
+      
+      // 🔄 Admin Auto Update (Poll every 60s)
+      const interval = setInterval(() => {
+        refreshData(true)
+      }, 60 * 1000)
+      
+      return () => clearInterval(interval)
+    }
+  }, [isAuthenticated, refreshData])
 
   const isActive = (href: string) => {
     if (!pathname) return false
@@ -357,9 +390,67 @@ function AdminContent({ children }: AdminLayoutProps) {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+  const [stats, setStats] = useState<any>(null)
+  const [recentOrders, setRecentOrders] = useState<any[]>([])
+  const [products, setProducts] = useState<any[]>([])
+  const [categories, setCategories] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const lastFetchedRef = useRef<number>(0)
+
+  const refreshData = useCallback(async (force = false) => {
+    // Cache: 1 minute for admin (more frequent)
+    const now = Date.now()
+    if (!force && stats && (now - lastFetchedRef.current < 60 * 1000)) {
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      // Fetch core admin data in parallel
+      const [statsRes, ordersRes, productsRes, categoriesRes] = await Promise.all([
+        apiFetch('/api/stats'),
+        apiFetch('/api/orders/latest'),
+        apiFetch('/api/products'),
+        apiFetch('/api/categories')
+      ])
+
+      const [statsData, ordersData, prodData, catData] = await Promise.all([
+        statsRes.json(),
+        ordersRes.json(),
+        productsRes.json(),
+        categoriesRes.json()
+      ])
+
+      setStats(statsData)
+      setRecentOrders(ordersData.orders || [])
+      setProducts(prodData)
+      setCategories(catData)
+      lastFetchedRef.current = Date.now()
+    } catch (error) {
+      logger.error(`Admin Data Fetch Failed: ${error}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [stats])
+
+  useEffect(() => {
+    // We only poll if authenticated
+    // This will be handled inside AdminContent but we can also put basic interval here
+    // But since AdminContent handles auth check, it's safer there or triggered by auth state
+  }, [])
+
   return (
     <AdminAuthProvider>
-      <AdminContent>{children}</AdminContent>
+      <AdminDataContext.Provider value={{
+        stats,
+        recentOrders,
+        products,
+        categories,
+        isLoading,
+        refreshData
+      }}>
+        <AdminContent>{children}</AdminContent>
+      </AdminDataContext.Provider>
     </AdminAuthProvider>
   )
 }

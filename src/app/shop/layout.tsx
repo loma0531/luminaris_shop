@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react'
+import React, { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -18,6 +18,36 @@ import {
   WalletIcon,
 } from '@/components/Icons'
 import { apiFetch } from '@/lib/apiFetch'
+import { logger } from '@/lib/logger'
+
+export interface Product {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  image: string | null
+  commands: string[]
+  requiresInput?: boolean
+  inputLabel?: string | null
+  inputPlaceholder?: string | null
+  category: {
+    id: string
+    name: string
+  }
+}
+
+export interface Category {
+  id: string
+  name: string
+  image?: string | null
+  icon?: string | null
+}
+
+export interface CartItem {
+  product: Product
+  quantity: number
+  customInput?: string | null
+}
 
 interface User {
   id: string
@@ -35,6 +65,11 @@ interface ShopContextType {
   showLoginModal: boolean
   setShowLoginModal: (show: boolean) => void
   triggerCartAnimation: () => void
+  // Client-side cache data
+  products: Product[]
+  categories: Category[]
+  isLoadingData: boolean
+  refreshData: (force?: boolean) => Promise<void>
 }
 
 const ShopContext = createContext<ShopContextType | null>(null)
@@ -300,6 +335,10 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [cartAnimating, setCartAnimating] = useState(false)
+  const [products, setProducts] = useState<Product[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  const lastFetchedRef = useRef<number>(0)
   const router = useRouter()
 
   const triggerCartAnimation = useCallback(() => {
@@ -338,6 +377,49 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const initShopData = useCallback(async (force = false) => {
+    // Cache logic: 5 mins cache or if already has data and not forced
+    const now = Date.now()
+    if (!force && products.length > 0 && categories.length > 0 && (now - lastFetchedRef.current < 5 * 60 * 1000)) {
+      return
+    }
+
+    setIsLoadingData(true)
+    const storedUser = localStorage.getItem('user')
+    let userQuery = ''
+    
+    if (storedUser) {
+      try {
+        const userObj = JSON.parse(storedUser)
+        if (userObj.minecraftName) {
+            userQuery = `?minecraftName=${userObj.minecraftName}`
+        }
+      } catch (e) {
+        logger.error(`User parse error in layout: ${e}`)
+      }
+    }
+
+    try {
+      const res = await apiFetch(`/api/shop/init${userQuery}`)
+      const data = await res.json()
+      
+      if (data.products) setProducts(data.products)
+      if (data.categories) setCategories(data.categories)
+      if (data.cart) {
+        setCartCount(data.cart.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0))
+      }
+      if (data.pendingOrders !== undefined) {
+        setPendingOrderCount(data.pendingOrders.length || 0)
+      }
+      
+      lastFetchedRef.current = Date.now()
+    } catch (error) {
+      logger.error(`Shop Init Failed: ${error}`)
+    } finally {
+      setIsLoadingData(false)
+    }
+  }, [products.length, categories.length])
+
   const updatePendingCount = useCallback(() => {
     if (user) {
       fetchPendingOrders(user.minecraftName)
@@ -349,12 +431,25 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
-      const userObj = JSON.parse(storedUser)
-      setUser(userObj)
-      fetchPendingOrders(userObj.minecraftName)
+      try {
+        const userObj = JSON.parse(storedUser)
+        setUser(userObj)
+      } catch (e) {
+        logger.error(`User parse error on boot: ${e}`)
+      }
     }
-    updateCartCount()
-  }, [updateCartCount, fetchPendingOrders])
+    
+    // Initial fetch
+    initShopData()
+
+    // 🔄 Auto Update System (Background Polling)
+    // Fetch fresh data every 60 seconds
+    const interval = setInterval(() => {
+      initShopData(true) // force refresh in background
+    }, 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [initShopData])
 
   const handleLogout = () => {
     localStorage.removeItem('user')
@@ -382,6 +477,10 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
       showLoginModal, 
       setShowLoginModal,
       triggerCartAnimation,
+      products,
+      categories,
+      isLoadingData,
+      refreshData: initShopData
     }}>
       <div className="shop-layout">
         {/* Top Header with Profile Link */}

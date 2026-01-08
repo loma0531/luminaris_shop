@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { SearchIcon, CheckIcon, CloseIcon, CreditCardIcon, ClockIcon } from '@/components/Icons'
 import { adminGet } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
+import { useAdminData } from '../layout'
 
 interface OrderItem {
   productId: string
@@ -26,38 +27,29 @@ interface Order {
 type StatusFilter = 'ALL' | 'PENDING' | 'AWAITING_PAYMENT' | 'COMPLETED' | 'CANCELLED'
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([])
+  const { 
+    recentOrders: orders, 
+    isLoading: loading, 
+    refreshData: fetchOrders 
+  } = useAdminData()
+  
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  const [loading, setLoading] = useState(true)
+  // Pagination simplified for cache mode or kept for full fetch
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      let url = `/api/orders?page=${page}&limit=20`
-      if (statusFilter !== 'ALL') {
-        url += `&status=${statusFilter}`
-      }
-      const res = await adminGet(url)
-      const data = await res.json()
-      setOrders(data.orders || [])
-      setTotalPages(data.totalPages || 1)
-    } catch (error) {
-      logger.error(`Error fetching orders: ${error}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [page, statusFilter])
-
   useEffect(() => {
+    // We can still trigger refresh when page or filter changes
+    // or rely on Layout's polling. Here we trigger once for this page specifically.
     fetchOrders()
-  }, [fetchOrders])
+  }, [statusFilter, page])
 
   // Filter by search (name or orderId)
-  const filteredOrders = orders.filter((o) =>
-    o.minecraftName.toLowerCase().includes(search.toLowerCase()) ||
-    o.orderId.toString().includes(search)
+  const filteredOrders = orders.filter((o: Order) =>
+    (statusFilter === 'ALL' || o.status === statusFilter) &&
+    (o.minecraftName.toLowerCase().includes(search.toLowerCase()) ||
+    o.orderId.toString().includes(search))
   )
 
   const getStatusBadge = (status: Order['status']) => {
@@ -148,7 +140,7 @@ export default function AdminOrdersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => (
+                  filteredOrders.map((order: Order) => (
                     <tr key={order.id}>
                       <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
                         #{order.orderId}
@@ -161,7 +153,7 @@ export default function AdminOrdersPage() {
                           gap: '0.25rem',
                           maxWidth: '300px',
                         }}>
-                          {order.items.map((item, idx) => (
+                          {order.items.map((item: OrderItem, idx: number) => (
                             <div key={idx} style={{ 
                               fontSize: '0.875rem',
                               padding: '0.25rem 0.5rem',

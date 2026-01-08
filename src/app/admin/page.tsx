@@ -20,6 +20,7 @@ import { logger } from '@/lib/logger'
 
 import { useToast } from '@/context/ToastContext'
 import ConfirmModal from '@/components/ConfirmModal'
+import { useAdminData } from './layout'
 
 interface Product {
   id: string
@@ -39,9 +40,14 @@ interface Product {
 }
 
 export default function AdminProductsPage() {
-  const [products, setProducts] = useState<Product[]>([])
+  const { 
+    products, 
+    categories, 
+    isLoading: loading, 
+    refreshData: fetchProducts 
+  } = useAdminData()
+  
   const [search, setSearch] = useState('')
-  const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [formData, setFormData] = useState({
@@ -55,40 +61,15 @@ export default function AdminProductsPage() {
     inputLabel: '',
     inputPlaceholder: '',
   })
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([])
 
   // Confirm Modal
   const [showConfirm, setShowConfirm] = useState(false)
   const [idToDelete, setIdToDelete] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchProducts()
-    fetchCategories()
     // Lazy cleanup: Trigger cleanup of old orders when admin visits
     adminPost('/api/orders/cleanup', {}).catch(err => logger.error(`Cleanup warning: ${err}`))
   }, [])
-
-  const fetchProducts = async () => {
-    try {
-      const res = await adminGet('/api/products')
-      const data = await res.json()
-      setProducts(data)
-    } catch (error) {
-      logger.error(`Error fetching products: ${error}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchCategories = async () => {
-    try {
-      const res = await adminGet('/api/categories')
-      const data = await res.json()
-      setCategories(data)
-    } catch (error) {
-      logger.error(`Error fetching categories: ${error}`)
-    }
-  }
 
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())

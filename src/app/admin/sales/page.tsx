@@ -138,6 +138,13 @@ export default function SalesPage() {
 
   useEffect(() => {
     fetchSales()
+
+    // 🔄 Auto Update every 60s
+    const interval = setInterval(() => {
+      fetchSales()
+    }, 60000)
+
+    return () => clearInterval(interval)
   }, [fetchSales])
 
   const periodConfig: Record<Period, { label: string; icon: React.ReactNode; description: string }> = {
