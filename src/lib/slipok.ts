@@ -149,9 +149,6 @@ async function verifySlipByFile(
   }
 }
 
-/**
- * Verify a slip from a File object (for use in API routes with FormData)
- */
 export async function verifySlip(
   file: File,
   expectedAmount?: number
@@ -172,3 +169,80 @@ export async function verifySlip(
     }
   }
 }
+
+// Export the SlipData type for use in other modules
+export type SlipData = NonNullable<SlipVerifyResponse['data']>
+
+/**
+ * Validate that the slip's ref1 matches the expected order ID
+ * This ensures the slip was generated from scanning our QR code
+ */
+export function validateSlipRef1(
+  slipData: SlipData,
+  expectedOrderId: string | number
+): { valid: boolean; error?: string; slipRef1?: string } {
+  const slipRef1 = slipData.ref1?.trim()
+  const expectedRef1 = String(expectedOrderId).trim()
+
+  // If no ref1 in slip, it might be from a personal PromptPay transfer
+  if (!slipRef1) {
+    return {
+      valid: false,
+      error: 'สลิปนี้ไม่มี Reference Number (ไม่ได้สแกนจาก QR ของร้าน)',
+      slipRef1: undefined,
+    }
+  }
+
+  // Check if ref1 matches order ID
+  if (slipRef1 !== expectedRef1) {
+    return {
+      valid: false,
+      error: `Reference ไม่ตรงกับ Order (คาดหวัง: ${expectedRef1}, สลิป: ${slipRef1})`,
+      slipRef1,
+    }
+  }
+
+  return { valid: true, slipRef1 }
+}
+
+/**
+ * Validate that the slip's receiver matches our PromptPay ID
+ * This ensures money was sent to our account
+ */
+export function validateSlipReceiver(
+  slipData: SlipData,
+  expectedPromptPayId?: string
+): { valid: boolean; error?: string } {
+  const promptPayId = expectedPromptPayId || process.env.PROMPTPAY_ID
+  
+  if (!promptPayId) {
+    // If no PromptPay ID configured, skip receiver validation
+    logger.warn('PROMPTPAY_ID not configured, skipping receiver validation', 200)
+    return { valid: true }
+  }
+
+  // Get receiver info - could be in proxy.value or account.value
+  const receiverProxyValue = slipData.receiver?.proxy?.value?.replace(/-/g, '') || ''
+  const receiverAccountValue = slipData.receiver?.account?.value?.replace(/-/g, '') || ''
+  const normalizedPromptPayId = promptPayId.replace(/-/g, '')
+
+  // Check if the receiver matches our PromptPay ID (phone or national ID)
+  const matchesProxy = receiverProxyValue.includes(normalizedPromptPayId) || 
+                       normalizedPromptPayId.includes(receiverProxyValue)
+  const matchesAccount = receiverAccountValue.includes(normalizedPromptPayId) || 
+                         normalizedPromptPayId.includes(receiverAccountValue)
+
+  if (!matchesProxy && !matchesAccount && receiverProxyValue && receiverAccountValue) {
+    logger.security.suspiciousActivity(
+      `Receiver mismatch - Expected: ${normalizedPromptPayId}, Got proxy: ${receiverProxyValue}, account: ${receiverAccountValue}`,
+      'unknown'
+    )
+    return {
+      valid: false,
+      error: 'สลิปนี้ไม่ได้โอนมายังบัญชีของร้าน',
+    }
+  }
+
+  return { valid: true }
+}
+

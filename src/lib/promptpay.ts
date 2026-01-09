@@ -4,9 +4,14 @@ import QRCode from 'qrcode'
 export interface PromptPayQROptions {
   amount?: number
   promptPayId?: string
-  refNo?: string
+  orderId?: string  // Kept for reference but PromptPay doesn't support ref1
 }
 
+/**
+ * Generate PromptPay QR payload
+ * Note: Standard PromptPay (phone/national ID) does NOT support ref1/ref2
+ * We verify payment by checking the receiver matches our PromptPay ID
+ */
 export function generatePromptPayPayload(options: PromptPayQROptions = {}): string {
   const promptPayId = options.promptPayId || process.env.PROMPTPAY_ID || ''
   
@@ -14,20 +19,12 @@ export function generatePromptPayPayload(options: PromptPayQROptions = {}): stri
     throw new Error('PromptPay ID is not configured')
   }
 
-  const payloadOptions: { amount?: number; ref1?: string } = {}
-  
+  // Generate payload - amount is optional
   if (options.amount && options.amount > 0) {
-    payloadOptions.amount = options.amount
-  }
-
-  // Use Order ID as Ref1 if provided (only works if library supports it/Bill Payment structure, 
-  // but passing it for attempt)
-  if (options.refNo) {
-    payloadOptions.ref1 = options.refNo
+    return generatePayload(promptPayId, { amount: options.amount })
   }
   
-  // Generate payload
-  return generatePayload(promptPayId, payloadOptions)
+  return generatePayload(promptPayId, {})
 }
 
 export async function generatePromptPayQRCode(options: PromptPayQROptions = {}): Promise<string> {

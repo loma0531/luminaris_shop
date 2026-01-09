@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     const qrCodeDataUrl = await generatePromptPayQRCode({ 
       amount,
-      refNo: orderId ? String(orderId) : undefined 
+      orderId: orderId ? String(orderId) : undefined 
     })
     
     return NextResponse.json({

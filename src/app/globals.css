@@ -431,6 +431,11 @@ a {
 .product-image svg {
   color: var(--muted-foreground);
   opacity: 0.5;
+  /* Center the icon when no image */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .product-image-placeholder {
@@ -823,7 +828,7 @@ a {
     padding-bottom: 56.25%; /* Force 16:9 Aspect Ratio */
     overflow: hidden;
   }
-  
+
   .product-image img {
     position: absolute !important;
     top: 0 !important;
@@ -981,8 +986,9 @@ a {
   pointer-events: none;
   text-transform: uppercase;
   letter-spacing: 0.025em;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
   /* Prevent wrapping and limit width */
   white-space: nowrap;
   max-width: 85%;
@@ -996,8 +1002,8 @@ a {
     right: 0.25rem;
     padding: 0.15rem 0.4rem;
     font-size: 0.55rem; /* Smaller font on mobile */
-    max-width: 70%;      /* Limit width even more */
-    border-radius: 4px;  /* Square-ish style for mobile to save space */
+    max-width: 70%; /* Limit width even more */
+    border-radius: 4px; /* Square-ish style for mobile to save space */
   }
 }
 
@@ -1070,7 +1076,8 @@ a {
   backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    0 8px 10px -6px rgba(0, 0, 0, 0.5);
   padding: 0.5rem;
   opacity: 0;
   visibility: hidden;

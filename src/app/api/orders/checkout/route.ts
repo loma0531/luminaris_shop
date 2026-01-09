@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { verifySlip } from '@/lib/slipok'
+import { verifySlip, validateSlipReceiver } from '@/lib/slipok'
 import { giveItemsToPlayer } from '@/lib/rcon'
 import { getNextSequence } from '@/lib/counter'
 import { isValidMinecraftName } from '@/lib/inputValidation'
@@ -9,6 +9,7 @@ import { requireUserAuth } from '@/lib/adminAuth'
 import { CART_LIMITS } from '@/lib/cartLimits'
 import { OrderItem } from '@/lib/types'
 import { validateCSRFToken, deleteCSRFToken } from '@/lib/redis'
+import { sendPurchaseLog, sendSecurityAlert } from '@/lib/webhook'
 
 import { CheckoutSchema } from '@/lib/schemas'
 import { replaceCustomInputInCommand } from '@/lib/nickColorValidation'
@@ -205,7 +206,29 @@ export async function PUT(request: NextRequest) {
       })
       if (existingPayment) {
         logger.security.suspiciousActivity(`Duplicate slip transRef: ${transRef}`, minecraftName)
+        await sendSecurityAlert('DUPLICATE_SLIP', {
+          orderId,
+          minecraftName,
+          message: `พบการใช้สลิปซ้ำ! TransRef: ${transRef}`,
+          transRef,
+        })
         return NextResponse.json({ success: false, error: 'This slip has already been used' }, { status: 400 })
+      }
+    }
+
+    // Security: Validate receiver is our PromptPay ID
+    // Note: Standard PromptPay doesn't support ref1/ref2, so we verify by receiver
+    if (slipResult.data) {
+      const receiverValidation = validateSlipReceiver(slipResult.data)
+      if (!receiverValidation.valid) {
+        logger.security.suspiciousActivity(`Wrong receiver: ${receiverValidation.error}`, minecraftName)
+        await sendSecurityAlert('WRONG_RECEIVER', {
+          orderId,
+          minecraftName,
+          message: receiverValidation.error || 'โอนผิดบัญชี',
+          transRef: transRef || undefined,
+        })
+        return NextResponse.json({ success: false, error: receiverValidation.error }, { status: 400 })
       }
     }
 
@@ -223,6 +246,24 @@ export async function PUT(request: NextRequest) {
 
     logger.order.statusChanged(orderId, 'AWAITING_PAYMENT', 'COMPLETED', minecraftName)
     logger.order.completed(orderId, minecraftName, order.total, timer())
+
+    // Send Discord notification with slip image
+    const orderItemsForLog = (order.items as OrderItem[]).map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    }))
+    
+    await sendPurchaseLog({
+      orderId,
+      minecraftName,
+      amount: order.total,
+      items: orderItemsForLog,
+      transRef: transRef || undefined,
+      ref1: slipResult.data?.ref1,
+      slipBuffer: buffer,
+      status: 'SUCCESS',
+    })
 
     // Update sold counts using transaction for better performance
     try {
