@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Mock MySQL
@@ -29,7 +29,7 @@ describe('Profile API', () => {
   })
 
   it('should return 404 if player not found in MySQL', async () => {
-    vi.mocked(getPlayerProfile).mockResolvedValue(null)
+    (getPlayerProfile as Mock).mockResolvedValue(null)
 
     const req = new NextRequest('http://localhost:3000/api/profile', {
       method: 'POST',
@@ -49,7 +49,7 @@ describe('Profile API', () => {
       lastLogoffTime: Date.now(),
       totalPlayTime: 3600
     }
-    vi.mocked(getPlayerProfile).mockResolvedValue(mockProfile as never)
+    ;(getPlayerProfile as Mock).mockResolvedValue(mockProfile)
 
     const req = new NextRequest('http://localhost:3000/api/profile', {
       method: 'POST',
@@ -62,3 +62,4 @@ describe('Profile API', () => {
     expect(data.profile).toEqual(mockProfile)
   })
 })
+

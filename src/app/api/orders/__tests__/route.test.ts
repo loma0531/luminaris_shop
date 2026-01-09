@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Create mock functions at factory level
@@ -36,11 +36,11 @@ describe('Order Management API', () => {
 
   describe('GET /api/orders (Admin)', () => {
     it('should return all orders with pagination', async () => {
-      vi.mocked(prisma.order.findMany).mockResolvedValue([
-        { id: '1', orderId: 1001, minecraftName: 'P1', status: 'PENDING', items: [], payment: null } as never,
-        { id: '2', orderId: 1002, minecraftName: 'P2', status: 'COMPLETED', items: [], payment: null } as never
+      (prisma.order.findMany as Mock).mockResolvedValue([
+        { id: '1', orderId: 1001, minecraftName: 'P1', status: 'PENDING', items: [], payment: null },
+        { id: '2', orderId: 1002, minecraftName: 'P2', status: 'COMPLETED', items: [], payment: null }
       ])
-      vi.mocked(prisma.order.count).mockResolvedValue(2)
+      ;(prisma.order.count as Mock).mockResolvedValue(2)
 
       const req = new NextRequest('http://localhost:3000/api/orders')
       const res = await AdminOrdersGET(req)
@@ -54,8 +54,8 @@ describe('Order Management API', () => {
 
   describe('GET /api/orders/user (User)', () => {
     it('should return orders for specific user', async () => {
-      vi.mocked(prisma.order.findMany).mockResolvedValue([
-        { id: '1', minecraftName: 'TestPlayer1', status: 'PENDING' } as never
+      (prisma.order.findMany as Mock).mockResolvedValue([
+        { id: '1', minecraftName: 'TestPlayer1', status: 'PENDING' }
       ])
 
       const req = new NextRequest('http://localhost:3000/api/orders/user?minecraftName=TestPlayer1&status=pending')
@@ -67,3 +67,4 @@ describe('Order Management API', () => {
     })
   })
 })
+

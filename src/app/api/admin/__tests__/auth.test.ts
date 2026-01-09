@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Mock bcrypt with inline factory
@@ -18,6 +18,15 @@ vi.mock('@/lib/prisma', () => ({
       create: vi.fn(),
     }
   }
+}))
+
+// Mock Redis to bypass rate limiting
+vi.mock('@/lib/redis', () => ({
+  checkRateLimitRedis: vi.fn().mockResolvedValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60000 }),
+  getRedis: vi.fn(() => ({
+    get: vi.fn().mockResolvedValue(null),
+    setex: vi.fn(),
+  })),
 }))
 
 // Mock env to avoid Zod validation issues
@@ -50,8 +59,8 @@ describe('Admin Authentication API', () => {
     })
 
     it('should return 401 for invalid email', async () => {
-      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(null)
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never)
+      (prisma.adminUser.findUnique as Mock).mockResolvedValue(null)
+      ;(bcrypt.compare as Mock).mockResolvedValue(false)
 
       const req = new NextRequest('http://localhost:3000/api/admin/login', {
         method: 'POST',
@@ -66,13 +75,13 @@ describe('Admin Authentication API', () => {
     })
 
     it('should return 401 for invalid password', async () => {
-      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+      (prisma.adminUser.findUnique as Mock).mockResolvedValue({
         id: 'admin-1',
         email: 'test@admin.com',
         passwordHash: 'hash',
         tokenHash: 'hash'
-      } as never)
-      vi.mocked(bcrypt.compare).mockResolvedValue(false as never)
+      })
+      ;(bcrypt.compare as Mock).mockResolvedValue(false)
 
       const req = new NextRequest('http://localhost:3000/api/admin/login', {
         method: 'POST',
@@ -87,13 +96,13 @@ describe('Admin Authentication API', () => {
     })
 
     it('should return 200 and session token for valid credentials', async () => {
-      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+      (prisma.adminUser.findUnique as Mock).mockResolvedValue({
         id: 'admin-1',
         email: 'test@admin.com',
         passwordHash: 'hash',
         tokenHash: 'hash'
-      } as never)
-      vi.mocked(bcrypt.compare).mockResolvedValue(true as never)
+      })
+      ;(bcrypt.compare as Mock).mockResolvedValue(true)
 
       const req = new NextRequest('http://localhost:3000/api/admin/login', {
         method: 'POST',
@@ -132,3 +141,4 @@ describe('Admin Authentication API', () => {
     })
   })
 })
+

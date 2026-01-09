@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Mock auth
@@ -33,11 +33,11 @@ describe('Payment Management API', () => {
 
   describe('GET /api/payments', () => {
     it('should return all payments', async () => {
-      vi.mocked(prisma.payment.findMany).mockResolvedValue([
-        { id: '1', paymentId: 2001, status: 'VERIFIED' } as never,
-        { id: '2', paymentId: 2002, status: 'PENDING' } as never
+      (prisma.payment.findMany as Mock).mockResolvedValue([
+        { id: '1', paymentId: 2001, status: 'VERIFIED' },
+        { id: '2', paymentId: 2002, status: 'PENDING' }
       ])
-      vi.mocked(prisma.payment.count).mockResolvedValue(2)
+      ;(prisma.payment.count as Mock).mockResolvedValue(2)
 
       const req = new NextRequest('http://localhost:3000/api/payments')
       const res = await GET(req)
@@ -49,3 +49,4 @@ describe('Payment Management API', () => {
     })
   })
 })
+

@@ -105,15 +105,15 @@ describe('inputValidation', () => {
 
   describe('validatePrice', () => {
     it('returns valid prices', () => {
-      expect(validatePrice(99.99)).toBe(99.99)
+      expect(validatePrice(99)).toBe(99)
       expect(validatePrice(50)).toBe(50)
       expect(validatePrice('100')).toBe(100)
-      expect(validatePrice(0.01)).toBe(0.01)
+      expect(validatePrice(1)).toBe(1)
     })
 
-    it('rounds to 2 decimal places', () => {
-      expect(validatePrice(99.999)).toBe(100)
-      expect(validatePrice(1.234)).toBe(1.23)
+    it('rounds to integer (Thai Baht)', () => {
+      expect(validatePrice(99.99)).toBe(100)
+      expect(validatePrice(1.234)).toBe(1)
     })
 
     it('rejects invalid prices', () => {

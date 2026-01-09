@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Mock auth
@@ -38,7 +38,7 @@ describe('RCON Retry API', () => {
   })
 
   it('should retry failed commands', async () => {
-    vi.mocked(prisma.commandQueue.findMany).mockResolvedValue([
+    (prisma.commandQueue.findMany as Mock).mockResolvedValue([
       {
         id: 'cmd-1',
         orderId: 'order-1',
@@ -46,11 +46,11 @@ describe('RCON Retry API', () => {
         command: 'give item 1',
         status: 'FAILED',
         retryCount: 0
-      } as never
+      }
     ])
 
-    vi.mocked(giveItemsToPlayer).mockResolvedValue({ success: true, results: ['Done'] })
-    vi.mocked(prisma.commandQueue.count).mockResolvedValue(0)
+    ;(giveItemsToPlayer as Mock).mockResolvedValue({ success: true, results: ['Done'] })
+    ;(prisma.commandQueue.count as Mock).mockResolvedValue(0)
 
     const req = new NextRequest('http://localhost:3000/api/rcon/retry', { method: 'POST' })
     const res = await POST(req)
@@ -68,3 +68,4 @@ describe('RCON Retry API', () => {
     )
   })
 })
+
