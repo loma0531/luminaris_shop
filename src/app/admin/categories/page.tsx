@@ -39,9 +39,11 @@ export default function AdminCategoriesPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [idToDelete, setIdToDelete] = useState<string | null>(null)
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (bustCache = false) => {
     try {
-      const res = await adminGet('/api/categories')
+      // Add cache busting when needed (after mutations)
+      const url = bustCache ? `/api/categories?_t=${Date.now()}` : '/api/categories'
+      const res = await adminGet(url)
       const data = await res.json()
       setCategories(data)
     } catch (error) {
@@ -75,7 +77,7 @@ export default function AdminCategoriesPage() {
       setShowModal(false)
       setEditingCategory(null)
       resetForm()
-      fetchCategories()
+      fetchCategories(true) // Bust cache after mutation
     } catch (error) {
       logger.error(`Error saving category: ${error}`)
       toastError('เกิดข้อผิดพลาดในการบันทึกหมวดหมู่')
@@ -110,7 +112,7 @@ export default function AdminCategoriesPage() {
     try {
       await adminDelete(`/api/categories/${id}`)
       success('ลบหมวดหมู่เรียบร้อยแล้ว')
-      fetchCategories()
+      fetchCategories(true) // Bust cache after mutation
     } catch (error) {
       logger.error(`Error deleting category: ${error}`)
       toastError('ไม่สามารถลบหมวดหมู่ได้')

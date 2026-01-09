@@ -430,7 +430,11 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
         setCartCount(data.cart.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0))
       }
       if (data.pendingOrders !== undefined) {
-        setPendingOrderCount(data.pendingOrders.length || 0)
+        // pendingOrders can be a number (count) or array for backward compatibility
+        const count = typeof data.pendingOrders === 'number' 
+          ? data.pendingOrders 
+          : (Array.isArray(data.pendingOrders) ? data.pendingOrders.length : 0)
+        setPendingOrderCount(count)
       }
       
       lastFetchedRef.current = Date.now()
