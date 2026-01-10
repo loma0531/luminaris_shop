@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { SearchIcon, CheckIcon, CloseIcon, CreditCardIcon, ClockIcon } from '@/components/Icons'
 import { adminGet } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
-import { useAdminData } from '../layout'
 
 interface OrderItem {
   productId: string
@@ -27,29 +26,39 @@ interface Order {
 type StatusFilter = 'ALL' | 'PENDING' | 'AWAITING_PAYMENT' | 'COMPLETED' | 'CANCELLED'
 
 export default function AdminOrdersPage() {
-  const { 
-    recentOrders: orders, 
-    isLoading: loading, 
-    refreshData: fetchOrders 
-  } = useAdminData()
-  
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
-  // Pagination simplified for cache mode or kept for full fetch
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
 
-  useEffect(() => {
-    // We can still trigger refresh when page or filter changes
-    // or rely on Layout's polling. Here we trigger once for this page specifically.
-    fetchOrders()
-  }, [statusFilter, page])
+  const fetchOrders = useCallback(async () => {
+    setLoading(true)
+    try {
+      const statusParam = statusFilter !== 'ALL' ? `&status=${statusFilter}` : ''
+      const res = await adminGet(`/api/orders?page=${page}&limit=50${statusParam}`)
+      const data = await res.json()
+      
+      if (data.orders) {
+        setOrders(data.orders)
+        setTotalPages(data.totalPages || 1)
+      }
+    } catch (error) {
+      logger.error(`Failed to fetch orders: ${error}`)
+    } finally {
+      setLoading(false)
+    }
+  }, [page, statusFilter])
 
-  // Filter by search (name or orderId)
+  useEffect(() => {
+    fetchOrders()
+  }, [fetchOrders])
+
+  // Filter by search (name or orderId) - client-side filtering
   const filteredOrders = orders.filter((o: Order) =>
-    (statusFilter === 'ALL' || o.status === statusFilter) &&
-    (o.minecraftName.toLowerCase().includes(search.toLowerCase()) ||
-    o.orderId.toString().includes(search))
+    o.minecraftName.toLowerCase().includes(search.toLowerCase()) ||
+    o.orderId.toString().includes(search)
   )
 
   const getStatusBadge = (status: Order['status']) => {
