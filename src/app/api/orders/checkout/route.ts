@@ -12,7 +12,7 @@ import { validateCSRFToken, deleteCSRFToken } from '@/lib/redis'
 import { sendPurchaseLog, sendSecurityAlert } from '@/lib/webhook'
 
 import { CheckoutSchema } from '@/lib/schemas'
-import { replaceCustomInputInCommand } from '@/lib/nickColorValidation'
+import { replaceCustomInput } from '@/lib/inputValidation'
 import * as z from 'zod'
 
 // Create pending order and payment
@@ -298,7 +298,7 @@ export async function PUT(request: NextRequest) {
         for (const cmd of item.commands) {
            // แทนที่ {customInput} ด้วยค่าจริง (ถ้ามี)
            const processedCmd = item.customInput 
-             ? replaceCustomInputInCommand(cmd, item.customInput)
+             ? replaceCustomInput(cmd, item.customInput)
              : cmd
            allCommandsToExecute.push(processedCmd)
            commandMap.push({ command: processedCmd, item: item.name })

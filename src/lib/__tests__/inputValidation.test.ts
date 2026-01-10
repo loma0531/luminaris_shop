@@ -1,116 +1,115 @@
 import { describe, it, expect } from 'vitest'
 import {
-  validateNickColorCode,
-  sanitizeNickColorCode,
-  replaceCustomInputInCommand,
+  validateCustomInput,
+  sanitizeCustomInput,
+  replaceCustomInput,
   commandRequiresCustomInput,
-} from '../nickColorValidation'
+} from '../inputValidation'
 
-describe('validateNickColorCode', () => {
+describe('validateCustomInput', () => {
   it('should accept valid simple color codes', () => {
-    const result = validateNickColorCode('&aTest')
+    const result = validateCustomInput('&aTest')
     expect(result.valid).toBe(true)
   })
 
   it('should accept valid hex color codes', () => {
-    const result = validateNickColorCode('&x&F&F&0&0&0&0Test')
+    const result = validateCustomInput('&x&F&F&0&0&0&0Test')
     expect(result.valid).toBe(true)
   })
 
   it('should accept complex gradient codes', () => {
     const code = '&x&8&6&6&4&F&FL&x&9&6&7&3&F&Fo&x&A&5&8&3&F&Em'
-    const result = validateNickColorCode(code)
+    const result = validateCustomInput(code)
     expect(result.valid).toBe(true)
   })
 
   it('should reject empty input', () => {
-    expect(validateNickColorCode('')).toEqual({ valid: false, error: 'กรุณากรอกโค้ดสี' })
-    expect(validateNickColorCode('   ')).toEqual({ valid: false, error: 'กรุณากรอกโค้ดสี' })
+    expect(validateCustomInput('')).toEqual({ valid: false, error: 'กรุณากรอกข้อมูล' })
+    expect(validateCustomInput('   ')).toEqual({ valid: false, error: 'กรุณากรอกข้อมูล' })
   })
 
   it('should reject null/undefined', () => {
-    expect(validateNickColorCode(null as unknown as string).valid).toBe(false)
-    expect(validateNickColorCode(undefined as unknown as string).valid).toBe(false)
+    expect(validateCustomInput(null as unknown as string).valid).toBe(false)
+    expect(validateCustomInput(undefined as unknown as string).valid).toBe(false)
   })
 
-  it('should reject code without color markers', () => {
-    const result = validateNickColorCode('JustText')
-    expect(result.valid).toBe(false)
-    expect(result.error).toContain('&')
+  it('should accept text without color markers (no longer requires & or #)', () => {
+    const result = validateCustomInput('JustText')
+    expect(result.valid).toBe(true)
   })
 
   it('should reject dangerous patterns - semicolon', () => {
-    const result = validateNickColorCode('&aTest;/op hacker')
+    const result = validateCustomInput('&aTest;/op hacker')
     expect(result.valid).toBe(false)
     expect(result.error).toContain('ไม่อนุญาต')
   })
 
   it('should reject dangerous patterns - newline', () => {
-    const result = validateNickColorCode('&aTest\n/op hacker')
+    const result = validateCustomInput('&aTest\n/op hacker')
     expect(result.valid).toBe(false)
   })
 
   it('should reject dangerous patterns - slash', () => {
-    const result = validateNickColorCode('&aTest/op hacker')
+    const result = validateCustomInput('&aTest/op hacker')
     expect(result.valid).toBe(false)
   })
 
   it('should reject dangerous patterns - brackets', () => {
-    const result = validateNickColorCode('&a{player}')
+    const result = validateCustomInput('&a{player}')
     expect(result.valid).toBe(false)
   })
 
   it('should reject too long input', () => {
-    const longCode = '&a' + 'A'.repeat(250)
-    const result = validateNickColorCode(longCode)
+    const longCode = '&a' + 'A'.repeat(2050)
+    const result = validateCustomInput(longCode)
     expect(result.valid).toBe(false)
     expect(result.error).toContain('ยาวเกินไป')
   })
 })
 
-describe('sanitizeNickColorCode', () => {
+describe('sanitizeCustomInput', () => {
   it('should trim whitespace', () => {
-    expect(sanitizeNickColorCode('  &aTest  ')).toBe('&aTest')
+    expect(sanitizeCustomInput('  &aTest  ')).toBe('&aTest')
   })
 
   it('should remove dangerous characters', () => {
-    expect(sanitizeNickColorCode('&aTest;/op')).toBe('&aTestop')
+    expect(sanitizeCustomInput('&aTest;/op')).toBe('&aTestop')
   })
 
   it('should handle null/undefined', () => {
-    expect(sanitizeNickColorCode(null as unknown as string)).toBe('')
-    expect(sanitizeNickColorCode(undefined as unknown as string)).toBe('')
+    expect(sanitizeCustomInput(null as unknown as string)).toBe('')
+    expect(sanitizeCustomInput(undefined as unknown as string)).toBe('')
   })
 
   it('should truncate long input', () => {
-    const longCode = '&a' + 'A'.repeat(250)
-    const result = sanitizeNickColorCode(longCode)
-    expect(result.length).toBeLessThanOrEqual(200)
+    const longCode = '&a' + 'A'.repeat(2050)
+    const result = sanitizeCustomInput(longCode)
+    expect(result.length).toBeLessThanOrEqual(2000)
   })
 })
 
-describe('replaceCustomInputInCommand', () => {
+describe('replaceCustomInput', () => {
   it('should replace {customInput} with value', () => {
     const cmd = 'cmi nick {player} {customInput}'
-    const result = replaceCustomInputInCommand(cmd, '&aTest')
+    const result = replaceCustomInput(cmd, '&aTest')
     expect(result).toBe('cmi nick {player} &aTest')
   })
 
   it('should handle case insensitive placeholder', () => {
     const cmd = 'cmi nick {player} {CUSTOMINPUT}'
-    const result = replaceCustomInputInCommand(cmd, '&aTest')
+    const result = replaceCustomInput(cmd, '&aTest')
     expect(result).toBe('cmi nick {player} &aTest')
   })
 
   it('should sanitize input before replacement', () => {
     const cmd = 'cmi nick {player} {customInput}'
-    const result = replaceCustomInputInCommand(cmd, '&aTest;/op')
+    const result = replaceCustomInput(cmd, '&aTest;/op')
     expect(result).toBe('cmi nick {player} &aTestop')
     expect(result).not.toContain(';')
   })
 
   it('should handle null command', () => {
-    expect(replaceCustomInputInCommand(null as unknown as string, '&aTest')).toBe(null)
+    expect(replaceCustomInput(null as unknown as string, '&aTest')).toBe(null)
   })
 })
 

@@ -3,6 +3,8 @@
  * ตรวจสอบและทำความสะอาด Input ต่างๆ เพื่อป้องกันการโจมตี
  */
 
+// ========== MongoDB ObjectId ==========
+
 /**
  * Validate MongoDB ObjectId format
  */
@@ -10,6 +12,8 @@ export function isValidObjectId(id: string): boolean {
   if (typeof id !== 'string') return false
   return /^[a-fA-F0-9]{24}$/.test(id)
 }
+
+// ========== Minecraft Name ==========
 
 /**
  * Validate Minecraft username
@@ -23,6 +27,8 @@ export function isValidMinecraftName(name: string): boolean {
   return standardRegex.test(name) || bedrockRegex.test(name)
 }
 
+// ========== Email ==========
+
 /**
  * Validate email format
  */
@@ -30,6 +36,8 @@ export function isValidEmail(email: string): boolean {
   if (typeof email !== 'string') return false
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
+// ========== String Sanitization ==========
 
 /**
  * Sanitize string input - remove potential XSS vectors
@@ -46,6 +54,8 @@ export function sanitizeString(input: string, maxLength = 500): string {
     .replace(/data:/gi, '') // Remove data URIs
 }
 
+// ========== Price Validation ==========
+
 /**
  * Validate and sanitize price
  * Returns null if invalid, integer if valid (no decimal points for Thai Baht)
@@ -55,6 +65,8 @@ export function validatePrice(price: unknown): number | null {
   if (isNaN(parsed) || !isFinite(parsed) || parsed <= 0 || parsed > 1000000) return null
   return Math.round(parsed) // Round to integer (Thai Baht doesn't use decimals typically)
 }
+
+// ========== Pagination ==========
 
 /**
  * Validate pagination parameters
@@ -71,6 +83,8 @@ export function validatePagination(
   return { page: parsedPage, limit: parsedLimit, skip }
 }
 
+// ========== Status Validation ==========
+
 /**
  * Validate order status
  */
@@ -85,6 +99,8 @@ export function isValidPaymentStatus(status: unknown): status is 'PENDING' | 'VE
   return ['PENDING', 'VERIFIED', 'REJECTED'].includes(String(status))
 }
 
+// ========== Command Sanitization ==========
+
 /**
  * Sanitize array of commands for RCON
  * Remove any commands that might be dangerous
@@ -96,4 +112,105 @@ export function sanitizeCommands(commands: unknown[]): string[] {
     .filter((cmd): cmd is string => typeof cmd === 'string')
     .map(cmd => cmd.trim())
     .filter(cmd => cmd.length > 0 && cmd.length < 500)
+}
+
+// ========== Custom Input Validation ==========
+
+// Pattern อันตรายที่ต้องบล็อก
+const DANGEROUS_PATTERNS = [
+  /;/,           // Command separator
+  /\n/,          // Newline
+  /\r/,          // Carriage return
+  /\//,          // Command prefix
+  /\\/,          // Backslash
+  /\$/,          // Variable injection
+  /`/,           // Backtick
+  /\|/,          // Pipe
+  />/,           // Redirect
+  /</,           // Redirect
+  /{/,           // Bracket (except in placeholder)
+  /}/,           // Bracket (except in placeholder)
+  /'/,           // Single quote
+  /"/,           // Double quote
+]
+
+// ความยาวสูงสุดของ customInput
+const MAX_CUSTOM_INPUT_LENGTH = 2000
+
+/**
+ * ตรวจสอบ customInput ให้ปลอดภัย
+ */
+export function validateCustomInput(input: string): { valid: boolean; error?: string; sanitized?: string } {
+  // ตรวจสอบว่ามีค่าหรือไม่
+  if (!input || typeof input !== 'string') {
+    return { valid: false, error: 'กรุณากรอกข้อมูล' }
+  }
+
+  const trimmed = input.trim()
+
+  // ตรวจสอบความยาว
+  if (trimmed.length === 0) {
+    return { valid: false, error: 'กรุณากรอกข้อมูล' }
+  }
+
+  if (trimmed.length > MAX_CUSTOM_INPUT_LENGTH) {
+    return { valid: false, error: `ข้อมูลยาวเกินไป (สูงสุด ${MAX_CUSTOM_INPUT_LENGTH} ตัวอักษร)` }
+  }
+
+  // ตรวจสอบ patterns อันตราย
+  for (const pattern of DANGEROUS_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return { valid: false, error: 'มีตัวอักษรที่ไม่อนุญาต' }
+    }
+  }
+
+  // Note: ไม่บังคับให้มี & หรือ # แล้ว เพราะ customInput อาจไม่ใช่โค้ดสี
+
+  return { valid: true, sanitized: trimmed }
+}
+
+/**
+ * Sanitize customInput ให้ปลอดภัย
+ * ใช้เมื่อต้องการทำความสะอาด input ก่อนใช้งาน
+ */
+export function sanitizeCustomInput(input: string): string {
+  if (!input || typeof input !== 'string') {
+    return ''
+  }
+
+  // ลบ whitespace ต้นและท้าย
+  let sanitized = input.trim()
+
+  // ลบตัวอักษรอันตราย
+  sanitized = sanitized
+    .replace(/[;\n\r\/\\$`|><{}'\"]/g, '')
+    .substring(0, MAX_CUSTOM_INPUT_LENGTH)
+
+  return sanitized
+}
+
+/**
+ * แทนที่ {customInput} ใน command ด้วยค่าจริง
+ */
+export function replaceCustomInput(command: string, customInput: string): string {
+  if (!command || typeof command !== 'string') {
+    return command
+  }
+
+  // Sanitize input ก่อนแทนที่
+  const sanitized = sanitizeCustomInput(customInput)
+  
+  // แทนที่ {customInput} ด้วยค่าจริง
+  return command.replace(/\{customInput\}/gi, sanitized)
+}
+
+/**
+ * ตรวจสอบว่า command มี {customInput} placeholder หรือไม่
+ */
+export function commandRequiresCustomInput(commands: string[]): boolean {
+  if (!Array.isArray(commands)) {
+    return false
+  }
+  
+  return commands.some(cmd => /\{customInput\}/i.test(cmd))
 }

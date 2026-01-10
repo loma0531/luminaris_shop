@@ -19,7 +19,7 @@ export const PaginationSchema = z.object({
 export const CartItemSchema = z.object({
   productId: ObjectIdSchema,
   quantity: z.coerce.number().min(1).max(100).int(),
-  customInput: z.string().max(200).nullable().optional(),  // สำหรับบริการที่ต้องการ input เพิ่มเติม
+  customInput: z.string().max(2000).nullable().optional(),  // สำหรับบริการที่ต้องการ input เพิ่มเติม
 })
 
 export const CheckoutSchema = z.object({
@@ -30,7 +30,7 @@ export const CheckoutSchema = z.object({
     price: z.number().min(0),
     quantity: z.number().min(1).max(99).int(),
     commands: z.array(z.string()).max(20).optional().default([]),
-    customInput: z.string().max(200).nullable().optional(),  // เช่น โค้ดสี
+    customInput: z.string().max(2000).nullable().optional(),  // เช่น โค้ดสี
   })).min(1),
   total: z.number().min(0),
   action: z.literal('create'),

@@ -13,7 +13,7 @@ import { apiFetch } from '@/lib/apiFetch'
 import { useToast } from '@/context/ToastContext'
 import { CART_LIMITS, canAddToCart } from '@/lib/cartLimits'
 import { logger } from '@/lib/logger'
-import { validateNickColorCode } from '@/lib/nickColorValidation'
+import { validateCustomInput } from '@/lib/inputValidation'
 
 // Product Image with error handling and fallback
 function ProductImage({ src, alt, priority = false }: { src: string | null; alt: string; priority?: boolean }) {
@@ -244,7 +244,7 @@ export default function ShopPage() {
     if (!pendingProduct) return
     
     // Validate input ด้วย validateNickColorCode
-    const validation = validateNickColorCode(customInputValue)
+    const validation = validateCustomInput(customInputValue)
     if (!validation.valid) {
       toastError(validation.error || 'โค้ดสีไม่ถูกต้อง')
       return
