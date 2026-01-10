@@ -330,6 +330,31 @@ export default function ImageEditor({
     }
   }, [previewUrl, initialImage])
 
+  // Handle paste event for clipboard images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Don't handle if we're in URL input mode or already editing
+      if (showUrlInput) return
+      
+      const items = e.clipboardData?.items
+      if (!items) return
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile()
+          if (file) {
+            e.preventDefault()
+            handleFileSelect(file)
+            break
+          }
+        }
+      }
+    }
+    
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [showUrlInput, handleFileSelect])
+
   return (
     <div className="image-editor">
       <input
@@ -350,7 +375,8 @@ export default function ImageEditor({
         >
           <UploadIcon size={40} />
           <p>ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</p>
-          <span className="image-editor-hint">รองรับ: JPG, PNG, WebP, GIF (สูงสุด 10MB)</span>
+          <span className="image-editor-hint">หรือกด Ctrl+V เพื่อวางรูปจาก clipboard</span>
+          <span className="image-editor-hint" style={{ marginTop: '0.25rem' }}>รองรับ: JPG, PNG, WebP, GIF (สูงสุด 10MB)</span>
         </div>
       ) : showUrlInput ? (
         <div className="image-editor-url-mode">

@@ -21,6 +21,9 @@ import { useShop } from '../layout'
 import { ORDER_CONFIG } from '@/lib/orderConfig'
 import { logger } from '@/lib/logger'
 
+// Paste zone ref
+const pasteZoneRef = { current: null as HTMLDivElement | null }
+
 
 
 interface OrderItem {
@@ -156,8 +159,7 @@ export default function OrdersPage() {
     return () => clearInterval(interval)
   }, [pendingOrder])
 
-  const handleSlipUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleSlipUpload = async (file: File) => {
     if (!file || !user || !pendingOrder || !pendingOrder.payment) return
 
     setUploading(true)
@@ -221,6 +223,37 @@ export default function OrdersPage() {
   }
 
   const isExpired = timeLeft === '00:00'
+
+  // Handle file input change
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleSlipUpload(file)
+  }
+
+  // Handle paste event for clipboard images
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      // Only handle paste when we're on pending order and not expired
+      if (!pendingOrder || isExpired || uploading) return
+      
+      const items = e.clipboardData?.items
+      if (!items) return
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          const file = items[i].getAsFile()
+          if (file) {
+            e.preventDefault()
+            handleSlipUpload(file)
+            break
+          }
+        }
+      }
+    }
+    
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [pendingOrder, isExpired, uploading])
 
   return (
     <div>
@@ -425,12 +458,14 @@ export default function OrdersPage() {
             {/* Actions */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {!isExpired && (
-                <label
+              <label
                   className="btn btn-primary btn-lg"
                   style={{ 
                     width: '100%', 
                     cursor: uploading ? 'not-allowed' : 'pointer',
                     justifyContent: 'center',
+                    flexDirection: 'column',
+                    gap: '0.25rem',
                   }}
                 >
                   {uploading ? (
@@ -440,14 +475,19 @@ export default function OrdersPage() {
                     </>
                   ) : (
                     <>
-                      <UploadIcon size={20} />
-                      อัปโหลดสลิปการโอนเงิน
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <UploadIcon size={20} />
+                        อัปโหลดสลิปการโอนเงิน
+                      </div>
+                      <span style={{ fontSize: '0.75rem', opacity: 0.7, fontWeight: 400 }}>
+                        หรือกด Ctrl+V เพื่อวางรูปจาก clipboard
+                      </span>
                     </>
                   )}
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleSlipUpload}
+                    onChange={handleFileInputChange}
                     style={{ display: 'none' }}
                     disabled={uploading}
                   />
