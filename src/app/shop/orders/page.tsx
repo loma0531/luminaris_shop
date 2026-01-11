@@ -430,6 +430,9 @@ export default function OrdersPage() {
                   สแกน QR Code เพื่อชำระเงิน
                 </h3>
                 <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '1rem' }}>
+                  ต้องเป็นสลิปธนาคารที่มี QR Code ในสลิปเท่านั้น ไม่รองรับ True money
+                </p>
+                <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '1rem' }}>
                   PromptPay
                 </p>
                 

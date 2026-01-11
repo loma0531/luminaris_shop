@@ -208,52 +208,172 @@ export function SkeletonStatsPage() {
   )
 }
 
-// Skeleton for Profile Page
+// Skeleton for Profile Page - New Layout with 3D model
 export function SkeletonProfilePage() {
   return (
-    <div>
-      {/* Title */}
-      <Skeleton width={120} height="1.375rem" style={{ marginBottom: '1.5rem' }} />
-
-      {/* 2 Column Layout */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(2, 1fr)', 
-        gap: '1rem',
-        maxWidth: '900px',
-      }}>
-        {/* Left Column - Main Info */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          {/* Profile Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-            <Skeleton width={56} height={56} borderRadius="0.5rem" />
-            <div style={{ flex: 1 }}>
-              <Skeleton width="60%" height="1rem" style={{ marginBottom: '0.25rem' }} />
-              <Skeleton width="40%" height="0.75rem" />
-            </div>
-          </div>
-          {/* Stats */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            <Skeleton width="100%" height={70} />
-            <Skeleton width="100%" height={70} />
-            <Skeleton width="100%" height={70} />
-          </div>
+    <>
+      <div className="skeleton-profile-page">
+        {/* Title - Simple without box */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
+          <Skeleton width={22} height={22} borderRadius={4} />
+          <Skeleton width={140} height="1.375rem" />
         </div>
 
-        {/* Right Column - Activity Info */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ height: '76px', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Skeleton width={16} height={16} />
-            <Skeleton width={100} height="0.9375rem" />
+        {/* Main Grid - 3D Model Left, Info Right */}
+        <div className="skeleton-profile-grid">
+          {/* Left - 3D Model Card (hidden on mobile) */}
+          <div className="skeleton-3d-section">
+            {/* Model Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <Skeleton width={18} height={18} borderRadius={4} />
+              <Skeleton width={100} height="0.875rem" />
+            </div>
+            {/* 3D Model Placeholder */}
+            <div style={{
+              width: '100%',
+              height: '400px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: '12px',
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div className="skeleton-spinner" />
+                <Skeleton width={100} height="0.875rem" style={{ margin: '0 auto' }} />
+              </div>
+            </div>
+            {/* Hint */}
+            <Skeleton width={140} height="0.75rem" style={{ margin: '0.75rem auto 0' }} />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-            <Skeleton width="100%" height={70} />
-            <Skeleton width="100%" height={70} />
-            <Skeleton width="100%" height={70} />
+
+          {/* Right - Info Cards */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Profile Card */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '16px',
+              padding: '1.25rem',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                <Skeleton width={80} height={80} borderRadius="16px" />
+                <div style={{ flex: 1 }}>
+                  <Skeleton width="60%" height="1.375rem" style={{ marginBottom: '0.5rem' }} />
+                  <Skeleton width="40%" height="0.875rem" />
+                </div>
+              </div>
+            </div>
+
+            {/* UUID Card */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '1.25rem',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Skeleton width={16} height={16} borderRadius={4} />
+                  <Skeleton width={40} height="0.875rem" />
+                </div>
+                <Skeleton width={60} height={28} borderRadius={8} />
+              </div>
+              <Skeleton width="100%" height={44} borderRadius={8} />
+            </div>
+
+            {/* Activity Card */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '1.25rem',
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                marginBottom: '1rem',
+                paddingBottom: '0.75rem',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              }}>
+                <Skeleton width={18} height={18} borderRadius={4} />
+                <Skeleton width={100} height="1rem" />
+              </div>
+              <div className="skeleton-activity-grid">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} style={{
+                    textAlign: 'center',
+                    padding: '1rem',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                  }}>
+                    <Skeleton width="70%" height="0.75rem" style={{ margin: '0 auto 0.5rem' }} />
+                    <Skeleton width="50%" height="1.125rem" style={{ margin: '0 auto' }} />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <style>{`
+        .skeleton-profile-page {
+          max-width: 1100px;
+          margin: 0 auto;
+        }
+
+        .skeleton-profile-grid {
+          display: grid;
+          grid-template-columns: 320px 1fr;
+          gap: 1.5rem;
+          align-items: start;
+        }
+
+        .skeleton-3d-section {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          padding: 1.25rem;
+        }
+
+        .skeleton-activity-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+        }
+
+        .skeleton-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(255, 255, 255, 0.1);
+          border-top-color: rgba(255, 255, 255, 0.5);
+          border-radius: 50%;
+          margin: 0 auto 1rem;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 900px) {
+          .skeleton-profile-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .skeleton-3d-section {
+            display: none;
+          }
+
+          .skeleton-activity-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </>
   )
 }
 

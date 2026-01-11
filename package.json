@@ -45,6 +45,7 @@
     "react-cropper": "^2.3.3",
     "react-dom": "^19.2.3",
     "sharp": "^0.34.5",
+    "skinview3d": "^3.4.1",
     "zod": "^4.3.5"
   },
   "devDependencies": {

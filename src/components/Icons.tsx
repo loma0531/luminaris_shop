@@ -335,3 +335,12 @@ export const CalendarMonthIcon: React.FC<IconProps> = ({ size = 20, className, s
     <path d="M16 18h.01" />
   </svg>
 )
+
+// Sparkles Icon
+export const SparklesIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5L12 3Z" />
+    <path d="M19 15L20 18L23 19L20 20L19 23L18 20L15 19L18 18L19 15Z" />
+    <path d="M5 18L6 20L8 21L6 22L5 24L4 22L2 21L4 20L5 18Z" />
+  </svg>
+)
