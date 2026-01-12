@@ -77,8 +77,8 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   return (
     <div className="login-modal-overlay" onClick={onClose}>
       <div className="login-modal" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold flex items-center gap-2">
             <GameControllerIcon size={24} />
             เข้าสู่ระบบ
           </h2>
@@ -87,7 +87,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           </button>
         </div>
 
-        <p style={{ color: 'var(--muted-foreground)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+        <p className="text-muted-foreground mb-6 text-sm">
           กรุณาใส่ชื่อ Minecraft ของคุณเพื่อดำเนินการต่อ
         </p>
 
@@ -114,13 +114,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
+            className="btn btn-primary w-full"
             disabled={loading || !playerName.trim()}
           >
             {loading ? (
               <>
-                <div className="spinner" style={{ width: 16, height: 16 }} />
+                <div className="spinner w-4 h-4" />
                 กำลังตรวจสอบ...
               </>
             ) : (
@@ -129,16 +128,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           </button>
         </form>
 
-        <div style={{
-          marginTop: '1.5rem',
-          paddingTop: '1rem',
-          borderTop: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontSize: '0.875rem',
-          color: 'var(--muted-foreground)',
-        }}>
+        <div className="mt-6 pt-4 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
           <QuestionIcon size={16} />
           ต้องเป็นผู้เล่นที่เคยเข้าเซิร์ฟเวอร์เท่านั้น
         </div>

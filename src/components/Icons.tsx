@@ -344,3 +344,81 @@ export const SparklesIcon: React.FC<IconProps> = ({ size = 20, className, style 
     <path d="M5 18L6 20L8 21L6 22L5 24L4 22L2 21L4 20L5 18Z" />
   </svg>
 )
+
+// ========== Image Editor Icons ==========
+
+// Flip Horizontal Icon
+export const FlipHIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3" />
+    <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
+    <line x1="12" y1="3" x2="12" y2="21" strokeDasharray="2 2" />
+  </svg>
+)
+
+// Flip Vertical Icon
+export const FlipVIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3" />
+    <path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" />
+    <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="2 2" />
+  </svg>
+)
+
+// Rotate Icon
+export const RotateIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M21.5 2v6h-6" />
+    <path d="M21.34 15.57a10 10 0 1 1-.57-8.38" />
+  </svg>
+)
+
+// Link Icon
+export const LinkIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+)
+
+// Reset Icon
+export const ResetIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+  </svg>
+)
+
+// Zoom In Icon
+export const ZoomInIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="11" y1="8" x2="11" y2="14" />
+    <line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+)
+
+// Zoom Out Icon
+export const ZoomOutIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    <line x1="8" y1="11" x2="14" y2="11" />
+  </svg>
+)
+
+// Crop Icon
+export const CropIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" />
+    <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" />
+  </svg>
+)
+
+// Move Icon
+export const MoveIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M15 19l-3 3-3-3M2 12h20M12 2v20" />
+  </svg>
+)

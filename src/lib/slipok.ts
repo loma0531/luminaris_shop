@@ -96,7 +96,30 @@ function handleAxiosError(error: unknown): SlipVerifyResponse {
 }
 
 /**
+ * Detect content type from buffer magic bytes
+ * Returns appropriate MIME type for SlipOK API
+ */
+function detectContentType(buffer: Buffer): { mimeType: string; extension: string } {
+  // Check magic bytes for common image formats
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+    return { mimeType: 'image/png', extension: 'png' }
+  }
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    return { mimeType: 'image/jpeg', extension: 'jpg' }
+  }
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46) {
+    // RIFF header, could be WebP
+    if (buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+      return { mimeType: 'image/webp', extension: 'webp' }
+    }
+  }
+  // Default to PNG as it's lossless and better for QR codes
+  return { mimeType: 'image/png', extension: 'png' }
+}
+
+/**
  * Verify slip by file buffer
+ * Preserves original image format for better QR code scanning
  */
 async function verifySlipByFile(
   fileBuffer: Buffer,
@@ -115,10 +138,13 @@ async function verifySlipByFile(
   }
 
   try {
+    // Detect original content type - DON'T convert to JPEG as it loses QR quality
+    const { mimeType, extension } = detectContentType(fileBuffer)
+    
     const formData = new FormData()
     formData.append('files', fileBuffer, {
-      filename: 'slip.jpg',
-      contentType: 'image/jpeg',
+      filename: `slip.${extension}`,
+      contentType: mimeType,
     })
     formData.append('log', 'true')
     
@@ -127,7 +153,7 @@ async function verifySlipByFile(
     }
 
     const url = `https://api.slipok.com/api/line/apikey/${config.branchId}`
-    logger.debug(`Calling SlipOK API: ${url}`, 200)
+    logger.debug(`Calling SlipOK API: ${url} (${mimeType}, ${fileBuffer.length} bytes)`, 200)
 
     const response = await axios.post(
       url,

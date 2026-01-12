@@ -128,7 +128,7 @@ export default function AdminCategoriesPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+      <div className="flex items-center justify-between mb-6">
         <h1 className="admin-title">รายการหมวดหมู่สินค้าทั้งหมด</h1>
         <button
           className="btn btn-primary"
@@ -143,7 +143,7 @@ export default function AdminCategoriesPage() {
         </button>
       </div>
 
-      <div className="search-box" style={{ marginBottom: '1.5rem' }}>
+      <div className="search-box mb-6">
         <span className="search-icon"><SearchIcon size={16} /></span>
         <input
           type="text"
@@ -160,7 +160,7 @@ export default function AdminCategoriesPage() {
         </div>
       ) : filteredCategories.length === 0 ? (
         <div className="empty-state">
-          <FolderIcon size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+          <FolderIcon size={48} className="mb-4 opacity-50" />
           <p>ไม่มีหมวดหมู่สินค้า</p>
         </div>
       ) : (
@@ -171,19 +171,19 @@ export default function AdminCategoriesPage() {
                 <th>ชื่อหมวดหมู่</th>
                 <th>รายละเอียด</th>
                 <th>จำนวนสินค้า</th>
-                <th style={{ width: '100px' }}>จัดการ</th>
+                <th className="w-[100px]">จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {filteredCategories.map((category) => (
                 <tr key={category.id}>
-                  <td style={{ fontWeight: 500 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <td className="font-medium">
+                    <div className="flex items-center gap-2">
                       <FolderIcon size={18} />
                       {category.name}
                     </div>
                   </td>
-                  <td style={{ color: 'var(--muted-foreground)' }}>
+                  <td className="text-muted-foreground">
                     {category.description || '-'}
                   </td>
                   <td>
@@ -233,7 +233,7 @@ export default function AdminCategoriesPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+              <div className="flex gap-2 justify-end mt-4">
                 {editingCategory && (
                   <button
                     type="button"

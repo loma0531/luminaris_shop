@@ -3,90 +3,21 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import Cropper, { ReactCropperElement } from 'react-cropper'
 import 'cropperjs/dist/cropper.css'
-import { CloseIcon } from './Icons'
+import { 
+  CloseIcon, 
+  UploadIcon, 
+  CheckIcon,
+  FlipHIcon,
+  FlipVIcon,
+  RotateIcon,
+  LinkIcon,
+  ResetIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+  CropIcon,
+  MoveIcon
+} from './Icons'
 import { logger } from '@/lib/logger'
-
-// Icons
-const UploadIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="17,8 12,3 7,8" />
-    <line x1="12" y1="3" x2="12" y2="15" />
-  </svg>
-)
-
-const FlipHIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3" />
-    <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
-    <line x1="12" y1="3" x2="12" y2="21" strokeDasharray="2 2" />
-  </svg>
-)
-
-const FlipVIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 8V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3" />
-    <path d="M3 16v3a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3" />
-    <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="2 2" />
-  </svg>
-)
-
-const RotateIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21.5 2v6h-6" />
-    <path d="M21.34 15.57a10 10 0 1 1-.57-8.38" />
-  </svg>
-)
-
-const CheckIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-)
-
-const LinkIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-)
-
-const ResetIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-    <path d="M3 3v5h5" />
-  </svg>
-)
-
-const ZoomInIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    <line x1="11" y1="8" x2="11" y2="14" />
-    <line x1="8" y1="11" x2="14" y2="11" />
-  </svg>
-)
-
-const ZoomOutIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-    <line x1="8" y1="11" x2="14" y2="11" />
-  </svg>
-)
-
-const CropIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" />
-    <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" />
-  </svg>
-)
-
-const MoveIcon = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M14 19l-3 3-3-3M2 12h20M12 2v20" />
-  </svg>
-)
 
 interface ImageEditorProps {
   initialImage?: string
@@ -362,7 +293,7 @@ export default function ImageEditor({
         type="file"
         accept="image/*"
         onChange={handleInputChange}
-        style={{ display: 'none' }}
+        className="hidden"
       />
       
       {!previewUrl && !showUrlInput ? (
@@ -376,7 +307,7 @@ export default function ImageEditor({
           <UploadIcon size={40} />
           <p>ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</p>
           <span className="image-editor-hint">หรือกด Ctrl+V เพื่อวางรูปจาก clipboard</span>
-          <span className="image-editor-hint" style={{ marginTop: '0.25rem' }}>รองรับ: JPG, PNG, WebP, GIF (สูงสุด 10MB)</span>
+          <span className="image-editor-hint mt-1">รองรับ: JPG, PNG, WebP, GIF (สูงสุด 10MB)</span>
         </div>
       ) : showUrlInput ? (
         <div className="image-editor-url-mode">
@@ -418,7 +349,7 @@ export default function ImageEditor({
             <div className="cropper-wrapper">
               <Cropper
                 ref={cropperRef}
-                style={{ height: 400, width: '100%' }}
+                className="h-[400px] w-full"
                 initialAspectRatio={16 / 9}
                 aspectRatio={16 / 9}
                 preview=".img-preview"
@@ -440,7 +371,7 @@ export default function ImageEditor({
                <img 
                  src={previewUrl} 
                  alt="Preview" 
-                 style={{ maxWidth: '100%', maxHeight: '300px', objectFit: 'contain' }}
+                 className="max-w-full max-h-[300px] object-contain"
                />
              </div>
           )}

@@ -234,7 +234,7 @@ export default function AdminProductsPage() {
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="empty-state">
-          <PackageIcon size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+          <PackageIcon size={48} className="mb-4 opacity-50" />
           <p>ไม่มีรายการสินค้าอื่น</p>
         </div>
       ) : (
@@ -243,7 +243,7 @@ export default function AdminProductsPage() {
             <div key={product.id} className="product-card">
               <div className="product-image">
                 {product.image ? (
-                  <Image src={product.image} alt={product.name} fill style={{ objectFit: 'cover' }} />
+                  <Image src={product.image} alt={product.name} fill className="object-cover" />
                 ) : (
                   <PackageIcon size={40} />
                 )}

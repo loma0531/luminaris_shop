@@ -7,19 +7,19 @@ import { CheckCircleIcon, CloseIcon, AlertIcon, ClockIcon } from '@/components/I
 
 const toastStyles = {
   success: {
-    icon: <CheckCircleIcon size={24} style={{ color: 'var(--success)' }} />, 
+    icon: <CheckCircleIcon size={24} className="text-success" />, 
     title: 'ดำเนินการสำเร็จ',
   },
   error: {
-    icon: <AlertIcon size={24} style={{ color: 'var(--error)' }} />,
+    icon: <AlertIcon size={24} className="text-error" />,
     title: 'เกิดข้อผิดพลาด',
   },
   info: {
-    icon: <ClockIcon size={24} style={{ color: 'var(--primary)' }} />,
+    icon: <ClockIcon size={24} className="text-primary" />,
     title: 'กำลังดำเนินการ',
   },
   warning: {
-    icon: <AlertIcon size={24} style={{ color: 'var(--warning)' }} />, 
+    icon: <AlertIcon size={24} className="text-warning" />, 
     title: 'คำเตือน',
   },
 }
@@ -28,63 +28,28 @@ export default function ToastContainer() {
   const { toasts, removeToast } = useToast()
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: '1rem',
-        right: '1rem',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-        pointerEvents: 'none',
-      }}
-    >
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="toast-card"
-          style={{
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
-            padding: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            minWidth: '300px',
-            maxWidth: '400px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-            position: 'relative',
-            pointerEvents: 'auto',
-            animation: 'toastSlideIn 0.3s ease-out forwards',
-          }}
+          className="toast-card bg-card border border-border rounded-xl p-4 flex items-center gap-4 min-w-[300px] max-w-[400px] shadow-2xl relative pointer-events-auto animate-[toastSlideIn_0.3s_ease-out_forwards]"
         >
           {/* Close Button */}
           <button
             onClick={() => removeToast(toast.id)}
-            style={{
-              position: 'absolute',
-              top: '0.5rem',
-              right: '0.5rem',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--muted-foreground)',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
+            className="absolute top-2 right-2 bg-transparent border-none text-muted-foreground cursor-pointer p-1"
           >
             <CloseIcon size={14} />
           </button>
 
           {/* Icon */}
-          <div style={{ flexShrink: 0 }}>
+          <div className="flex-shrink-0">
             {toastStyles[toast.type].icon}
           </div>
 
           {/* Content */}
-          <div style={{ flex: 1, color: 'var(--foreground)' }}>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 }}>
+          <div className="flex-1 text-foreground">
+            <h3 className="m-0 text-base font-semibold leading-snug">
               {toast.message}
             </h3>
           </div>

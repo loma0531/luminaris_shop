@@ -257,64 +257,52 @@ export default function OrdersPage() {
 
   return (
     <div>
-      <h1 style={{ 
-        fontSize: '1.5rem', 
-        fontWeight: 600, 
-        marginBottom: '1.5rem', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem' 
-      }}>
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <CreditCardIcon size={24} />
         รายการรอชำระเงิน
       </h1>
 
         {loading ? (
-          <div className="card" style={{ padding: '1.5rem' }}>
+          <div className="card p-6">
             {/* Timer skeleton */}
-            <div className="skeleton" style={{ width: '100%', height: 50, marginBottom: '1.5rem', borderRadius: '0.375rem' }} />
+            <div className="skeleton w-full h-[50px] mb-6 rounded-md" />
             {/* Order info skeleton */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+            <div className="flex justify-between mb-4 pb-4 border-b border-border">
               <div>
-                <div className="skeleton" style={{ width: 150, height: '1.25rem', marginBottom: '0.5rem' }} />
-                <div className="skeleton" style={{ width: 100, height: '0.875rem' }} />
+                <div className="skeleton w-[150px] h-5 mb-2" />
+                <div className="skeleton w-[100px] h-3.5" />
               </div>
             </div>
             {/* Items skeleton */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div className="skeleton" style={{ width: 100, height: '1rem', marginBottom: '0.75rem' }} />
-              <div className="skeleton" style={{ width: '100%', height: 44, marginBottom: '0.5rem' }} />
-              <div className="skeleton" style={{ width: '100%', height: 44, marginBottom: '0.5rem' }} />
+            <div className="mb-6">
+              <div className="skeleton w-[100px] h-4 mb-3" />
+              <div className="skeleton w-full h-11 mb-2" />
+              <div className="skeleton w-full h-11 mb-2" />
             </div>
             {/* QR skeleton */}
-            <div style={{ textAlign: 'center', padding: '1.5rem', background: 'var(--muted)', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
-              <div className="skeleton" style={{ width: 200, height: 200, margin: '0 auto 1rem' }} />
-              <div className="skeleton" style={{ width: 100, height: '1.5rem', margin: '0 auto' }} />
+            <div className="text-center p-6 bg-muted rounded-lg mb-6">
+              <div className="skeleton w-[200px] h-[200px] mx-auto mb-4" />
+              <div className="skeleton w-[100px] h-6 mx-auto" />
             </div>
             {/* Buttons skeleton */}
-            <div className="skeleton" style={{ width: '100%', height: 48, marginBottom: '0.75rem' }} />
-            <div className="skeleton" style={{ width: '100%', height: 40 }} />
+            <div className="skeleton w-full h-12 mb-3" />
+            <div className="skeleton w-full h-10" />
           </div>
         ) : step === 'success' ? (
-          <div className="card" style={{ textAlign: 'center' }}>
+          <div className="card text-center">
             <div className="success-icon">
               <CheckCircleIcon size={48} />
             </div>
-            <h2 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: 600 }}>
+            <h2 className="mb-2 text-2xl font-semibold">
               ชำระเงินสำเร็จ!
             </h2>
-            <p style={{ color: 'var(--muted-foreground)', marginBottom: '2rem' }}>
+            <p className="text-muted-foreground mb-8">
               ไอเทมถูกส่งไปยังตัวละครของคุณแล้ว
             </p>
-            <div style={{ 
-              background: 'var(--muted)', 
-              padding: '1rem', 
-              borderRadius: '0.5rem', 
-              marginBottom: '2rem' 
-            }}>
+            <div className="bg-muted p-4 rounded-lg mb-8">
               <p>หมายเลขคำสั่งซื้อ: <strong>#{pendingOrder?.orderId}</strong></p>
             </div>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <div className="flex gap-4 justify-center">
               <Link href="/shop" className="btn btn-primary btn-lg">
                 <CartIcon size={20} />
                 กลับไปร้านค้า
@@ -327,8 +315,8 @@ export default function OrdersPage() {
           </div>
         ) : !pendingOrder ? (
           <div className="empty-state">
-            <PackageIcon size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-            <p style={{ marginBottom: '1rem' }}>ไม่มีรายการรอชำระเงิน</p>
+            <PackageIcon size={48} className="opacity-50 mb-4" />
+            <p className="mb-4">ไม่มีรายการรอชำระเงิน</p>
             <Link href="/shop/cart" className="btn btn-primary">
               <CartIcon size={16} />
               ไปที่ตะกร้าสินค้า
@@ -337,152 +325,90 @@ export default function OrdersPage() {
         ) : (
           <div className="card">
             {/* Timer */}
-            <div style={{ 
-              background: isExpired ? 'rgba(255, 68, 68, 0.1)' : 'var(--primary)', 
-              color: isExpired ? '#ff4444' : 'var(--primary-foreground)', 
-              padding: '0.75rem', 
-              borderRadius: '0.375rem',
-              marginBottom: '1.5rem',
-              textAlign: 'center',
-              fontSize: '1.25rem',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}>
+            <div className={`p-3 rounded-md mb-6 text-center text-xl font-bold flex items-center justify-center gap-2 ${isExpired ? 'bg-red-500/10 text-red-500' : 'bg-primary text-primary-foreground'}`}>
               <ClockIcon size={20} />
               {isExpired ? 'หมดเวลาชำระเงิน' : `เหลือเวลา ${timeLeft} นาที`}
             </div>
 
             {/* Order Info */}
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '1rem',
-              paddingBottom: '1rem',
-              borderBottom: '1px solid var(--border)'
-            }}>
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-border">
               <div>
-                <h2 style={{ fontSize: '1.125rem', fontWeight: 600 }}>
+                <h2 className="text-lg font-semibold">
                   Order #{pendingOrder.orderId}
                 </h2>
-                <span style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                <span className="text-sm text-muted-foreground">
                   {new Date(pendingOrder.createdAt).toLocaleString('th-TH')}
                 </span>
               </div>
             </div>
 
             {/* Items */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <h3 style={{ 
-                fontSize: '0.875rem', 
-                fontWeight: 600, 
-                marginBottom: '0.75rem', 
-                color: 'var(--muted-foreground)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}>
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground flex items-center gap-2">
                 <PackageIcon size={14} />
                 รายการสินค้า
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="flex flex-col gap-2">
                 {pendingOrder.items.map((item, idx) => (
-                  <div key={idx} style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    fontSize: '0.875rem',
-                    padding: '0.5rem',
-                    background: 'var(--muted)',
-                    borderRadius: '0.375rem',
-                  }}>
+                  <div key={idx} className="flex justify-between text-sm p-2 bg-muted rounded-md">
                     <span>{item.name} x {item.quantity}</span>
-                    <span style={{ fontWeight: 500 }}>{(item.price * item.quantity).toLocaleString()} บาท</span>
+                    <span className="font-medium">{(item.price * item.quantity).toLocaleString()} บาท</span>
                   </div>
                 ))}
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                marginTop: '1rem',
-                paddingTop: '1rem',
-                borderTop: '1px solid var(--border)',
-                fontSize: '1.25rem',
-                fontWeight: 600,
-              }}>
+              <div className="flex justify-between mt-4 pt-4 border-t border-border text-xl font-semibold">
                 <span>รวมทั้งสิ้น</span>
-                <span style={{ color: 'var(--primary)' }}>{pendingOrder.total.toLocaleString()} บาท</span>
+                <span className="text-primary">{pendingOrder.total.toLocaleString()} บาท</span>
               </div>
             </div>
 
             {/* QR Code Section */}
             {!isExpired && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '1.5rem',
-                background: 'var(--muted)',
-                borderRadius: '0.5rem',
-                marginBottom: '1.5rem',
-              }}>
-                <h3 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>
+              <div className="text-center p-6 bg-muted rounded-lg mb-6">
+                <h3 className="font-semibold mb-2">
                   สแกน QR Code เพื่อชำระเงิน
                 </h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '1rem' }}>
+                <p className="text-sm text-muted-foreground mb-4">
                   ต้องเป็นสลิปธนาคารที่มี QR Code ในสลิปเท่านั้น ไม่รองรับ True money
                 </p>
-                <p style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '1rem' }}>
+                <p className="text-sm text-muted-foreground mb-4">
                   PromptPay
                 </p>
                 
                 {qrCode ? (
-                  <div style={{
-                    background: 'white',
-                    padding: '1rem',
-                    borderRadius: '0.5rem',
-                    display: 'inline-block',
-                    marginBottom: '1rem',
-                  }}>
+                  <div className="bg-white p-4 rounded-lg inline-block mb-4">
                     <Image src={qrCode} alt="PromptPay QR Code" width={200} height={200} />
                   </div>
                 ) : (
-                  <div style={{ padding: '2rem' }}>
+                  <div className="p-8">
                     <div className="spinner" />
                   </div>
                 )}
 
-                <p style={{ fontSize: '1.125rem', fontWeight: 600, marginTop: '0.5rem' }}>
+                <p className="text-lg font-semibold mt-2">
                   {pendingOrder.total.toLocaleString()} บาท
                 </p>
               </div>
             )}
 
             {/* Actions */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div className="flex flex-col gap-3">
               {!isExpired && (
               <label
-                  className="btn btn-primary btn-lg"
-                  style={{ 
-                    width: '100%', 
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                    justifyContent: 'center',
-                    flexDirection: 'column',
-                    gap: '0.25rem',
-                  }}
+                  className={`btn btn-primary btn-lg w-full flex-col gap-1 justify-center ${uploading ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 >
                   {uploading ? (
                     <>
-                      <div className="spinner" style={{ width: 16, height: 16 }} />
+                      <div className="spinner w-4 h-4" />
                       กำลังตรวจสอบสลิป...
                     </>
                   ) : (
                     <>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div className="flex items-center gap-2">
                         <UploadIcon size={20} />
                         อัปโหลดสลิปการโอนเงิน
                       </div>
-                      <span style={{ fontSize: '0.75rem', opacity: 0.7, fontWeight: 400 }}>
+                      <span className="text-xs opacity-70 font-normal">
                         หรือกด Ctrl+V เพื่อวางรูปจาก clipboard
                       </span>
                     </>
@@ -491,15 +417,14 @@ export default function OrdersPage() {
                     type="file"
                     accept="image/*"
                     onChange={handleFileInputChange}
-                    style={{ display: 'none' }}
+                    className="hidden"
                     disabled={uploading}
                   />
                 </label>
               )}
               
               <button 
-                className="btn btn-danger"
-                style={{ width: '100%' }}
+                className="btn btn-danger w-full"
                 onClick={() => setShowConfirm(true)}
                 disabled={uploading}
               >

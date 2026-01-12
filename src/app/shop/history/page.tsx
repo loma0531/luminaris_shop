@@ -79,89 +79,57 @@ export default function HistoryPage() {
 
   return (
     <div>
-      <h1 style={{ 
-        fontSize: '1.5rem', 
-        fontWeight: 600, 
-        marginBottom: '1.5rem', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem' 
-      }}>
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <HistoryIcon size={24} />
         ประวัติการซื้อ
       </h1>
 
         {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="flex flex-col gap-4">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="card" style={{ padding: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <div className="skeleton" style={{ width: 120, height: '1.25rem' }} />
-                  <div className="skeleton" style={{ width: 80, height: '1.5rem', borderRadius: 20 }} />
+              <div key={i} className="card p-4">
+                <div className="flex justify-between mb-4">
+                  <div className="skeleton w-[120px] h-5" />
+                  <div className="skeleton w-20 h-6 rounded-full" />
                 </div>
-                <div className="skeleton" style={{ width: '100%', height: 60, marginBottom: '1rem' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div className="skeleton" style={{ width: 100, height: '1rem' }} />
-                  <div className="skeleton" style={{ width: 80, height: '1.25rem' }} />
+                <div className="skeleton w-full h-[60px] mb-4" />
+                <div className="flex justify-between">
+                  <div className="skeleton w-[100px] h-4" />
+                  <div className="skeleton w-20 h-5" />
                 </div>
               </div>
             ))}
           </div>
         ) : orders.length === 0 ? (
           <div className="empty-state">
-            <PackageIcon size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-            <p style={{ marginBottom: '1rem' }}>ยังไม่มีประวัติการซื้อ</p>
+            <PackageIcon size={48} className="opacity-50 mb-4" />
+            <p className="mb-4">ยังไม่มีประวัติการซื้อ</p>
             <Link href="/shop" className="btn btn-primary">
               <CartIcon size={16} />
               ไปซื้อสินค้า
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="flex flex-col gap-4">
             {orders.map((order) => (
               <div key={order.id} className="card">
                 {/* Order Header */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '1rem',
-                  paddingBottom: '1rem',
-                  borderBottom: '1px solid var(--border)'
-                }}>
+                <div className="flex justify-between items-center mb-4 pb-4 border-b border-border">
                   <div>
-                    <span style={{ fontWeight: 600, fontSize: '1.125rem' }}>
+                    <span className="font-semibold text-lg">
                       Order #{order.orderId}
                     </span>
-                    <span style={{ 
-                      fontSize: '0.875rem', 
-                      color: 'var(--muted-foreground)', 
-                      marginLeft: '1rem' 
-                    }}>
+                    <span className="text-sm text-muted-foreground ml-4">
                       {new Date(order.createdAt).toLocaleString('th-TH')}
                     </span>
                   </div>
                   {order.status === 'COMPLETED' ? (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      color: '#22c55e',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    }}>
+                    <div className="flex items-center gap-2 text-success text-sm font-medium">
                       <CheckCircleIcon size={16} />
                       สำเร็จ
                     </div>
                   ) : (
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      color: '#ef4444',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                    }}>
+                    <div className="flex items-center gap-2 text-error text-sm font-medium">
                       <CloseIcon size={16} />
                       ยกเลิก
                     </div>
@@ -169,23 +137,15 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Order Items */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div className="flex flex-col gap-2">
                   {order.items.map((item, idx) => (
-                    <div key={idx} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '0.5rem 0.75rem',
-                      background: 'var(--muted)',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div key={idx} className="flex justify-between items-center px-3 py-2 bg-muted rounded-md text-sm">
+                      <div className="flex items-center gap-2">
                         <PackageIcon size={14} />
                         <span>{item.name}</span>
-                        <span style={{ color: 'var(--muted-foreground)' }}>x{item.quantity}</span>
+                        <span className="text-muted-foreground">x{item.quantity}</span>
                       </div>
-                      <span style={{ fontWeight: 500 }}>
+                      <span className="font-medium">
                         {(item.price * item.quantity).toLocaleString()} บาท
                       </span>
                     </div>
@@ -193,17 +153,9 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Order Total */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  marginTop: '1rem',
-                  paddingTop: '1rem',
-                  borderTop: '1px solid var(--border)',
-                  fontSize: '1.125rem',
-                  fontWeight: 600,
-                }}>
+                <div className="flex justify-between mt-4 pt-4 border-t border-border text-lg font-semibold">
                   <span>รวมทั้งสิ้น</span>
-                  <span style={{ color: 'var(--primary)' }}>
+                  <span className="text-primary">
                     {order.total.toLocaleString()} บาท
                   </span>
                 </div>

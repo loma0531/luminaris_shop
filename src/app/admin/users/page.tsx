@@ -82,9 +82,9 @@ export default function AdminUsersPage() {
 
   return (
     <div>
-      <h1 className="admin-title" style={{ marginBottom: '1.5rem' }}>จัดการผู้ใช้</h1>
+      <h1 className="admin-title mb-6">จัดการผู้ใช้</h1>
 
-      <div className="search-box" style={{ marginBottom: '1.5rem' }}>
+      <div className="search-box mb-6">
         <span className="search-icon"><SearchIcon size={16} /></span>
         <input
           type="text"
@@ -114,7 +114,7 @@ export default function AdminUsersPage() {
               <tbody>
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={4} className="text-center p-8">
                       ไม่พบผู้ใช้
                     </td>
                   </tr>
@@ -122,9 +122,9 @@ export default function AdminUsersPage() {
                   filteredUsers.map((user) => (
                     <React.Fragment key={user.id}>
                       <tr>
-                        <td style={{ fontWeight: 600 }}>{user.minecraftName}</td>
+                        <td className="font-semibold">{user.minecraftName}</td>
                         <td>{(user.totalSpent || 0).toLocaleString()} ฿</td>
-                        <td style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                        <td className="text-sm text-muted-foreground">
                           {new Date(user.createdAt).toLocaleDateString('th-TH')}
                         </td>
                         <td>
@@ -134,7 +134,7 @@ export default function AdminUsersPage() {
                             disabled={loadingOrders === user.minecraftName}
                           >
                             {loadingOrders === user.minecraftName ? (
-                              <div className="spinner" style={{ width: 14, height: 14 }} />
+                              <div className="spinner w-3.5 h-3.5" />
                             ) : (
                               <PackageIcon size={14} />
                             )}
@@ -145,60 +145,40 @@ export default function AdminUsersPage() {
                       {/* Expanded Order History */}
                       {expandedUser === user.minecraftName && (
                         <tr>
-                          <td colSpan={4} style={{ background: 'var(--muted)', padding: '1rem' }}>
+                          <td colSpan={4} className="bg-muted p-4">
                             {userOrders.get(user.minecraftName)?.length === 0 ? (
-                              <p style={{ textAlign: 'center', color: 'var(--muted-foreground)' }}>
+                              <p className="text-center text-muted-foreground">
                                 ยังไม่มีประวัติการซื้อ
                               </p>
                             ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                              <div className="flex flex-col gap-3">
                                 {userOrders.get(user.minecraftName)?.map((order) => (
                                   <div 
                                     key={order.id} 
-                                    style={{ 
-                                      background: 'var(--card)', 
-                                      padding: '0.75rem 1rem',
-                                      borderRadius: '0.5rem',
-                                      border: '1px solid var(--border)',
-                                    }}
+                                    className="bg-card px-4 py-3 rounded-lg border border-border"
                                   >
-                                    <div style={{ 
-                                      display: 'flex', 
-                                      justifyContent: 'space-between', 
-                                      alignItems: 'center',
-                                      marginBottom: '0.5rem',
-                                    }}>
-                                      <span style={{ fontWeight: 600 }}>Order #{order.orderId}</span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div className="flex justify-between items-center mb-2">
+                                      <span className="font-semibold">Order #{order.orderId}</span>
+                                      <div className="flex items-center gap-2">
                                         <span className="badge badge-success">
                                           <CheckCircleIcon size={12} /> สำเร็จ
                                         </span>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
+                                        <span className="text-xs text-muted-foreground">
                                           {new Date(order.createdAt).toLocaleString('th-TH')}
                                         </span>
                                       </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                    <div className="flex flex-wrap gap-2">
                                       {order.items.map((item, idx) => (
                                         <span
                                           key={idx}
-                                          style={{
-                                            fontSize: '0.75rem',
-                                            padding: '0.25rem 0.5rem',
-                                            background: 'var(--muted)',
-                                            borderRadius: '0.25rem',
-                                          }}
+                                          className="text-xs px-2 py-1 bg-muted rounded"
                                         >
                                           {item.name} x{item.quantity}
                                         </span>
                                       ))}
                                     </div>
-                                    <div style={{ 
-                                      textAlign: 'right', 
-                                      marginTop: '0.5rem',
-                                      fontWeight: 600,
-                                      color: 'var(--primary)',
-                                    }}>
+                                    <div className="text-right mt-2 font-semibold text-primary">
                                       {order.total.toLocaleString()} ฿
                                     </div>
                                   </div>

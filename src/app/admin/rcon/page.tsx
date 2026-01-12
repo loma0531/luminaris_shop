@@ -104,33 +104,25 @@ export default function RconTestPage() {
 
   return (
     <div>
-      <h1 className="admin-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <h1 className="admin-title flex items-center gap-2 mb-6">
         <TerminalIcon size={24} />
         RCON Console
       </h1>
 
       {/* Connection Status */}
-      <div className="card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="card mb-6">
+        <div className="flex items-center gap-3">
           <ServerIcon size={20} />
           <span>Minecraft Server RCON</span>
-          <span style={{ 
-            marginLeft: 'auto',
-            padding: '0.25rem 0.75rem',
-            borderRadius: '9999px',
-            fontSize: '0.75rem',
-            fontWeight: 500,
-            background: 'rgba(34, 197, 94, 0.1)',
-            color: '#22c55e',
-          }}>
+          <span className="ml-auto px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success">
             Ready
           </span>
         </div>
       </div>
 
       {/* Command Input */}
-      <form onSubmit={executeCommand} className="card" style={{ marginBottom: '1.5rem' }}>
-        <div style={{ marginBottom: '1rem' }}>
+      <form onSubmit={executeCommand} className="card mb-6">
+        <div className="mb-4">
           <label className="form-label">Player Name (optional)</label>
           <input
             type="text"
@@ -139,23 +131,22 @@ export default function RconTestPage() {
             onChange={(e) => setPlayerName(e.target.value)}
             placeholder="ชื่อผู้เล่น เช่น Loma0531"
           />
-          <p style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)', marginTop: '0.25rem' }}>
+          <p className="text-xs text-muted-foreground mt-1">
             ใช้แทน {'{player}'} ในคำสั่ง
           </p>
         </div>
 
-        <div style={{ marginBottom: '1rem' }}>
+        <div className="mb-4">
           <label className="form-label">Command</label>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ color: 'var(--muted-foreground)', fontFamily: 'monospace', fontWeight: 'bold' }}>/</span>
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center gap-2">
+              <span className="text-muted-foreground font-mono font-bold">/</span>
               <input
                 type="text"
-                className="input"
+                className="input font-mono flex-1"
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 placeholder="list"
-                style={{ fontFamily: 'monospace', flex: 1 }}
                 disabled={loading}
               />
             </div>
@@ -165,7 +156,7 @@ export default function RconTestPage() {
               disabled={loading || !command.trim()}
             >
               {loading ? (
-                <div className="spinner" style={{ width: 16, height: 16 }} />
+                <div className="spinner w-4 h-4" />
               ) : (
                 <>
                   <PlayIcon size={14} />
@@ -178,8 +169,8 @@ export default function RconTestPage() {
 
         {/* Quick Commands */}
         <div>
-          <label className="form-label" style={{ marginBottom: '0.5rem' }}>Quick Commands</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <label className="form-label mb-2">Quick Commands</label>
+          <div className="flex flex-wrap gap-2">
             {quickCommands.map((qc) => (
               <button
                 key={qc.cmd}
@@ -196,55 +187,31 @@ export default function RconTestPage() {
 
       {/* Command Logs */}
       <div className="card">
-        <h3 style={{ 
-          fontSize: '0.875rem', 
-          fontWeight: 600, 
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
+        <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
           <TerminalIcon size={16} />
           Command History
         </h3>
 
         {logs.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '2rem',
-            color: 'var(--muted-foreground)',
-          }}>
+          <div className="text-center p-8 text-muted-foreground">
             No commands executed yet
           </div>
         ) : (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: '0.5rem',
-            maxHeight: '400px',
-            overflowY: 'auto',
-          }}>
+          <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
             {logs.map((log) => (
               <div 
                 key={log.id}
-                style={{
-                  background: log.success ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)',
-                  border: `1px solid ${log.success ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                  borderRadius: '0.5rem',
-                  padding: '0.75rem',
-                  fontFamily: 'monospace',
-                  fontSize: '0.8125rem',
-                }}
+                className={`rounded-lg p-3 font-mono text-[0.8125rem] border ${log.success ? 'bg-success/5 border-success/20' : 'bg-error/5 border-error/20'}`}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                  <span style={{ color: log.success ? '#22c55e' : '#ef4444', fontWeight: 500 }}>
+                <div className="flex justify-between mb-1">
+                  <span className={`font-medium ${log.success ? 'text-success' : 'text-error'}`}>
                     /{log.command}
                   </span>
-                  <span style={{ color: 'var(--muted-foreground)', fontSize: '0.75rem' }}>
+                  <span className="text-muted-foreground text-xs">
                     {log.timestamp.toLocaleTimeString('th-TH')}
                   </span>
                 </div>
-                <div style={{ color: 'var(--foreground)', whiteSpace: 'pre-wrap' }}>
+                <div className="text-foreground whitespace-pre-wrap">
                   {log.response || '(no output)'}
                 </div>
               </div>

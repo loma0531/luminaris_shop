@@ -101,10 +101,7 @@ const ChevronIcon = ({ size = 16, expanded }: { size?: number; expanded: boolean
     strokeWidth="2" 
     strokeLinecap="round" 
     strokeLinejoin="round"
-    style={{ 
-      transition: 'transform 0.2s', 
-      transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' 
-    }}
+    className={`transition-transform duration-200 ${expanded ? 'rotate-180' : 'rotate-0'}`}
   >
     <polyline points="6 9 12 15 18 9" />
   </svg>
@@ -153,9 +150,9 @@ function ShopSidebar({
         <Icon size={20} />
         {shopExpanded && (
           <>
-            <span style={{ flex: 1 }}>{label}</span>
+            <span className="flex-1">{label}</span>
             {badge && (
-              <span className="badge" style={{ background: badgeColor || undefined }}>
+              <span className="badge" style={badgeColor ? { background: badgeColor } : undefined}>
                 {badge}
               </span>
             )}
@@ -531,14 +528,14 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
           
           <div className="shop-top-header-right">
             {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div className="flex items-center gap-3">
                 <Link href="/shop/profile" className="shop-header-profile">
                   <Image
                     src={`https://mc-heads.net/avatar/${getSkinName(user.minecraftName)}/24`}
                     alt="Head"
                     width={24}
                     height={24}
-                    style={{ borderRadius: '0.25rem' }}
+                    className="rounded"
                     unoptimized
                   />
                   <span>{user.minecraftName}</span>

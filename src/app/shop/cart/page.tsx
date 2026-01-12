@@ -369,7 +369,7 @@ export default function CartPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <CartIcon size={24} />
         ตะกร้าสินค้า
       </h1>
@@ -382,19 +382,19 @@ export default function CartPage() {
               <SkeletonCartItem />
             </div>
             <div>
-              <div className="card" style={{ padding: '1.5rem' }}>
-                <div className="skeleton" style={{ width: '50%', height: '1.5rem', marginBottom: '1.5rem' }} />
-                <div className="skeleton" style={{ width: '100%', height: '1rem', marginBottom: '1rem' }} />
-                <div className="skeleton" style={{ width: '100%', height: '1rem', marginBottom: '1.5rem' }} />
-                <div className="skeleton" style={{ width: '100%', height: '3rem' }} />
+              <div className="card p-6">
+                <div className="skeleton w-1/2 h-6 mb-6" />
+                <div className="skeleton w-full h-4 mb-4" />
+                <div className="skeleton w-full h-4 mb-6" />
+                <div className="skeleton w-full h-12" />
               </div>
             </div>
           </div>
         ) : cart.length === 0 ? (
           <div className="empty-state">
-            <CartIcon size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+            <CartIcon size={48} className="mb-4 opacity-50" />
             <p>ตะกร้าว่างเปล่า</p>
-            <Link href="/shop" className="btn" style={{ marginTop: '1rem' }}>
+            <Link href="/shop" className="btn mt-4">
               ไปดูสินค้า
             </Link>
           </div>
@@ -403,15 +403,7 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
               {/* Select All / None */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '1rem', 
-                marginBottom: '1rem',
-                padding: '0.75rem 1rem',
-                background: 'var(--muted)',
-                borderRadius: '0.5rem',
-              }}>
+              <div className="flex items-center gap-4 mb-4 px-4 py-3 bg-muted rounded-lg">
                 <button className="btn btn-sm" onClick={selectAll}>
                   <CheckIcon size={14} />
                   เลือกทั้งหมด
@@ -419,7 +411,7 @@ export default function CartPage() {
                 <button className="btn btn-sm btn-outline" onClick={selectNone}>
                   ยกเลิกทั้งหมด
                 </button>
-                <span style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem', marginLeft: 'auto' }}>
+                <span className="text-muted-foreground text-sm ml-auto">
                   เลือก {selectedItems.size} / {cart.length} รายการ
                 </span>
               </div>
@@ -427,51 +419,26 @@ export default function CartPage() {
               {cart.map((item) => (
                 <div
                   key={getCartKey(item)}
-                  className="card cart-item-card"
-                  style={{ 
-                    opacity: selectedItems.has(getCartKey(item)) ? 1 : 0.6,
-                    border: selectedItems.has(getCartKey(item)) ? '2px solid var(--primary)' : '2px solid transparent',
-                    transition: 'all 0.2s',
-                  }}
+                  className={`card cart-item-card transition-all duration-200 ${selectedItems.has(getCartKey(item)) ? 'opacity-100 border-2 border-primary' : 'opacity-60 border-2 border-transparent'}`}
                 >
                   {/* Checkbox */}
-                  <label style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    cursor: 'pointer',
-                    padding: '0.5rem',
-                  }}>
+                  <label className="flex items-center cursor-pointer p-2">
                     <input
                       type="checkbox"
                       checked={selectedItems.has(getCartKey(item))}
                       onChange={() => toggleSelectItem(getCartKey(item))}
-                      style={{
-                        width: 20,
-                        height: 20,
-                        cursor: 'pointer',
-                        accentColor: 'var(--primary)',
-                      }}
+                      className="w-5 h-5 cursor-pointer accent-primary"
                     />
                   </label>
 
                   {/* Product Image */}
-                  <div className="cart-item-image" style={{
-                    width: 80,
-                    height: 80,
-                    background: 'var(--muted)',
-                    borderRadius: '0.375rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    overflow: 'hidden',
-                  }}>
+                  <div className="cart-item-image w-20 h-20 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden">
                     {item.product.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.product.image}
                         alt={item.product.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <PackageIcon size={32} />
@@ -479,28 +446,16 @@ export default function CartPage() {
                   </div>
 
                   {/* Product Info + Price (Desktop) */}
-                  <div className="cart-item-info" style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                  <div className="cart-item-info flex-1 min-w-0 flex justify-between items-center gap-4">
                     <div>
-                      <h3 style={{ fontWeight: 600, fontSize: '1rem' }}>{item.product.name}</h3>
-                      <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
+                      <h3 className="font-semibold text-base">{item.product.name}</h3>
+                      <p className="text-muted-foreground text-sm">
                         {item.product.price.toLocaleString()} บาท / ชิ้น
                       </p>
                       {item.customInput && (
-                        <p style={{ 
-                          color: 'var(--primary)', 
-                          fontSize: '0.875rem', 
-                          marginTop: '0.25rem', 
-                          fontFamily: 'monospace',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem'
-                        }}>
-                          <span style={{ flexShrink: 0 }}>Note:</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <p className="text-primary text-sm mt-1 font-mono truncate max-w-full flex items-center gap-2">
+                          <span className="shrink-0">Note:</span>
+                          <span className="truncate">
                             {item.customInput.length > 15 ? item.customInput.slice(0, 15) + '...' : item.customInput}
                           </span>
                         </p>
@@ -521,7 +476,7 @@ export default function CartPage() {
                       >
                         <MinusIcon size={16} />
                       </button>
-                      <span style={{ minWidth: 32, textAlign: 'center', fontWeight: 500 }}>{item.quantity}</span>
+                      <span className="min-w-[32px] text-center font-medium">{item.quantity}</span>
                       <button
                         className="btn btn-icon btn-sm"
                         onClick={() => updateQuantity(getCartKey(item), 1)}
@@ -542,47 +497,32 @@ export default function CartPage() {
 
             <div className="h-fit">
               <div className="card sticky top-4">
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1.5rem' }}>สรุปคำสั่งซื้อ</h2>
+                <h2 className="text-xl font-semibold mb-6">สรุปคำสั่งซื้อ</h2>
                 
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  marginBottom: '1rem',
-                  paddingBottom: '1rem',
-                  borderBottom: '1px solid var(--border)' 
-                }}>
-                  <span style={{ color: 'var(--muted-foreground)' }}>สินค้าที่เลือก ({selectedCount} ชิ้น)</span>
-                  <span style={{ fontWeight: 500 }}>{selectedTotal.toLocaleString()} บาท</span>
+                <div className="flex justify-between mb-4 pb-4 border-b border-border">
+                  <span className="text-muted-foreground">สินค้าที่เลือก ({selectedCount} ชิ้น)</span>
+                  <span className="font-medium">{selectedTotal.toLocaleString()} บาท</span>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 600 }}>
+                <div className="flex justify-between mb-6 text-xl font-semibold">
                   <span>ยอดสุทธิ</span>
-                  <span style={{ color: 'var(--primary)' }}>{selectedTotal.toLocaleString()} บาท</span>
+                  <span className="text-primary">{selectedTotal.toLocaleString()} บาท</span>
                 </div>
 
                 {hasPendingOrder && (
-                  <div style={{
-                    background: 'rgba(255, 200, 0, 0.1)',
-                    border: '1px solid rgba(255, 200, 0, 0.3)',
-                    borderRadius: '0.5rem',
-                    padding: '0.75rem',
-                    marginBottom: '1rem',
-                    fontSize: '0.875rem',
-                    color: '#ffc800',
-                  }}>
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 mb-4 text-sm text-yellow-500">
                     ⚠️ คุณมีรายการรอชำระเงินอยู่
                   </div>
                 )}
 
                 <button
-                  className="btn btn-primary btn-lg"
-                  style={{ width: '100%' }}
+                  className="btn btn-primary btn-lg w-full"
                   onClick={handleCheckout}
                   disabled={loading || selectedItems.size === 0}
                 >
                   {loading ? (
                     <>
-                      <div className="spinner" style={{ width: 16, height: 16 }} />
+                      <div className="spinner w-4 h-4" />
                       กำลังสร้างรายการ...
                     </>
                   ) : hasPendingOrder ? (
@@ -595,7 +535,7 @@ export default function CartPage() {
                 </button>
                 
                 {selectedItems.size === 0 && cart.length > 0 && (
-                  <p style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--muted-foreground)', textAlign: 'center' }}>
+                  <p className="mt-3 text-sm text-muted-foreground text-center">
                     กรุณาเลือกสินค้าที่ต้องการซื้อ
                   </p>
                 )}

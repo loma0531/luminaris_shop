@@ -32,7 +32,7 @@ function ProductImage({ src, alt, priority = false }: { src: string | null; alt:
       src={src} 
       alt={alt} 
       fill 
-      style={{ objectFit: 'cover' }}
+      className="object-cover"
       unoptimized={src.startsWith('/uploads/')} // Skip optimization for local images
       onError={() => setError(true)}
       priority={priority}
@@ -272,7 +272,7 @@ export default function ShopPage() {
         }
       `}</style>
       
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <PackageIcon size={24} />
         สินค้าทั้งหมด
       </h1>
@@ -334,17 +334,17 @@ export default function ShopPage() {
       {loading ? (
         <div className="product-grid">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card" style={{ padding: '1rem' }}>
-              <div className="skeleton" style={{ width: '100%', height: 120, marginBottom: '1rem' }} />
-              <div className="skeleton" style={{ width: '60%', height: '1.25rem', marginBottom: '0.5rem' }} />
-              <div className="skeleton" style={{ width: '40%', height: '1rem', marginBottom: '0.75rem' }} />
-              <div className="skeleton" style={{ width: '100%', height: 40 }} />
+            <div key={i} className="card p-4">
+              <div className="skeleton w-full h-[120px] mb-4" />
+              <div className="skeleton w-3/5 h-5 mb-2" />
+              <div className="skeleton w-2/5 h-4 mb-3" />
+              <div className="skeleton w-full h-10" />
             </div>
           ))}
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="empty-state">
-          <PackageIcon size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+          <PackageIcon size={48} className="mb-4 opacity-50" />
           <p>ยังไม่มีสินค้าในหมวดหมู่นี้</p>
         </div>
       ) : (
@@ -385,31 +385,17 @@ export default function ShopPage() {
       {/* Custom Input Modal */}
       {showInputModal && pendingProduct && (
         <div 
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem'
-          }}
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4"
           onClick={() => setShowInputModal(false)}
         >
           <div 
-            className="card"
-            style={{
-              maxWidth: '500px',
-              width: '100%',
-              padding: '1.5rem',
-            }}
+            className="card max-w-[500px] w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', fontWeight: 600 }}>
+            <h2 className="mb-4 text-xl font-semibold">
               {pendingProduct.inputLabel || 'กรอกข้อมูลเพิ่มเติม'}
             </h2>
-            <p style={{ marginBottom: '1rem', color: 'var(--color-text-tertiary)', fontSize: '0.875rem' }}>
+            <p className="mb-4 text-muted-foreground text-sm">
               สินค้า: <strong>{pendingProduct.name}</strong> - {pendingProduct.price.toLocaleString()} บาท
             </p>
             
@@ -418,17 +404,7 @@ export default function ShopPage() {
               value={customInputValue}
               onChange={(e) => setCustomInputValue(e.target.value)}
               placeholder={pendingProduct.inputPlaceholder || 'เช่น &a&lYourName หรือ &#FF00FFYourName'}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                borderRadius: '0.5rem',
-                border: '1px solid var(--color-border)',
-                backgroundColor: 'var(--color-background)',
-                color: 'var(--color-text)',
-                fontSize: '1rem',
-                marginBottom: '1.5rem',
-                fontFamily: 'monospace'
-              }}
+              className="input mb-6 font-mono"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
@@ -437,19 +413,15 @@ export default function ShopPage() {
               }}
             />
             
-
-            
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div className="flex gap-3">
               <button
-                className="btn"
-                style={{ flex: 1, backgroundColor: 'var(--color-background-elevated)' }}
+                className="btn flex-1 bg-muted"
                 onClick={() => setShowInputModal(false)}
               >
                 ยกเลิก
               </button>
               <button
-                className="btn btn-primary"
-                style={{ flex: 1 }}
+                className="btn btn-primary flex-1"
                 onClick={handleConfirmCustomInput}
               >
                 <CartIcon size={16} />

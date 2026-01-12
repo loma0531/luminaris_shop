@@ -242,7 +242,7 @@ export default function ProfilePage() {
   if (!user || !profile) {
     return (
       <div className="empty-state">
-        <UserIcon size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
+        <UserIcon size={48} className="opacity-50 mb-4" />
         <p>ไม่พบข้อมูลผู้เล่น</p>
       </div>
     )

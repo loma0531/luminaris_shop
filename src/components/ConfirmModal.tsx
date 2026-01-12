@@ -25,31 +25,25 @@ export default function ConfirmModal({
   if (!isOpen) return null
 
   return (
-    <div className="modal-overlay" onClick={onCancel} style={{ zIndex: 10000 }}>
+    <div className="modal-overlay z-[10000]" onClick={onCancel}>
       <div 
-        className="modal" 
-        onClick={(e) => e.stopPropagation()} 
-        style={{ maxWidth: '400px', width: '100%', animation: 'slideUp 0.3s ease-out' }}
+        className="modal max-w-[400px] w-full animate-[slideUp_0.3s_ease-out]" 
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
           <h2 className="modal-title">{title}</h2>
         </div>
         
         {content && (
-          <div style={{ marginBottom: '1.5rem', color: 'var(--muted-foreground)' }}>
+          <div className="mb-6 text-muted-foreground">
             {content}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+        <div className="flex gap-3 justify-end">
           <button 
-            className="btn" 
+            className="btn bg-transparent border border-border text-foreground" 
             onClick={onCancel}
-            style={{ 
-              backgroundColor: 'transparent', 
-              border: '1px solid var(--border)',
-              color: 'var(--foreground)'
-            }}
           >
             {cancelText}
           </button>

@@ -34,7 +34,7 @@ const TrophyRankIcon = ({ rank }: { rank: number }) => {
     3: '#cd7f32', // Bronze
   }
   
-  if (rank > 3) return <span style={{ fontWeight: 600 }}>{rank}</span>
+  if (rank > 3) return <span className="font-semibold">{rank}</span>
   
   return (
     <svg width={20} height={20} viewBox="0 0 24 24" fill={colors[rank]} stroke={colors[rank]} strokeWidth="1">
@@ -78,7 +78,7 @@ export default function StatsPage() {
   if (!data) {
     return (
       <div className="empty-state">
-        <WalletIcon size={48} style={{ opacity: 0.5, marginBottom: '1rem' }} />
+        <WalletIcon size={48} className="opacity-50 mb-4" />
         <p>ไม่สามารถโหลดข้อมูลได้</p>
       </div>
     )
@@ -86,81 +86,51 @@ export default function StatsPage() {
 
   return (
     <div>
-      <h1 style={{ 
-        fontSize: '1.5rem', 
-        fontWeight: 600, 
-        marginBottom: '1.5rem', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem' 
-      }}>
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <WalletIcon size={24} />
         สถิติการเติมเงิน
       </h1>
 
       {/* Summary Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '1rem', 
-        marginBottom: '2rem' 
-      }}>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '0.5rem' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-8">
+        <div className="card p-5">
+          <div className="text-sm text-muted-foreground mb-2">
             ยอดเติมเงินรวม
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#22c55e' }}>
+          <div className="text-3xl font-bold text-success">
             ฿{data.totalAmount.toLocaleString()}
           </div>
         </div>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '0.5rem' }}>
+        <div className="card p-5">
+          <div className="text-sm text-muted-foreground mb-2">
             จำนวนการเติมเงิน
           </div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>
+          <div className="text-3xl font-bold">
             {data.totalCount.toLocaleString()} ครั้ง
           </div>
         </div>
       </div>
 
       {/* Two Column Layout */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-        gap: '1.5rem' 
-      }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-6">
         {/* Leaderboard */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <h2 style={{ 
-            fontSize: '1rem', 
-            fontWeight: 600, 
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
+        <div className="card p-5">
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
             🏆 อันดับผู้เติมเงินสูงสุด
           </h2>
           
           {data.leaderboard.length === 0 ? (
-            <p style={{ color: 'var(--muted-foreground)', textAlign: 'center', padding: '2rem 0' }}>
+            <p className="text-muted-foreground text-center py-8">
               ยังไม่มีข้อมูล
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className="flex flex-col gap-2">
               {data.leaderboard.map((entry, index) => (
                 <div 
                   key={entry.minecraftName}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem',
-                    background: index < 3 ? 'var(--muted)' : 'transparent',
-                    borderRadius: '0.5rem',
-                  }}
+                  className={`flex items-center gap-3 p-3 rounded-lg ${index < 3 ? 'bg-muted' : ''}`}
                 >
-                  <div style={{ width: 24, textAlign: 'center' }}>
+                  <div className="w-6 text-center">
                     <TrophyRankIcon rank={index + 1} />
                   </div>
                   <Image
@@ -168,15 +138,15 @@ export default function StatsPage() {
                     alt="Head"
                     width={24}
                     height={24}
-                    style={{ borderRadius: '0.25rem' }}
+                    className="rounded"
                     unoptimized
                   />
-                  <span style={{ flex: 1, fontWeight: 500 }}>{entry.minecraftName}</span>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 600, color: '#22c55e' }}>
+                  <span className="flex-1 font-medium">{entry.minecraftName}</span>
+                  <div className="text-right">
+                    <div className="font-semibold text-success">
                       ฿{entry.total.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
+                    <div className="text-xs text-muted-foreground">
                       {entry.count} ครั้ง
                     </div>
                   </div>
@@ -187,50 +157,37 @@ export default function StatsPage() {
         </div>
 
         {/* Recent Transactions */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <h2 style={{ 
-            fontSize: '1rem', 
-            fontWeight: 600, 
-            marginBottom: '1rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-          }}>
+        <div className="card p-5">
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
             <ClockIcon size={18} />
             การเติมเงินล่าสุด
           </h2>
           
           {data.recentTransactions.length === 0 ? (
-            <p style={{ color: 'var(--muted-foreground)', textAlign: 'center', padding: '2rem 0' }}>
+            <p className="text-muted-foreground text-center py-8">
               ยังไม่มีข้อมูล
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className="flex flex-col gap-2">
               {data.recentTransactions.map((tx, index) => (
                 <div 
                   key={index}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.5rem 0',
-                    borderBottom: index < data.recentTransactions.length - 1 ? '1px solid var(--border)' : 'none',
-                  }}
+                  className={`flex items-center gap-3 py-2 ${index < data.recentTransactions.length - 1 ? 'border-b border-border' : ''}`}
                 >
                   <Image
                     src={`https://mc-heads.net/avatar/${getSkinName(tx.minecraftName)}/20`}
                     alt="Head"
                     width={20}
                     height={20}
-                    style={{ borderRadius: '0.25rem' }}
+                    className="rounded"
                     unoptimized
                   />
-                  <span style={{ flex: 1, fontSize: '0.875rem' }}>{tx.minecraftName}</span>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 500, color: '#22c55e', fontSize: '0.875rem' }}>
+                  <span className="flex-1 text-sm">{tx.minecraftName}</span>
+                  <div className="text-right">
+                    <div className="font-medium text-success text-sm">
                       +฿{tx.amount.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.6875rem', color: 'var(--muted-foreground)' }}>
+                    <div className="text-[0.6875rem] text-muted-foreground">
                       {new Date(tx.date).toLocaleDateString('th-TH', { 
                         day: 'numeric', 
                         month: 'short',

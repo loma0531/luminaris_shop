@@ -91,20 +91,14 @@ function AdminLoginForm() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem',
-    }}>
-      <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="card max-w-[400px] w-full">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 text-2xl font-semibold mb-2">
             <LockIcon size={28} />
             ระบบจัดการหลังบ้าน
           </div>
-          <p style={{ color: 'var(--muted-foreground)' }}>
+          <p className="text-muted-foreground">
             กรุณาใส่ข้อมูลเพื่อเข้าสู่ระบบ
           </p>
         </div>
@@ -158,13 +152,12 @@ function AdminLoginForm() {
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
+            className="btn btn-primary w-full"
             disabled={loading || !email.trim() || !password.trim() || !token.trim()}
           >
             {loading ? (
               <>
-                <div className="spinner" style={{ width: 16, height: 16 }} />
+                <div className="spinner w-4 h-4" />
                 กำลังตรวจสอบ...
               </>
             ) : (
@@ -173,13 +166,8 @@ function AdminLoginForm() {
           </button>
         </form>
 
-        <div style={{
-          marginTop: '1.5rem',
-          paddingTop: '1rem',
-          borderTop: '1px solid var(--border)',
-          textAlign: 'center',
-        }}>
-          <Link href="/" className="btn" style={{ fontSize: '0.875rem' }}>
+        <div className="mt-6 pt-4 border-t border-border text-center">
+          <Link href="/" className="btn text-sm">
             <ArrowLeftIcon size={16} />
             กลับหน้าหลัก
           </Link>
@@ -219,12 +207,7 @@ function AdminContent({ children }: AdminLayoutProps) {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
+      <div className="min-h-screen flex items-center justify-center">
         <div className="spinner" />
       </div>
     )

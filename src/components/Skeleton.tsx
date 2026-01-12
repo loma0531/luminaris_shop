@@ -42,7 +42,7 @@ export function Skeleton({
 // Preset skeleton components for common use cases
 export function SkeletonText({ lines = 1, gap = '0.5rem' }: { lines?: number; gap?: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap }}>
+    <div className="flex flex-col" style={{ gap }}>
       {Array.from({ length: lines }).map((_, i) => (
         <Skeleton 
           key={i} 
@@ -57,7 +57,7 @@ export function SkeletonText({ lines = 1, gap = '0.5rem' }: { lines?: number; ga
 
 export function SkeletonCard({ height = 200 }: { height?: number }) {
   return (
-    <div className="card" style={{ padding: '1rem' }}>
+    <div className="card p-4">
       <Skeleton width="100%" height={height} />
     </div>
   )
@@ -65,11 +65,11 @@ export function SkeletonCard({ height = 200 }: { height?: number }) {
 
 export function SkeletonProductCard() {
   return (
-    <div className="card" style={{ padding: '1rem', display: 'flex', gap: '1rem' }}>
+    <div className="card p-4 flex gap-4">
       <Skeleton width={80} height={80} />
-      <div style={{ flex: 1 }}>
-        <Skeleton width="60%" height="1.25rem" style={{ marginBottom: '0.5rem' }} />
-        <Skeleton width="40%" height="1rem" style={{ marginBottom: '0.75rem' }} />
+      <div className="flex-1">
+        <Skeleton width="60%" height="1.25rem" className="mb-2" />
+        <Skeleton width="40%" height="1rem" className="mb-3" />
         <Skeleton width="30%" height="1.5rem" />
       </div>
     </div>
@@ -78,16 +78,11 @@ export function SkeletonProductCard() {
 
 export function SkeletonCartItem() {
   return (
-    <div className="card" style={{ 
-      padding: '1rem', 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '1rem' 
-    }}>
+    <div className="card p-4 flex items-center gap-4">
       <Skeleton width={20} height={20} borderRadius={4} />
       <Skeleton width={80} height={80} />
-      <div style={{ flex: 1 }}>
-        <Skeleton width="50%" height="1rem" style={{ marginBottom: '0.5rem' }} />
+      <div className="flex-1">
+        <Skeleton width="50%" height="1rem" className="mb-2" />
         <Skeleton width="30%" height="0.875rem" />
       </div>
       <Skeleton width={100} height={36} />
@@ -97,13 +92,13 @@ export function SkeletonCartItem() {
 
 export function SkeletonOrderCard() {
   return (
-    <div className="card" style={{ padding: '1rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+    <div className="card p-4">
+      <div className="flex justify-between mb-4">
         <Skeleton width={120} height="1.25rem" />
         <Skeleton width={80} height="1.5rem" borderRadius={20} />
       </div>
-      <Skeleton width="100%" height={60} style={{ marginBottom: '1rem' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <Skeleton width="100%" height={60} className="mb-4" />
+      <div className="flex justify-between">
         <Skeleton width={100} height="1rem" />
         <Skeleton width={80} height="1.25rem" />
       </div>
@@ -113,15 +108,15 @@ export function SkeletonOrderCard() {
 
 export function SkeletonProfileCard() {
   return (
-    <div className="card" style={{ padding: '1.5rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+    <div className="card p-6">
+      <div className="flex items-center gap-4 mb-6">
         <Skeleton width={80} height={80} variant="circular" />
-        <div style={{ flex: 1 }}>
-          <Skeleton width="60%" height="1.5rem" style={{ marginBottom: '0.5rem' }} />
+        <div className="flex-1">
+          <Skeleton width="60%" height="1.5rem" className="mb-2" />
           <Skeleton width="40%" height="1rem" />
         </div>
       </div>
-      <div style={{ display: 'grid', gap: '0.75rem' }}>
+      <div className="grid gap-3">
         <Skeleton width="100%" height={70} />
         <Skeleton width="100%" height={70} />
         <Skeleton width="100%" height={70} />
@@ -132,14 +127,14 @@ export function SkeletonProfileCard() {
 
 export function SkeletonTable({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div className="card" style={{ padding: '1rem', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+    <div className="card p-4 overflow-hidden">
+      <div className="flex gap-4 mb-4 pb-4 border-b border-border">
         {Array.from({ length: cols }).map((_, i) => (
           <Skeleton key={i} width={`${100/cols}%`} height="1rem" />
         ))}
       </div>
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div key={rowIndex} style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem' }}>
+        <div key={rowIndex} className="flex gap-4 mb-3">
           {Array.from({ length: cols }).map((_, colIndex) => (
             <Skeleton key={colIndex} width={`${100/cols}%`} height="1rem" />
           ))}
@@ -154,51 +149,42 @@ export function SkeletonStatsPage() {
   return (
     <div>
       {/* Title */}
-      <Skeleton width={200} height="1.5rem" style={{ marginBottom: '1.5rem' }} />
+      <Skeleton width={200} height="1.5rem" className="mb-6" />
       
       {/* Summary Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '1rem', 
-        marginBottom: '2rem' 
-      }}>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <Skeleton width="60%" height="0.875rem" style={{ marginBottom: '0.5rem' }} />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-8">
+        <div className="card p-5">
+          <Skeleton width="60%" height="0.875rem" className="mb-2" />
           <Skeleton width="80%" height="1.75rem" />
         </div>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <Skeleton width="60%" height="0.875rem" style={{ marginBottom: '0.5rem' }} />
+        <div className="card p-5">
+          <Skeleton width="60%" height="0.875rem" className="mb-2" />
           <Skeleton width="70%" height="1.75rem" />
         </div>
       </div>
 
       {/* Two Column Layout */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-        gap: '1.5rem' 
-      }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-6">
         {/* Leaderboard */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <Skeleton width={180} height="1rem" style={{ marginBottom: '1rem' }} />
+        <div className="card p-5">
+          <Skeleton width={180} height="1rem" className="mb-4" />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem' }}>
+            <div key={i} className="flex items-center gap-3 p-3">
               <Skeleton width={24} height={24} />
               <Skeleton width={24} height={24} />
-              <Skeleton width="40%" height="1rem" style={{ flex: 1 }} />
+              <Skeleton width="40%" height="1rem" className="flex-1" />
               <Skeleton width={80} height="1.25rem" />
             </div>
           ))}
         </div>
 
         {/* Recent Transactions */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <Skeleton width={150} height="1rem" style={{ marginBottom: '1rem' }} />
+        <div className="card p-5">
+          <Skeleton width={150} height="1rem" className="mb-4" />
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0', borderBottom: i < 4 ? '1px solid var(--border)' : 'none' }}>
+            <div key={i} className={`flex items-center gap-3 py-2 ${i < 4 ? 'border-b border-border' : ''}`}>
               <Skeleton width={20} height={20} />
-              <Skeleton width="40%" height="0.875rem" style={{ flex: 1 }} />
+              <Skeleton width="40%" height="0.875rem" className="flex-1" />
               <Skeleton width={70} height="1rem" />
             </div>
           ))}
@@ -214,7 +200,7 @@ export function SkeletonProfilePage() {
     <>
       <div className="skeleton-profile-page">
         {/* Title - Simple without box */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem' }}>
+        <div className="flex items-center gap-2 mb-8">
           <Skeleton width={22} height={22} borderRadius={4} />
           <Skeleton width={140} height="1.375rem" />
         </div>
@@ -224,56 +210,38 @@ export function SkeletonProfilePage() {
           {/* Left - 3D Model Card (hidden on mobile) */}
           <div className="skeleton-3d-section">
             {/* Model Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <div className="flex items-center gap-2 mb-3">
               <Skeleton width={18} height={18} borderRadius={4} />
               <Skeleton width={100} height="0.875rem" />
             </div>
             {/* 3D Model Placeholder */}
-            <div style={{
-              width: '100%',
-              height: '400px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(255, 255, 255, 0.02)',
-              borderRadius: '12px',
-            }}>
-              <div style={{ textAlign: 'center' }}>
+            <div className="w-full h-[400px] flex items-center justify-center bg-white/[0.02] rounded-xl">
+              <div className="text-center">
                 <div className="skeleton-spinner" />
-                <Skeleton width={100} height="0.875rem" style={{ margin: '0 auto' }} />
+                <Skeleton width={100} height="0.875rem" className="mx-auto" />
               </div>
             </div>
             {/* Hint */}
-            <Skeleton width={140} height="0.75rem" style={{ margin: '0.75rem auto 0' }} />
+            <Skeleton width={140} height="0.75rem" className="mx-auto mt-3" />
           </div>
 
           {/* Right - Info Cards */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div className="flex flex-col gap-4">
             {/* Profile Card */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '16px',
-              padding: '1.25rem',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <div className="bg-white/5 border border-white/15 rounded-2xl p-5">
+              <div className="flex items-center gap-5">
                 <Skeleton width={80} height={80} borderRadius="16px" />
-                <div style={{ flex: 1 }}>
-                  <Skeleton width="60%" height="1.375rem" style={{ marginBottom: '0.5rem' }} />
+                <div className="flex-1">
+                  <Skeleton width="60%" height="1.375rem" className="mb-2" />
                   <Skeleton width="40%" height="0.875rem" />
                 </div>
               </div>
             </div>
 
             {/* UUID Card */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '16px',
-              padding: '1.25rem',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+              <div className="flex justify-between mb-3">
+                <div className="flex items-center gap-2">
                   <Skeleton width={16} height={16} borderRadius={4} />
                   <Skeleton width={40} height="0.875rem" />
                 </div>
@@ -283,34 +251,16 @@ export function SkeletonProfilePage() {
             </div>
 
             {/* Activity Card */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '16px',
-              padding: '1.25rem',
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                marginBottom: '1rem',
-                paddingBottom: '0.75rem',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-              }}>
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/[0.08]">
                 <Skeleton width={18} height={18} borderRadius={4} />
                 <Skeleton width={100} height="1rem" />
               </div>
               <div className="skeleton-activity-grid">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} style={{
-                    textAlign: 'center',
-                    padding: '1rem',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}>
-                    <Skeleton width="70%" height="0.75rem" style={{ margin: '0 auto 0.5rem' }} />
-                    <Skeleton width="50%" height="1.125rem" style={{ margin: '0 auto' }} />
+                  <div key={i} className="text-center p-4 bg-white/[0.02] rounded-xl border border-white/[0.08]">
+                    <Skeleton width="70%" height="0.75rem" className="mx-auto mb-2" />
+                    <Skeleton width="50%" height="1.125rem" className="mx-auto" />
                   </div>
                 ))}
               </div>

@@ -25,15 +25,13 @@ interface SalesResponse {
 // Skeleton for loading state
 function SkeletonChart() {
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', height: 200, padding: '1rem 0' }}>
+    <div className="flex items-end gap-2 h-[200px] py-4">
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className="skeleton"
+          className="skeleton flex-1 rounded-t"
           style={{
-            flex: 1,
             height: `${30 + Math.random() * 70}%`,
-            borderRadius: '0.25rem 0.25rem 0 0',
           }}
         />
       ))}
@@ -45,13 +43,7 @@ function SkeletonChart() {
 function BarChart({ data, maxHeight = 250 }: { data: SalesData[]; maxHeight?: number }) {
   if (data.length === 0) {
     return (
-      <div style={{ 
-        height: maxHeight, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        color: 'var(--muted-foreground)'
-      }}>
+      <div className="h-[250px] flex items-center justify-center text-muted-foreground">
         ไม่มีข้อมูล
       </div>
     )
@@ -60,54 +52,29 @@ function BarChart({ data, maxHeight = 250 }: { data: SalesData[]; maxHeight?: nu
   const maxAmount = Math.max(...data.map(d => d.amount), 1)
 
   return (
-    <div style={{ height: maxHeight, display: 'flex', flexDirection: 'column' }}>
+    <div className="flex flex-col" style={{ height: maxHeight }}>
       {/* Chart area */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        alignItems: 'flex-end', 
-        gap: '0.25rem',
-        paddingBottom: '2rem',
-        position: 'relative',
-      }}>
+      <div className="flex-1 flex items-end gap-1 pb-8 relative">
         {data.map((item, index) => {
           const heightPercent = (item.amount / maxAmount) * 100
           return (
             <div
               key={index}
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                height: '100%',
-                justifyContent: 'flex-end',
-              }}
+              className="flex-1 flex flex-col items-center h-full justify-end"
             >
               {/* Tooltip on hover */}
               <div
+                className="w-full max-w-[40px] rounded-t cursor-pointer transition-opacity duration-150 relative"
                 style={{
-                  width: '100%',
-                  maxWidth: 40,
                   height: `${Math.max(heightPercent, 2)}%`,
                   background: item.amount > 0 
                     ? 'linear-gradient(180deg, #22c55e 0%, #16a34a 100%)' 
                     : 'var(--border)',
-                  borderRadius: '0.25rem 0.25rem 0 0',
-                  cursor: 'pointer',
-                  transition: 'opacity 0.15s',
-                  position: 'relative',
                 }}
                 title={`${item.label}: ฿${item.amount.toLocaleString()} (${item.count} ครั้ง)`}
               />
               {/* Label */}
-              <div style={{
-                position: 'absolute',
-                bottom: 0,
-                fontSize: '0.625rem',
-                color: 'var(--muted-foreground)',
-                whiteSpace: 'nowrap',
-              }}>
+              <div className="absolute bottom-0 text-[0.625rem] text-muted-foreground whitespace-nowrap">
                 {item.label}
               </div>
             </div>
@@ -167,37 +134,18 @@ export default function SalesPage() {
 
   return (
     <div>
-      <h1 style={{ 
-        fontSize: '1.5rem', 
-        fontWeight: 600, 
-        marginBottom: '1.5rem', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.5rem' 
-      }}>
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <WalletIcon size={24} />
         สรุปยอดเติมเงิน
       </h1>
 
       {/* Period Selector */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '0.5rem', 
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-      }}>
+      <div className="flex gap-2 mb-6 flex-wrap">
         {(['daily', 'weekly', 'monthly'] as Period[]).map((p) => (
           <button
             key={p}
-            className={`btn ${period === p ? 'btn-primary' : ''}`}
+            className={`btn min-w-[120px] flex items-center justify-center gap-2 ${period === p ? 'btn-primary' : ''}`}
             onClick={() => setPeriod(p)}
-            style={{ 
-              minWidth: 120,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}
           >
             {periodConfig[p].icon}
             {periodConfig[p].label}
@@ -206,45 +154,33 @@ export default function SalesPage() {
       </div>
 
       {/* Period Description */}
-      <div style={{ 
-        fontSize: '0.875rem', 
-        color: 'var(--muted-foreground)', 
-        marginBottom: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-      }}>
+      <div className="text-sm text-muted-foreground mb-4 flex items-center gap-2">
         {periodConfig[period].icon}
         {periodConfig[period].description}
       </div>
 
       {/* Summary Cards */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '1rem', 
-        marginBottom: '1.5rem' 
-      }}>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '0.5rem' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-6">
+        <div className="card p-5">
+          <div className="text-sm text-muted-foreground mb-2">
             ยอดเติมเงินรวม
           </div>
           {loading ? (
-            <div className="skeleton" style={{ width: '60%', height: '1.75rem' }} />
+            <div className="skeleton w-[60%] h-7" />
           ) : (
-            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: '#22c55e' }}>
+            <div className="text-3xl font-bold text-success">
               ฿{data?.summary.totalAmount.toLocaleString() || 0}
             </div>
           )}
         </div>
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <div style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)', marginBottom: '0.5rem' }}>
+        <div className="card p-5">
+          <div className="text-sm text-muted-foreground mb-2">
             จำนวนการเติมเงิน
           </div>
           {loading ? (
-            <div className="skeleton" style={{ width: '50%', height: '1.75rem' }} />
+            <div className="skeleton w-[50%] h-7" />
           ) : (
-            <div style={{ fontSize: '1.75rem', fontWeight: 700 }}>
+            <div className="text-3xl font-bold">
               {data?.summary.totalCount.toLocaleString() || 0} ครั้ง
             </div>
           )}
@@ -252,15 +188,8 @@ export default function SalesPage() {
       </div>
 
       {/* Chart */}
-      <div className="card" style={{ padding: '1.5rem' }}>
-        <h2 style={{ 
-          fontSize: '1rem', 
-          fontWeight: 600, 
-          marginBottom: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-        }}>
+      <div className="card p-6">
+        <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
           <ChartIcon size={20} />
           กราฟยอดเติมเงิน{periodConfig[period].label}
         </h2>
@@ -274,12 +203,8 @@ export default function SalesPage() {
 
       {/* Data Table */}
       {!loading && data && data.data.length > 0 && (
-        <div className="card" style={{ padding: '1.5rem', marginTop: '1.5rem' }}>
-          <h2 style={{ 
-            fontSize: '1rem', 
-            fontWeight: 600, 
-            marginBottom: '1rem',
-          }}>
+        <div className="card p-6 mt-6">
+          <h2 className="text-base font-semibold mb-4">
             รายละเอียด
           </h2>
           <div className="table-container">
@@ -287,18 +212,18 @@ export default function SalesPage() {
               <thead>
                 <tr>
                   <th>ช่วงเวลา</th>
-                  <th style={{ textAlign: 'right' }}>ยอดเงิน</th>
-                  <th style={{ textAlign: 'right' }}>จำนวนครั้ง</th>
+                  <th className="text-right">ยอดเงิน</th>
+                  <th className="text-right">จำนวนครั้ง</th>
                 </tr>
               </thead>
               <tbody>
                 {data.data.map((item, index) => (
                   <tr key={index}>
                     <td>{item.label}</td>
-                    <td style={{ textAlign: 'right', color: '#22c55e', fontWeight: 500 }}>
+                    <td className="text-right text-success font-medium">
                       ฿{item.amount.toLocaleString()}
                     </td>
-                    <td style={{ textAlign: 'right' }}>{item.count}</td>
+                    <td className="text-right">{item.count}</td>
                   </tr>
                 ))}
               </tbody>

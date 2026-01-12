@@ -127,6 +127,13 @@ const COLORS = {
   magenta: '\x1b[35m',    // SECURITY
 }
 
+// Body size limit (1MB) - prevents DoS attacks
+const MAX_BODY_SIZE = 1 * 1024 * 1024 // 1MB
+
+// Content Security Policy - restrictive for API, relaxed for pages
+const CSP_API = "default-src 'none'; frame-ancestors 'none'"
+const CSP_PAGE = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc-heads.net https://crafatar.com https://texture.geysermc.org; font-src 'self'; connect-src 'self'; frame-ancestors 'self'"
+
 function getStatusColor(status: number): string {
   if (status >= 200 && status < 300) return COLORS.green
   if (status >= 300 && status < 400) return COLORS.yellow
@@ -145,6 +152,21 @@ export async function proxy(request: NextRequest) {
   
   // Only apply to /api routes
   if (pathname.startsWith('/api')) {
+    // Check body size for POST/PUT/PATCH requests (skip upload routes)
+    if (['POST', 'PUT', 'PATCH'].includes(method) && !pathname.includes('/upload')) {
+      const contentLength = request.headers.get('content-length')
+      if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
+        logger.security.suspiciousActivity(`Body size exceeded: ${contentLength} bytes`, ip)
+        return NextResponse.json(
+          { error: 'Request body too large. Maximum size is 1MB.' },
+          { 
+            status: 413,
+            headers: { 'X-Request-ID': requestId }
+          }
+        )
+      }
+    }
+
     // Log API request with Request ID
     logger.api.request(method, pathname)
 
@@ -197,6 +219,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set('X-Frame-Options', 'DENY')
     response.headers.set('X-XSS-Protection', '1; mode=block')
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+    response.headers.set('Content-Security-Policy', CSP_API)
     
     return response
   }
@@ -207,6 +230,7 @@ export async function proxy(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'SAMEORIGIN')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  response.headers.set('Content-Security-Policy', CSP_PAGE)
   response.headers.set('X-Request-ID', requestId)
   
   return response

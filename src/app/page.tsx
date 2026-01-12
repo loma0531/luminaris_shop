@@ -70,19 +70,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '1rem',
-    }}>
-      <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="card max-w-[400px] w-full">
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 text-2xl font-semibold mb-2">
             Luminaris Shop
           </div>
-          <p style={{ color: 'var(--muted-foreground)' }}>
+          <p className="text-muted-foreground">
             เข้าสู่ระบบด้วยชื่อผู้เล่น Minecraft
           </p>
         </div>
@@ -109,13 +103,12 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%' }}
+            className="btn btn-primary w-full"
             disabled={loading || !playerName.trim()}
           >
             {loading ? (
               <>
-                <div className="spinner" style={{ width: 16, height: 16 }} />
+                <div className="spinner w-4 h-4" />
                 กำลังตรวจสอบ...
               </>
             ) : (
@@ -124,26 +117,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{
-          marginTop: '1.5rem',
-          paddingTop: '1rem',
-          borderTop: '1px solid var(--border)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-          fontSize: '0.875rem',
-          color: 'var(--muted-foreground)',
-        }}>
+        <div className="mt-6 pt-4 border-t border-border flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <QuestionIcon size={16} />
           ต้องเป็นผู้เล่นที่เคยเข้าเซิร์ฟเวอร์เท่านั้น
         </div>
 
-        <div style={{
-          marginTop: '1rem',
-          textAlign: 'center',
-        }}>
-          <Link href="/shop" className="btn btn-outline" style={{ width: '100%' }}>
+        <div className="mt-4 text-center">
+          <Link href="/shop" className="btn btn-outline w-full">
             ดูสินค้าก่อนโดยไม่ต้องเข้าสู่ระบบ
           </Link>
         </div>
@@ -151,3 +131,4 @@ export default function LoginPage() {
     </div>
   )
 }
+

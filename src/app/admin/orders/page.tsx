@@ -64,31 +64,25 @@ export default function AdminOrdersPage() {
   const getStatusBadge = (status: Order['status']) => {
     switch (status) {
       case 'COMPLETED':
-        return <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><CheckIcon size={12} /> สำเร็จ</span>
+        return <span className="badge badge-success inline-flex items-center gap-1"><CheckIcon size={12} /> สำเร็จ</span>
       case 'CANCELLED':
-        return <span className="badge badge-error" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><CloseIcon size={12} /> ยกเลิก</span>
+        return <span className="badge badge-error inline-flex items-center gap-1"><CloseIcon size={12} /> ยกเลิก</span>
       case 'AWAITING_PAYMENT':
-        return <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><CreditCardIcon size={12} /> รอชำระ</span>
+        return <span className="badge badge-warning inline-flex items-center gap-1"><CreditCardIcon size={12} /> รอชำระ</span>
       case 'PENDING':
       default:
-        return <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}><ClockIcon size={12} /> รอดำเนินการ</span>
+        return <span className="badge badge-warning inline-flex items-center gap-1"><ClockIcon size={12} /> รอดำเนินการ</span>
     }
   }
 
   return (
     <div>
-      <h1 className="admin-title" style={{ marginBottom: '1.5rem' }}>จัดการคำสั่งซื้อ</h1>
+      <h1 className="admin-title mb-6">จัดการคำสั่งซื้อ</h1>
 
       {/* Filters */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '1rem', 
-        marginBottom: '1.5rem',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-      }}>
+      <div className="flex gap-4 mb-6 flex-wrap items-center">
         {/* Search */}
-        <div className="search-box" style={{ flex: '1', minWidth: '200px' }}>
+        <div className="search-box flex-1 min-w-[200px]">
           <span className="search-icon"><SearchIcon size={16} /></span>
           <input
             type="text"
@@ -101,19 +95,11 @@ export default function AdminOrdersPage() {
 
         {/* Status Filter */}
         <select
-          className="input"
+          className="input min-w-[160px] px-4 py-2 bg-card border border-border rounded-md text-foreground"
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value as StatusFilter)
             setPage(1)
-          }}
-          style={{ 
-            minWidth: '160px',
-            padding: '0.5rem 1rem',
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: '0.375rem',
-            color: 'var(--foreground)',
           }}
         >
           <option value="ALL">ทุกสถานะ</option>
@@ -144,39 +130,29 @@ export default function AdminOrdersPage() {
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem' }}>
+                    <td colSpan={6} className="text-center p-8">
                       ไม่พบรายการ
                     </td>
                   </tr>
                 ) : (
                   filteredOrders.map((order: Order) => (
                     <tr key={order.id}>
-                      <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                      <td className="font-mono font-semibold">
                         #{order.orderId}
                       </td>
                       <td>{order.minecraftName}</td>
                       <td>
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '0.25rem',
-                          maxWidth: '300px',
-                        }}>
+                        <div className="flex flex-col gap-1 max-w-[300px]">
                           {order.items.map((item: OrderItem, idx: number) => (
-                            <div key={idx} style={{ 
-                              fontSize: '0.875rem',
-                              padding: '0.25rem 0.5rem',
-                              background: 'var(--muted)',
-                              borderRadius: '0.25rem',
-                            }}>
-                              {item.name} <span style={{ color: 'var(--muted-foreground)' }}>x{item.quantity}</span>
+                            <div key={idx} className="text-sm px-2 py-1 bg-muted rounded">
+                              {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
                             </div>
                           ))}
                         </div>
                       </td>
-                      <td style={{ fontWeight: 600 }}>{order.total.toLocaleString()} ฿</td>
+                      <td className="font-semibold">{order.total.toLocaleString()} ฿</td>
                       <td>{getStatusBadge(order.status)}</td>
-                      <td style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+                      <td className="text-sm text-muted-foreground">
                         {new Date(order.createdAt).toLocaleString('th-TH')}
                       </td>
                     </tr>
