@@ -30,6 +30,7 @@
     "k6:all": "k6 run k6/scenarios/smoke.test.js && k6 run k6/scenarios/load.test.js"
   },
   "dependencies": {
+    "@fortune-inc/tw-voucher": "^1.1.2",
     "@prisma/client": "^5.22.0",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",

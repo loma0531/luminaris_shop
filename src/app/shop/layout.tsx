@@ -190,7 +190,13 @@ function ShopSidebar({
       <aside className={`shop-sidebar ${mobileOpen ? 'open' : ''}`}>
         {/* Logo */}
         <div className="shop-sidebar-logo">
-          {/* <PackageIcon size={24} /> */}
+          <Image 
+            src="/Legacy_of_Luminaris_World_Logo_NoBG_1-1_03.png" 
+            alt="Luminaris" 
+            width={28} 
+            height={28}
+            className="rounded"
+          />
           <span>Luminaris Shop</span>
         </div>
 

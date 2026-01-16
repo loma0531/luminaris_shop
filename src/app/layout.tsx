@@ -14,6 +14,11 @@ const notoSansThai = Noto_Sans_Thai({
 export const metadata: Metadata = {
   title: "Luminaris Shop - ร้านค้า Minecraft",
   description: "ร้านค้าไอเทม Minecraft สำหรับเซิร์ฟเวอร์ Luminaris",
+  icons: {
+    icon: "/Legacy_of_Luminaris_World_Logo_NoBG_1-1_03.png",
+    shortcut: "/Legacy_of_Luminaris_World_Logo_NoBG_1-1_03.png",
+    apple: "/Legacy_of_Luminaris_World_Logo_NoBG_1-1_03.png",
+  },
 };
 
 import { ToastProvider } from '@/context/ToastContext'
