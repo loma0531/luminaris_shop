@@ -69,9 +69,9 @@ export async function redeemTruewalletVoucher(
   console.log(`[Truewallet] URL: ${voucherUrl.slice(0, 45)}...`);
 
   try {
-    // Dynamic import เพื่อหลีกเลี่ยงปัญหา build time
-    const melodyModule = await import('melody191-fetcher');
-    const Melodyshop_Voucher = melodyModule.Melodyshop_Voucher;
+    // ใช้ require แทน dynamic import เพื่อหลีกเลี่ยงปัญหา Turbopack
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Melodyshop_Voucher } = require('melody191-fetcher');
     
     // ใช้ melody191-fetcher สำหรับ redeem
     const result: MelodyVoucherResult = await Melodyshop_Voucher(voucherUrl, cleanPhone);
