@@ -2,7 +2,7 @@
  * Truewallet Voucher Redemption Library
  * ใช้สำหรับ redeem ซองอั่งเปา Truewallet
  * 
- * Implement เองโดยตรงเพราะ library มีปัญหากับ Bun
+ * ใช้ melody191-fetcher package เพื่อ bypass Cloudflare protection
  */
 
 export interface TruewalletRedeemResult {
@@ -14,23 +14,27 @@ export interface TruewalletRedeemResult {
 }
 
 /**
- * Extract voucher code จาก URL
- * รองรับ format: https://gift.truemoney.com/campaign/?v=XXXXXXXXX
+ * Map error codes จาก melody191-fetcher เป็นข้อความภาษาไทย
  */
-function extractVoucherCode(voucherUrl: string): string | null {
-  // ลอง extract จาก URL parameter
-  const match = voucherUrl.match(/[?&]v=([0-9A-Za-z]+)/);
-  if (match && match[1]) {
-    return match[1];
-  }
-  
-  // ลองเอาโค้ดตรงๆ ถ้าไม่ใช่ URL
-  const codeMatch = voucherUrl.match(/^[0-9A-Za-z]{18}$/);
-  if (codeMatch) {
-    return codeMatch[0];
-  }
-  
-  return null;
+const errorMessages: Record<number, string> = {
+  1000: 'ไม่สามารถรับซองของตัวเองได้',
+  1001: 'ไม่พบเบอร์นี้ในระบบ TrueMoney',
+  1002: 'ไม่พบซองอั่งเปาในระบบ',
+  1003: 'ซองอั่งเปานี้หมดอายุแล้ว',
+  1004: 'ซองอั่งเปานี้ถูกใช้งานไปแล้ว',
+  1005: 'ไม่พบซองนี้ในระบบ หรือ URL ไม่ถูกต้อง',
+  1006: 'เบอร์โทรศัพท์ผู้รับเงินไม่ถูกต้อง',
+  [-1]: 'เกิดข้อผิดพลาดที่ไม่รู้จัก',
+};
+
+interface MelodyVoucherResult {
+  ok?: string;
+  amount?: string;
+  name_owner?: string;
+  my_phone?: string;
+  code?: string;
+  errorData?: number;
+  mes_err?: string;
 }
 
 /**
@@ -52,68 +56,50 @@ export async function redeemTruewalletVoucher(
     };
   }
 
-  // Extract voucher code
-  const voucherCode = extractVoucherCode(voucherUrl);
-  if (!voucherCode) {
+  // Validate URL format
+  if (!voucherUrl.includes('gift.truemoney.com')) {
     return {
       success: false,
       error: 'รูปแบบ URL ไม่ถูกต้อง กรุณาใช้ลิงก์จาก TrueMoney Gift',
     };
   }
 
-  console.log(`[Truewallet] Attempting redeem - Phone: ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-3)}, Code: ${voucherCode.slice(0, 5)}...`);
+  console.log(`[Truewallet] Attempting redeem with melody191-fetcher`);
+  console.log(`[Truewallet] Phone: ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-3)}`);
+  console.log(`[Truewallet] URL: ${voucherUrl.slice(0, 45)}...`);
 
   try {
-    // เรียก API ของ Truewoney โดยตรง
-    const response = await fetch(`https://gift.truemoney.com/campaign/vouchers/${voucherCode}/redeem`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Origin': 'https://gift.truemoney.com',
-        'Referer': `https://gift.truemoney.com/campaign/?v=${voucherCode}`,
-      },
-      body: JSON.stringify({
-        mobile: cleanPhone,
-        voucher_hash: voucherCode,
-      }),
-    });
+    // Dynamic import เพื่อหลีกเลี่ยงปัญหา build time
+    const melodyModule = await import('melody191-fetcher');
+    const Melodyshop_Voucher = melodyModule.Melodyshop_Voucher;
+    
+    // ใช้ melody191-fetcher สำหรับ redeem
+    const result: MelodyVoucherResult = await Melodyshop_Voucher(voucherUrl, cleanPhone);
+    
+    console.log('[Truewallet] API Response:', JSON.stringify(result, null, 2));
 
-    const data = await response.json();
-    console.log('[Truewallet] API Response:', JSON.stringify(data, null, 2));
-
-    // ตรวจสอบผลลัพธ์
-    if (data.status?.code === 'SUCCESS') {
+    // ตรวจสอบผลลัพธ์สำเร็จ
+    if (result.ok === 'success') {
+      const amount = parseFloat(result.amount || '0') || 0;
+      console.log(`[Truewallet] Success! Amount: ${amount} THB, Owner: ${result.name_owner}`);
+      
       return {
         success: true,
-        code: voucherCode,
-        ownerFullName: data.data?.owner_profile?.full_name || data.data?.voucher?.full_name || 'Unknown',
-        amount: parseFloat(data.data?.my_ticket?.amount_baht?.replace(/,/g, '') || data.data?.voucher?.amount_baht || '0'),
+        code: result.code || voucherUrl,
+        ownerFullName: result.name_owner || 'Unknown',
+        amount: amount,
       };
     }
 
     // Handle error cases
-    const errorCode = data.status?.code || 'UNKNOWN_ERROR';
-    const errorMessage = data.status?.message || 'Unknown error';
+    const errorCode = result.errorData || -1;
+    const errorMsg = result.mes_err || errorMessages[errorCode] || 'เกิดข้อผิดพลาดที่ไม่รู้จัก';
     
-    console.error(`[Truewallet] Redeem failed - Code: ${errorCode}, Message: ${errorMessage}`);
-    
-    // Map error codes to Thai messages
-    const errorMessages: Record<string, string> = {
-      'VOUCHER_OUT_OF_STOCK': 'ซองอั่งเปานี้ถูกใช้หมดแล้ว',
-      'VOUCHER_EXPIRED': 'ซองอั่งเปานี้หมดอายุแล้ว',
-      'VOUCHER_NOT_FOUND': 'ไม่พบซองอั่งเปานี้',
-      'VOUCHER_ALREADY_REDEEMED': 'ซองอั่งเปานี้ถูกใช้งานไปแล้ว',
-      'TARGET_USER_REDEEMED': 'คุณได้รับซองนี้ไปแล้ว',
-      'CANNOT_GET_OWN_VOUCHER': 'ไม่สามารถรับซองของตัวเองได้',
-      'INVALID_MOBILE': 'เบอร์โทรศัพท์ไม่ถูกต้อง',
-      'LIMIT_EXCEEDED': 'เกินจำนวนที่สามารถรับได้',
-    };
+    console.error(`[Truewallet] Redeem failed - Code: ${errorCode}, Message: ${errorMsg}`);
     
     return {
       success: false,
-      error: errorMessages[errorCode] || `เกิดข้อผิดพลาด: ${errorMessage} (${errorCode})`,
+      error: errorMsg,
     };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);

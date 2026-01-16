@@ -12,6 +12,7 @@
         "cropperjs": "^1.6.2",
         "form-data": "^4.0.5",
         "ioredis": "^5.9.0",
+        "melody191-fetcher": "^1.0.6",
         "mysql2": "^3.16.0",
         "next": "^16.1.1",
         "promptpay-qr": "^0.5.0",
@@ -949,6 +950,8 @@
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
     "mdn-data": ["mdn-data@2.12.2", "", {}, "sha512-IEn+pegP1aManZuckezWCO+XZQDplx1366JoVhTpMpBB1sPey/SbveZQUosKiKiGYjg1wH4pMlNgXbCiYgihQA=="],
+
+    "melody191-fetcher": ["melody191-fetcher@1.0.6", "", { "dependencies": { "axios": "^1.6.0" } }, "sha512-o+aFx/1lM6Vq/kijxAgr8iwCtFAj2IgDz3BF4tnmVhk9BBD3sXHeiFtNKixUMG4VzNa3G8/wkcpB0+fGck1gJQ=="],
 
     "merge2": ["merge2@1.4.1", "", {}, "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg=="],
 
