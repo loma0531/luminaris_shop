@@ -29,6 +29,9 @@ const nextConfig: NextConfig = {
   // Enable React strict mode for better development
   reactStrictMode: true,
   
+  // External packages for server-side (bypass Turbopack bundling)
+  serverExternalPackages: ['melody191-fetcher'],
+  
   // Experimental features for better performance
   experimental: {
     // Enable optimized package imports
