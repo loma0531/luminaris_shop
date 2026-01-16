@@ -505,6 +505,14 @@ export default function OrdersPage() {
                     color="orange"
                   />
                 </div>
+                <button 
+                  className="btn btn-danger w-full mt-4"
+                  onClick={() => setShowConfirm(true)}
+                  disabled={uploading}
+                >
+                  <TrashIcon size={16} />
+                  ยกเลิกรายการ
+                </button>
               </div>
             )}
 
@@ -609,6 +617,10 @@ export default function OrdersPage() {
                     วางลิงก์ซองอั่งเปาด้านล่าง
                   </p>
 
+                  <p className="text-center text-2xl font-bold text-white mb-4">
+                    {pendingOrder.total.toLocaleString()} บาท
+                  </p>
+                  
                   {/* Voucher URL Input */}
                   <div className="relative mb-4">
                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500">
@@ -623,11 +635,6 @@ export default function OrdersPage() {
                       disabled={uploading}
                     />
                   </div>
-
-                  <p className="text-center text-2xl font-bold text-white mb-4">
-                    ยอดที่ต้องชำระ: {pendingOrder.total.toLocaleString()} บาท
-                  </p>
-
 
                   {/* Submit Button - styled like PromptPay upload button */}
                   <button
