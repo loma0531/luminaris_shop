@@ -35,6 +35,9 @@ function createSignedToken(payload: TokenPayload): string {
 /**
  * Internal helper to verify token signature and basic structure
  */
+/**
+ * Internal helper to verify token signature and basic structure
+ */
 function verifyTokenSignature<T extends TokenPayload>(token: string, expectedType: string): { valid: boolean, payload?: T, error?: string } {
   if (!token) return { valid: false, error: 'No token provided' }
 
@@ -47,7 +50,22 @@ function verifyTokenSignature<T extends TokenPayload>(token: string, expectedTyp
     .update(payloadBase64)
     .digest('hex')
 
-  if (signature !== expectedSignature) return { valid: false, error: 'Invalid token signature' }
+  // Use timingSafeEqual to prevent timing attacks
+  const signatureBuffer = Buffer.from(signature)
+  const expectedBuffer = Buffer.from(expectedSignature)
+
+  // Length check first (also timing safe-ish in practice for JS strings, but buffers are better)
+  // If lengths differ, we still compare to avoid leaking length info immediately if possible? 
+  // timingSafeEqual throws if lengths differ.
+  
+  // Safe approach: check length first, if mismatch, compare with dummy but return false
+  if (signatureBuffer.length !== expectedBuffer.length) {
+      return { valid: false, error: 'Invalid token signature' }
+  }
+
+  if (!crypto.timingSafeEqual(signatureBuffer, expectedBuffer)) {
+      return { valid: false, error: 'Invalid token signature' }
+  }
 
   try {
     const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString()) as T

@@ -1,5 +1,6 @@
 import { Rcon } from 'rcon-client'
 import { logger } from '@/lib/logger'
+import { isValidMinecraftName } from '@/lib/inputValidation'
 
 interface RconConfig {
   host: string
@@ -190,6 +191,10 @@ export async function getPlayerLastSeen(playerName: string): Promise<PlayerSeenR
  * Verify if a player exists by checking if they have ever joined the server
  */
 export async function verifyPlayerExists(playerName: string): Promise<boolean> {
+  if (!isValidMinecraftName(playerName)) {
+    logger.security.invalidInput('verifyPlayerExists', playerName)
+    return false
+  }
   try {
     const result = await getPlayerLastSeen(playerName)
     return result.hasPlayed
@@ -206,6 +211,11 @@ export async function verifyPlayerExists(playerName: string): Promise<boolean> {
  * Uses a SINGLE connection for all commands to improve performance
  */
 export async function giveItemsToPlayer(playerName: string, commands: string[]): Promise<{ success: boolean; results: string[] }> {
+  if (!isValidMinecraftName(playerName)) {
+    logger.security.invalidInput('giveItemsToPlayer', playerName)
+    return { success: false, results: ['Invalid player name'] }
+  }
+
   const results: string[] = []
   let success = true
   const config = getRconConfig()

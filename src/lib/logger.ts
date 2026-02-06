@@ -58,6 +58,20 @@ function formatLevel(level: LogLevel): string {
   return `${color}[${level}]${COLORS.reset}`
 }
 
+/**
+ * Mask sensitive data like passwords or tokens in logs
+ */
+function maskSensitiveData(message: string): string {
+  if (!message) return message
+  // Mask anything looking like a password parameter
+  // e.g. "register mypassword" -> "register *****"
+  // "login password123" -> "login *****"
+  return message
+    .replace(/(register|login|changepassword|auth|password)\s+([^\s]+)/gi, '$1 *****')
+    .replace(/(token=|bearer\s+)([a-zA-Z0-9\.\-\_]+)/gi, '$1*****')
+}
+
+
 function log(level: LogLevel, message: string, statusCode?: number, duration?: number): void {
   const timestamp = `[${formatTimestamp()}]`
   
@@ -399,7 +413,7 @@ export const logger = {
     },
     
     failed: (playerName: string, error: string) => {
-      log(LogLevel.ERROR, `RCON failed for ${playerName}: ${error}`, 500)
+      log(LogLevel.ERROR, `RCON failed for ${playerName}: ${maskSensitiveData(error)}`, 500)
     },
     
     commandBlocked: (command: string, playerName: string) => {
@@ -416,7 +430,7 @@ export const logger = {
     
     // New detailed logs for item delivery
     commandSent: (playerName: string, command: string) => {
-      log(LogLevel.DEBUG, `RCON command sent to ${playerName}: ${command}`, 200)
+      log(LogLevel.DEBUG, `RCON command sent to ${playerName}: ${maskSensitiveData(command)}`, 200)
     },
     
     commandResponse: (playerName: string, command: string, response: string) => {
@@ -424,11 +438,11 @@ export const logger = {
     },
     
     commandSuccess: (playerName: string, command: string) => {
-      log(LogLevel.INFO, `RCON command success for ${playerName}: ${command}`, 200)
+      log(LogLevel.INFO, `RCON command success for ${playerName}: ${maskSensitiveData(command)}`, 200)
     },
     
     commandFailed: (playerName: string, command: string, error: string) => {
-      log(LogLevel.ERROR, `RCON command failed for ${playerName}: ${command} - ${error}`, 500)
+      log(LogLevel.ERROR, `RCON command failed for ${playerName}: ${maskSensitiveData(command)} - ${error}`, 500)
     },
     
     deliveryStarted: (orderId: number, playerName: string, itemCount: number) => {
