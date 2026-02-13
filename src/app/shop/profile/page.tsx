@@ -1,27 +1,17 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { UserIcon, EyeIcon, EyeOffIcon, LockIcon, ClockIcon, SparklesIcon } from '@/components/Icons'
 import { MinecraftColoredText } from '@/lib/minecraftColors'
-import { apiFetch } from '@/lib/apiFetch'
 import { logger } from '@/lib/logger'
 import { SkeletonProfilePage } from '@/components/Skeleton'
+import { useProfile } from '@/lib/swr-hooks'
 
 interface User {
   id: string
   minecraftName: string
-}
-
-interface ProfileData {
-  displayName: string | null
-  balance: number
-  playerUuid: string | null
-  jobs: string[]
-  lastLoginTime: number | null
-  lastLogoffTime: number | null
-  totalPlayTime: number | null
 }
 
 // Check if player is Bedrock (has BR_ prefix)
@@ -40,7 +30,6 @@ function getCleanName(minecraftName: string): string {
 // Get avatar URL based on platform
 function getAvatarUrl(minecraftName: string, size: number): string {
   const cleanName = getCleanName(minecraftName)
-  // mc-heads.net works for both Java and Bedrock usernames
   return `https://mc-heads.net/avatar/${cleanName}/${size}`
 }
 
@@ -78,39 +67,27 @@ function SkinViewer3D({ minecraftName }: { minecraftName: string }) {
   const [isLoaded, setIsLoaded] = useState(false)
   const [skinUrl, setSkinUrl] = useState<string | null>(null)
 
-  // Fetch skin URL based on platform
+  /* WebGL Error Handling */
+  const [isWebglError, setIsWebglError] = useState(false)
+
+  // Fetch skin URL based on platform via server API
   useEffect(() => {
     const fetchSkinUrl = async () => {
-      const isBedrockPlayer = isBedrock(minecraftName)
-      const cleanName = getCleanName(minecraftName)
-      
-      if (isBedrockPlayer) {
-        // Bedrock: Use GeyserMC API
-        try {
-          // Step 1: Get XUID from gamertag
-          const xuidResponse = await fetch(`https://api.geysermc.org/v2/xbox/xuid/${cleanName}`)
-          if (xuidResponse.ok) {
-            const xuidData = await xuidResponse.json()
-            if (xuidData.xuid) {
-              // Step 2: Get skin texture ID from XUID
-              const skinResponse = await fetch(`https://api.geysermc.org/v2/skin/${xuidData.xuid}`)
-              if (skinResponse.ok) {
-                const skinData = await skinResponse.json()
-                if (skinData.texture_id) {
-                  setSkinUrl(`https://textures.minecraft.net/texture/${skinData.texture_id}`)
-                  return
-                }
-              }
-            }
+      try {
+        const res = await fetch(`/api/shop/skin?name=${minecraftName}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.skinUrl) {
+            setSkinUrl(data.skinUrl)
           }
-        } catch (error) {
-          logger.error(`Error fetching Bedrock skin: ${error}`)
+        } else {
+           // Fallback if API fails
+           setSkinUrl(`https://mc-heads.net/skin/${minecraftName}`)
         }
-        // Fallback to mc-heads.net
-        setSkinUrl(`https://mc-heads.net/skin/${cleanName}`)
-      } else {
-        // Java: Use mc-heads.net directly
-        setSkinUrl(`https://mc-heads.net/skin/${cleanName}`)
+      } catch (error) {
+        logger.error(`Error fetching skin: ${error}`)
+        // Fallback
+        setSkinUrl(`https://mc-heads.net/skin/${minecraftName}`)
       }
     }
 
@@ -144,8 +121,8 @@ function SkinViewer3D({ minecraftName }: { minecraftName: string }) {
 
         // Configure viewer - VERY BRIGHT lighting
         viewerRef.current.zoom = 0.9
-        viewerRef.current.globalLight.intensity = 3.0  // Very bright
-        viewerRef.current.cameraLight.intensity = 2.0   // Very bright camera light
+        viewerRef.current.globalLight.intensity = 3.0
+        viewerRef.current.cameraLight.intensity = 2.0
 
         // Add idle animation
         viewerRef.current.animation = new skinview3d.IdleAnimation()
@@ -155,8 +132,11 @@ function SkinViewer3D({ minecraftName }: { minecraftName: string }) {
         viewerRef.current.playerObject.rotation.y = -0.3
 
         setIsLoaded(true)
+        setIsWebglError(false)
       } catch (error) {
         logger.error(`Error initializing skin viewer: ${error}`)
+        setIsWebglError(true)
+        setIsLoaded(true) // Stop loading spinner
       }
     }
 
@@ -170,6 +150,24 @@ function SkinViewer3D({ minecraftName }: { minecraftName: string }) {
       }
     }
   }, [skinUrl])
+
+  if (isWebglError) {
+    return (
+      <div className="skin-viewer-container flex-col gap-4">
+        <div className="relative opacity-100 filter brightness-110">
+           <Image 
+             src={`https://mc-heads.net/body/${getCleanName(minecraftName)}/150`}
+             alt="Character Preview"
+             width={100}
+             height={220}
+             className="object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"
+             unoptimized
+           />
+        </div>
+        <span className="text-white/40 text-sm">ไม่สามารถแสดงผล 3D ได้</span>
+      </div>
+    )
+  }
 
   return (
     <div className="skin-viewer-container">
@@ -190,50 +188,25 @@ function SkinViewer3D({ minecraftName }: { minecraftName: string }) {
 
 export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null)
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [loading, setLoading] = useState(true)
   const [showUuid, setShowUuid] = useState(false)
   const router = useRouter()
-  const currentUserRef = useRef<string | null>(null)
 
-  const fetchProfile = useCallback(async (minecraftName: string) => {
-    try {
-      const res = await apiFetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minecraftName }),
-      })
-      const data = await res.json()
-      
-      if (data.profile) {
-        setProfile(data.profile)
-      }
-    } catch (error) {
-      logger.error(`Error fetching profile: ${error}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // Load user from localStorage
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     if (!storedUser) {
       router.push('/shop')
       return
     }
-    
-    const userObj = JSON.parse(storedUser) as User
-    
-    // Check if user changed - reset and fetch new data
-    if (currentUserRef.current !== userObj.minecraftName) {
-      currentUserRef.current = userObj.minecraftName
-      setUser(userObj)
-      setProfile(null)
-      setLoading(true)
-      setShowUuid(false)
-      fetchProfile(userObj.minecraftName)
+    try {
+      setUser(JSON.parse(storedUser))
+    } catch {
+      router.push('/shop')
     }
-  }, [router, fetchProfile])
+  }, [router])
+
+  // SWR: ดึง profile อัตโนมัติเมื่อมี user
+  const { data: profile, isLoading: loading } = useProfile(user?.minecraftName || null)
 
   if (loading) {
     return <SkeletonProfilePage />
@@ -288,7 +261,6 @@ export default function ProfilePage() {
                   className="avatar-image"
                   loading="eager"
                   priority
-                  unoptimized
                 />
                 <div className="avatar-glow" />
               </div>

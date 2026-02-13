@@ -5,6 +5,7 @@ import { CACHE_HEADERS } from '@/lib/cache'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { logger, createTimer } from '@/lib/logger'
 import { CartItemData } from '@/lib/types'
+import { getCachedCart, setCachedCart, invalidateCartCache, CachedCartItem } from '@/lib/redis'
 
 export async function GET(request: NextRequest) {
   const timer = createTimer()
@@ -21,6 +22,19 @@ export async function GET(request: NextRequest) {
 
     if (!isValidMinecraftName(minecraftName)) {
       return NextResponse.json({ error: 'Invalid minecraft name format' }, { status: 400 })
+    }
+
+    // Try cache first
+    const cachedCart = await getCachedCart(minecraftName)
+    if (cachedCart) {
+      logger.cart.loaded(minecraftName, cachedCart.items.length, timer())
+      // Add X-Cache header for debugging
+      return NextResponse.json({ items: cachedCart.items }, { 
+        headers: { 
+          ...CACHE_HEADERS.NONE,
+          'X-Cache': 'HIT'
+        } 
+      })
     }
 
     const cart = await prisma.cart.findUnique({
@@ -69,9 +83,17 @@ export async function GET(request: NextRequest) {
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
 
+    // Save to cache
+    // Map items to match CachedCartItem interface if needed, but the structure is compatible enough
+    // We cast to CachedCartItem[] to satisfy the type system if strict, or let it infer
+    await setCachedCart(minecraftName, { 
+      items: items as unknown as CachedCartItem[], 
+      timestamp: Date.now() 
+    })
+
     logger.cart.loaded(minecraftName, items.length, timer())
 
-    return NextResponse.json({ items }, { headers: CACHE_HEADERS.NONE })
+    return NextResponse.json({ items }, { headers: { ...CACHE_HEADERS.NONE, 'X-Cache': 'MISS' } })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.system.error(`Failed to fetch cart: ${errorMessage}`)
@@ -127,6 +149,9 @@ export async function POST(request: NextRequest) {
         create: { minecraftName, items: cartItems },
       })
       
+      // Invalidate cache
+      await invalidateCartCache(minecraftName)
+
       // Simple log: just count
       logger.debug(`Cart updated for ${minecraftName}: ${cartItems.length} items`, 200, timer())
       
@@ -184,6 +209,9 @@ export async function POST(request: NextRequest) {
       create: { minecraftName, items: cartItems },
     })
 
+    // Invalidate cache
+    await invalidateCartCache(minecraftName)
+
     logger.cart.saved(minecraftName, cartItems.length, timer())
 
     return NextResponse.json({ success: true })
@@ -193,3 +221,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to save cart' }, { status: 500 })
   }
 }
+

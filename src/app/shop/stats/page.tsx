@@ -139,7 +139,6 @@ export default function StatsPage() {
                     width={24}
                     height={24}
                     className="rounded"
-                    unoptimized
                   />
                   <span className="flex-1 font-medium">{entry.minecraftName}</span>
                   <div className="text-right">
@@ -180,7 +179,6 @@ export default function StatsPage() {
                     width={20}
                     height={20}
                     className="rounded"
-                    unoptimized
                   />
                   <span className="flex-1 text-sm">{tx.minecraftName}</span>
                   <div className="text-right">

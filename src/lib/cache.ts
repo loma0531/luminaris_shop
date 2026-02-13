@@ -4,14 +4,14 @@
  */
 
 export const CACHE_HEADERS = {
-  // 1 minute cache for dynamic data (products, categories)
+  // 2 minute cache for dynamic data (products, categories)
   SHORT: { 
-    'Cache-Control': 'public, max-age=60, stale-while-revalidate=300' 
+    'Cache-Control': 'public, max-age=120, stale-while-revalidate=600' 
   },
   
-  // 5 minute cache for semi-static data  
+  // 10 minute cache for semi-static data  
   MEDIUM: { 
-    'Cache-Control': 'public, max-age=300, stale-while-revalidate=600' 
+    'Cache-Control': 'public, max-age=600, stale-while-revalidate=1200' 
   },
   
   // 1 hour cache for static data
@@ -19,14 +19,15 @@ export const CACHE_HEADERS = {
     'Cache-Control': 'public, max-age=3600, stale-while-revalidate=7200'
   },
   
-  // No cache for user-specific or sensitive data
+  // No cache for sensitive/auth data
   NONE: { 
     'Cache-Control': 'no-store, no-cache, must-revalidate, private' 
   },
   
-  // Private cache (only browser, not CDN)
+  // Private cache for user-specific data (cart, orders, profile)
+  // SWR จัดการ freshness ฝั่ง client → ให้ browser cache ได้สั้นๆ
   PRIVATE: {
-    'Cache-Control': 'private, max-age=60'
+    'Cache-Control': 'private, max-age=30, stale-while-revalidate=120'
   }
 } as const
 

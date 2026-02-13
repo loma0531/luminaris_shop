@@ -14,6 +14,9 @@ import { useToast } from '@/context/ToastContext'
 import { CART_LIMITS, canAddToCart } from '@/lib/cartLimits'
 import { logger } from '@/lib/logger'
 import { validateCustomInput } from '@/lib/inputValidation'
+import { getCartKey } from '@/lib/swr-hooks'
+import { mutate as globalMutate } from 'swr'
+import { cartSaveStarted, cartSaveCompleted, hasCartSavesInFlight } from '@/lib/cartSaveTracker'
 
 // Product Image with error handling and fallback
 function ProductImage({ src, alt, priority = false }: { src: string | null; alt: string; priority?: boolean }) {
@@ -33,7 +36,7 @@ function ProductImage({ src, alt, priority = false }: { src: string | null; alt:
       alt={alt} 
       fill 
       className="object-cover"
-      unoptimized={src.startsWith('/uploads/')} // Skip optimization for local images
+      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
       onError={() => setError(true)}
       priority={priority}
     />
@@ -48,8 +51,12 @@ export default function ShopPage() {
     triggerCartAnimation,
     products,
     categories,
-    isLoadingData: loading
+    isLoadingData: loading,
+    startCartSave,
+    endCartSave,
+    isCartSaving
   } = useShop()
+
   
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [cart, setCart] = useState<CartItem[]>([])
@@ -99,18 +106,30 @@ export default function ShopPage() {
   }
 
   const filteredProducts = selectedCategory
-    ? products.filter((p) => p.category.id === selectedCategory)
+    ? products.filter((p) => p.category?.id === selectedCategory)
     : products
 
   // Use refs to avoid stale closures in debounce
   const userRef = useRef(user)
   userRef.current = user
-  
+
   // Debounced save function - batches multiple adds into one API call
   // Using empty deps to ensure stable function reference
   const debouncedSaveCart = useCallback((newCart: CartItem[]) => {
     const currentUser = userRef.current
     if (!currentUser) return
+    
+    // ⚡ Optimistic update
+    const newCount = newCart.reduce((sum, item) => sum + item.quantity, 0)
+    globalMutate(
+      getCartKey(currentUser.minecraftName),
+      { items: newCart, count: newCount },
+      { revalidate: false }
+    )
+    
+    // Track save in shared tracker AND global context
+    cartSaveStarted()
+    startCartSave()
     
     // Always update pending cart to latest state
     pendingCartRef.current = newCart
@@ -118,9 +137,12 @@ export default function ShopPage() {
     // Clear existing timer
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
+      // Note: We don't call endCartSave() here because we are just resetting the timer,
+      // the "save process" as a whole is still ongoing from the user's perspective.
+      cartSaveCompleted() // cancel internal counter
     }
     
-    // Set new timer - wait 800ms of inactivity before saving
+    // Set new timer
     saveTimerRef.current = setTimeout(async () => {
       if (!pendingCartRef.current) return
       
@@ -137,13 +159,17 @@ export default function ShopPage() {
             items: cartToSave.map(i => ({ productId: i.product.id, quantity: i.quantity, customInput: i.customInput })) 
           }),
         })
-        // Don't call updateCartCount here - it causes extra GET requests
-        // The cart state is already updated optimistically
       } catch (error) {
         logger.error(`Failed to save cart to DB: ${error}`)
+      } finally {
+        cartSaveCompleted()
+        endCartSave() // Unblock UI
+        if (!hasCartSavesInFlight()) {
+          globalMutate(getCartKey(currentUser.minecraftName))
+        }
       }
     }, 800)
-  }, []) // Empty deps - uses refs for latest values
+  }, [startCartSave, endCartSave])
 
   // Ensure pending changes are saved when navigating away
   useEffect(() => {
@@ -157,9 +183,7 @@ export default function ShopPage() {
         const cartToSave = pendingCartRef.current
         const currentUser = userRef.current
         
-        // Use fetch directly for “fire and forget” during unmount
-        // Note: keeping keepalive: true might help in some browsers but strictly fetch is okay
-        // We use apiFetch but need to catch errors to avoid unhandled rejections
+        cartSaveStarted()
         apiFetch('/api/cart?quick=true', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -167,8 +191,18 @@ export default function ShopPage() {
               minecraftName: currentUser.minecraftName, 
               items: cartToSave.map(i => ({ productId: i.product.id, quantity: i.quantity, customInput: i.customInput })) 
             }),
-            keepalive: true // Important for ensuring request completes after unload
-        }).catch(err => console.error('Failed to save cart on unmount', err))
+            keepalive: true
+        })
+        .then(() => {
+          cartSaveCompleted()
+          if (!hasCartSavesInFlight()) {
+            globalMutate(getCartKey(currentUser.minecraftName))
+          }
+        })
+        .catch(err => {
+          console.error('Failed to save cart on unmount', err)
+          cartSaveCompleted()
+        })
       }
     }
   }, [])
@@ -354,7 +388,7 @@ export default function ShopPage() {
               <div key={product.id} className="product-card">
                 <div className="product-image">
                   <ProductImage src={product.image} alt={product.name} priority={index < 4} />
-                  <span className="category-badge">{product.category.name}</span>
+                  <span className="category-badge">{product.category?.name}</span>
                 </div>
                 <div className="product-info">
                   <h3 className="product-name">{product.name}</h3>
@@ -367,10 +401,11 @@ export default function ShopPage() {
                     {product.price.toLocaleString()} บาท
                   </p>
                 </div>
-                <div className="product-actions">
+                  <div className="product-actions">
                   <button
-                    className="btn btn-primary"
-                    onClick={() => addToCart(product)}
+                    className={`btn btn-primary ${isCartSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={() => !isCartSaving && addToCart(product)}
+                    disabled={isCartSaving}
                   >
                     <CartIcon size={16} />
                     เพิ่มลงตะกร้า
@@ -386,7 +421,7 @@ export default function ShopPage() {
       {showInputModal && pendingProduct && (
         <div 
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4"
-          onClick={() => setShowInputModal(false)}
+          onClick={() => !isCartSaving && setShowInputModal(false)}
         >
           <div 
             className="card max-w-[500px] w-full p-6"
@@ -406,8 +441,9 @@ export default function ShopPage() {
               placeholder={pendingProduct.inputPlaceholder || 'เช่น &a&lYourName หรือ &#FF00FFYourName'}
               className="input mb-6 font-mono"
               autoFocus
+              disabled={isCartSaving}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !isCartSaving) {
                   handleConfirmCustomInput()
                 }
               }}
@@ -417,12 +453,14 @@ export default function ShopPage() {
               <button
                 className="btn flex-1 bg-muted"
                 onClick={() => setShowInputModal(false)}
+                disabled={isCartSaving}
               >
                 ยกเลิก
               </button>
               <button
                 className="btn btn-primary flex-1"
                 onClick={handleConfirmCustomInput}
+                disabled={isCartSaving}
               >
                 <CartIcon size={16} />
                 เพิ่มลงตะกร้า

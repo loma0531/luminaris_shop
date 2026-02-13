@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -10,25 +10,8 @@ import {
   CloseIcon,
   CartIcon,
 } from '@/components/Icons'
-import { apiFetch } from '@/lib/apiFetch'
-import { logger } from '@/lib/logger'
+import { useOrderHistory } from '@/lib/swr-hooks'
 
-
-interface OrderItem {
-  productId: string
-  name: string
-  price: number
-  quantity: number
-}
-
-interface Order {
-  id: string
-  orderId: number
-  items: OrderItem[]
-  total: number
-  status: string
-  createdAt: string
-}
 
 interface User {
   id: string
@@ -36,30 +19,8 @@ interface User {
 }
 
 export default function HistoryPage() {
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
-  const [, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const router = useRouter()
-  const currentUserRef = useRef<string | null>(null)
-
-  const fetchHistory = useCallback(async (userObj: User) => {
-    // Reset state for new user
-    setOrders([])
-    setLoading(true)
-
-    try {
-      const res = await apiFetch(`/api/orders/user?minecraftName=${encodeURIComponent(userObj.minecraftName)}&status=history`)
-      const data = await res.json()
-      
-      if (data.orders) {
-        setOrders(data.orders)
-      }
-    } catch (error) {
-      logger.error(`Error fetching history: ${error}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -67,15 +28,16 @@ export default function HistoryPage() {
       router.push('/shop')
       return
     }
-    const userObj = JSON.parse(storedUser)
-    
-    // Check if user changed - reset and fetch new data
-    if (currentUserRef.current !== userObj.minecraftName) {
-      currentUserRef.current = userObj.minecraftName
-      setUser(userObj)
-      fetchHistory(userObj)
+    try {
+      setUser(JSON.parse(storedUser))
+    } catch {
+      router.push('/shop')
     }
-  }, [router, fetchHistory])
+  }, [router])
+
+  // SWR: ดึง order history อัตโนมัติเมื่อมี user
+  const { data, isLoading: loading } = useOrderHistory(user?.minecraftName || null)
+  const orders = data?.orders || []
 
   return (
     <div>

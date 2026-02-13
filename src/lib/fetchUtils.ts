@@ -23,13 +23,9 @@ export const createBaseHeaders = (options: FetchOptions): HeadersInit => {
 export const baseFetch = async (url: string, options: FetchOptions = {}) => {
   const headers = createBaseHeaders(options)
   
-  const isGetRequest = !options.method || options.method.toUpperCase() === 'GET'
-  
   const finalOptions: RequestInit = {
     ...options,
     headers,
-    // Disable browser cache for GET requests by default
-    ...(isGetRequest && { cache: 'no-store' as RequestCache }),
   }
 
   return fetch(url, finalOptions)

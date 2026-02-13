@@ -192,9 +192,9 @@ const CACHE_PREFIX = {
 }
 
 const CACHE_TTL = {
-  PRODUCTS: 60,      // 1 minute
-  CATEGORIES: 300,   // 5 minutes
-  STATS: 30,         // 30 seconds
+  PRODUCTS: 300,     // 5 minutes (SWR จะ revalidate ฝั่ง client ทุก 30s อยู่แล้ว)
+  CATEGORIES: 600,   // 10 minutes (categories แทบไม่เปลี่ยน)
+  STATS: 120,        // 2 minutes
 }
 
 /**
@@ -348,17 +348,21 @@ export async function setCachedStats<T>(stats: T): Promise<void> {
 // =========================================
 
 const CART_CACHE_PREFIX = 'cache:cart:'
-const CART_CACHE_TTL = 30 // 30 seconds - short TTL since cart changes frequently
+const CART_CACHE_TTL = 60 // 60 seconds - SWR handles client-side freshness
 
 export interface CachedCartItem {
-  productId: string
+  productId: string // Keeping for reference
   quantity: number
+  customInput?: string | null
   product?: {
     id: string
     name: string
     price: number
     image: string | null
     commands: string[]
+    requiresInput: boolean
+    inputLabel: string | null
+    inputPlaceholder: string | null
   }
 }
 

@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 import { ToastProvider } from '@/context/ToastContext'
 import ToastContainer from '@/components/ToastContainer'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { SWRProvider } from '@/providers/SWRProvider'
 
 export default function RootLayout({
   children,
@@ -34,10 +35,12 @@ export default function RootLayout({
     <html lang="th">
       <body className={notoSansThai.variable}>
         <ErrorBoundary>
-          <ToastProvider>
-            {children}
-            <ToastContainer />
-          </ToastProvider>
+          <SWRProvider>
+            <ToastProvider>
+              {children}
+              <ToastContainer />
+            </ToastProvider>
+          </SWRProvider>
         </ErrorBoundary>
       </body>
     </html>

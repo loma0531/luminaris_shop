@@ -17,37 +17,12 @@ import {
   MenuIcon,
   WalletIcon,
 } from '@/components/Icons'
-import { apiFetch } from '@/lib/apiFetch'
+import { useShopInit } from '@/lib/swr-hooks'
+import type { Product, Category, CartItem } from '@/lib/swr-hooks'
 import { logger } from '@/lib/logger'
 
-export interface Product {
-  id: string
-  name: string
-  description: string | null
-  price: number
-  image: string | null
-  commands: string[]
-  requiresInput?: boolean
-  inputLabel?: string | null
-  inputPlaceholder?: string | null
-  category: {
-    id: string
-    name: string
-  }
-}
-
-export interface Category {
-  id: string
-  name: string
-  image?: string | null
-  icon?: string | null
-}
-
-export interface CartItem {
-  product: Product
-  quantity: number
-  customInput?: string | null
-}
+// Re-export types for backward compatibility
+export type { Product, Category, CartItem } from '@/lib/swr-hooks'
 
 interface User {
   id: string
@@ -69,7 +44,11 @@ interface ShopContextType {
   products: Product[]
   categories: Category[]
   isLoadingData: boolean
-  refreshData: (force?: boolean) => Promise<void>
+  refreshData: () => void
+  // Blocking state
+  isCartSaving: boolean
+  startCartSave: () => void
+  endCartSave: () => void
 }
 
 const ShopContext = createContext<ShopContextType | null>(null)
@@ -131,36 +110,7 @@ function ShopSidebar({
     return pathname.startsWith(href)
   }
 
-  // Prefetch component for instant navigation
-  const PrefetchLink = ({ href, label, Icon, badge, badgeColor }: any) => {
-    const handlePrefetch = () => {
-      // Basic prefetch logic - requests next.js page data
-      if (typeof window !== 'undefined') {
-        // We can custom trigger SWR revalidations or simply rely on Next.js Link prefetch (default)
-        // Here we just ensure we don't block
-      }
-    }
-
-    return (
-      <Link 
-        href={href} 
-        className={`shop-nav-item ${isActive(href) ? 'active' : ''}`}
-        onMouseEnter={handlePrefetch}
-      >
-        <Icon size={20} />
-        {shopExpanded && (
-          <>
-            <span className="flex-1">{label}</span>
-            {badge && (
-              <span className="badge" style={badgeColor ? { background: badgeColor } : undefined}>
-                {badge}
-              </span>
-            )}
-          </>
-        )}
-      </Link>
-    )
-  }
+  // Prefetch component moved below to use SafeLink
 
   // Navigation groups
   const shopItems = [
@@ -177,6 +127,51 @@ function ShopSidebar({
     { href: '/shop/profile', label: 'โปรไฟล์', Icon: UserIcon, badge: null, badgeColor: undefined },
     { href: '/shop/stats', label: 'สถิติการเติมเงิน', Icon: WalletIcon, badge: null, badgeColor: undefined },
   ]
+
+  // Hook into context to check saving state
+  const { isCartSaving } = useShop()
+
+  // Wrapper for links to block navigation when saving
+  const SafeLink = ({ href, children, className, ...props }: any) => {
+    if (isCartSaving) {
+      return (
+        <div className={`${className} opacity-50 cursor-not-allowed`} title="กำลังบันทึกข้อมูล...">
+          {children}
+        </div>
+      )
+    }
+    return <Link href={href} className={className} {...props}>{children}</Link>
+  }
+  
+  // Custom PrefetchLink that uses SafeLink
+  const PrefetchLink = ({ href, label, Icon, badge, badgeColor }: any) => {
+    const handlePrefetch = () => {
+      // Basic prefetch logic
+      if (typeof window !== 'undefined' && !isCartSaving) {
+        // ...
+      }
+    }
+
+    return (
+      <SafeLink 
+        href={href} 
+        className={`shop-nav-item ${isActive(href) ? 'active' : ''}`}
+        onMouseEnter={handlePrefetch}
+      >
+        <Icon size={20} />
+        {shopExpanded && (
+          <>
+            <span className="flex-1">{label}</span>
+            {badge && (
+              <span className="badge" style={badgeColor ? { background: badgeColor } : undefined}>
+                {badge}
+              </span>
+            )}
+          </>
+        )}
+      </SafeLink>
+    )
+  }
 
   return (
     <>
@@ -332,130 +327,59 @@ function ShopSidebar({
 
 export default function ShopLayout({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [cartCount, setCartCount] = useState(0)
-  const [pendingOrderCount, setPendingOrderCount] = useState(0)
+  const [cartCountOverride, setCartCountOverride] = useState<number | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [cartAnimating, setCartAnimating] = useState(false)
-  const [products, setProducts] = useState<Product[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isLoadingData, setIsLoadingData] = useState(false)
-  const lastFetchedRef = useRef<number>(0)
   const router = useRouter()
+
+  // ─── SWR: ดึงข้อมูล shop ทั้งหมดด้วย useShopInit ───────────
+  const minecraftName = user?.minecraftName || null
+  const { data: shopData, isLoading: isLoadingData, mutate: mutateShopData } = useShopInit(minecraftName)
+
+  // Derived data from SWR
+  const products = shopData?.products || []
+  const categories = shopData?.categories || []
+  const swrCartCount = shopData?.cart?.reduce((sum, item) => sum + item.quantity, 0) || 0
+  const pendingOrderCount = shopData?.pendingOrders || 0
+
+  // cartCount: ใช้ override ถ้ามี (optimistic update) ไม่งั้นใช้จาก SWR
+  const cartCount = cartCountOverride !== null ? cartCountOverride : swrCartCount
+
+  // Reset override เมื่อ SWR data เปลี่ยน
+  useEffect(() => {
+    if (shopData) {
+      setCartCountOverride(null)
+    }
+  }, [shopData])
 
   const triggerCartAnimation = useCallback(() => {
     setCartAnimating(true)
     setTimeout(() => setCartAnimating(false), 600)
   }, [])
 
-  const updateCartCount = useCallback(async () => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
-      setCartCount(0)
-      return
-    }
-    try {
-      const userObj = JSON.parse(storedUser)
-      // Fetch cart from API (DB is source of truth)
-      const res = await apiFetch(`/api/cart?minecraftName=${userObj.minecraftName}`)
-      const data = await res.json()
-      const items = data.items || []
-      const count = items.reduce((sum: number, item: { quantity?: number }) => sum + (item.quantity || 0), 0)
-      setCartCount(count)
-    } catch {
-      setCartCount(0)
-    }
+  // setCartCount: optimistic update — ตั้ง override ทันที, SWR จะ sync ภายหลัง
+  const setCartCount = useCallback((count: number) => {
+    setCartCountOverride(count)
   }, [])
 
-  const fetchPendingOrders = useCallback(async (minecraftName: string) => {
-    try {
-      const res = await apiFetch(`/api/orders/user?minecraftName=${encodeURIComponent(minecraftName)}&status=pending`)
-      const data = await res.json()
-      if (data.orders) {
-        setPendingOrderCount(data.orders.length)
-      }
-    } catch {
-      setPendingOrderCount(0)
-    }
-  }, [])
+  // updateCartCount: trigger SWR revalidation
+  const updateCartCount = useCallback(() => {
+    mutateShopData()
+  }, [mutateShopData])
 
-  const lastHashRef = useRef<string>('')
-
-  const initShopData = useCallback(async (force = false) => {
-    // Cache logic: 5 mins cache or if already has data and not forced
-    const now = Date.now()
-    if (!force && products.length > 0 && categories.length > 0 && (now - lastFetchedRef.current < 5 * 60 * 1000)) {
-      return
-    }
-
-    // Only show loading on first load, not on background refresh
-    if (products.length === 0) {
-      setIsLoadingData(true)
-    }
-    
-    const storedUser = localStorage.getItem('user')
-    let userQuery = ''
-    
-    if (storedUser) {
-      try {
-        const userObj = JSON.parse(storedUser)
-        if (userObj.minecraftName) {
-            userQuery = `?minecraftName=${userObj.minecraftName}`
-        }
-      } catch (e) {
-        logger.error(`User parse error in layout: ${e}`)
-      }
-    }
-
-    try {
-      // Cache-busting: add timestamp when force refresh to bypass browser/CDN cache
-      const cacheBuster = force ? `${userQuery ? '&' : '?'}_t=${Date.now()}` : ''
-      
-      const res = await apiFetch(`/api/shop/init${userQuery}${cacheBuster}`)
-      
-      // 304 Not Modified = data hasn't changed, no need to update UI
-      if (res.status === 304) {
-        lastFetchedRef.current = Date.now()
-        return
-      }
-      
-      const data = await res.json()
-      
-      // Store new hash for next request
-      if (data.hash) {
-        lastHashRef.current = data.hash
-      }
-      
-      if (data.products) setProducts(data.products)
-      if (data.categories) setCategories(data.categories)
-      if (data.cart) {
-        setCartCount(data.cart.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0))
-      }
-      if (data.pendingOrders !== undefined) {
-        // pendingOrders can be a number (count) or array for backward compatibility
-        const count = typeof data.pendingOrders === 'number' 
-          ? data.pendingOrders 
-          : (Array.isArray(data.pendingOrders) ? data.pendingOrders.length : 0)
-        setPendingOrderCount(count)
-      }
-      
-      lastFetchedRef.current = Date.now()
-    } catch (error) {
-      logger.error(`Shop Init Failed: ${error}`)
-    } finally {
-      setIsLoadingData(false)
-    }
-  }, [products.length, categories.length])
-
+  // updatePendingCount: trigger SWR revalidation 
   const updatePendingCount = useCallback(() => {
-    if (user) {
-      fetchPendingOrders(user.minecraftName)
-    } else {
-      setPendingOrderCount(0)
-    }
-  }, [user, fetchPendingOrders])
+    mutateShopData()
+  }, [mutateShopData])
 
+  // refreshData: trigger SWR revalidation
+  const refreshData = useCallback(() => {
+    mutateShopData()
+  }, [mutateShopData])
+
+  // Load user from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
     if (storedUser) {
@@ -466,32 +390,28 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
         logger.error(`User parse error on boot: ${e}`)
       }
     }
-    
-    // Initial fetch
-    initShopData()
-
-    // 🔄 Auto Update System (Background Polling)
-    // Fetch fresh data every 60 seconds
-    const interval = setInterval(() => {
-      initShopData(true) // force refresh in background
-    }, 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [initShopData])
+  }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('user')
     setUser(null)
-    setCartCount(0)
-    setPendingOrderCount(0)
+    setCartCountOverride(null)
+    mutateShopData() // Clear SWR cache
     router.push('/')
   }
 
   const handleLoginSuccess = (loggedInUser: { id: string; minecraftName: string }) => {
     setUser(loggedInUser)
     setShowLoginModal(false)
-    fetchPendingOrders(loggedInUser.minecraftName)
+    mutateShopData() // Refetch with new user
   }
+
+  // Global saving state for cart operations
+  const [isCartSaving, setIsCartSaving] = useState(false)
+  
+  // Expose methods to set saving state
+  const startCartSave = useCallback(() => setIsCartSaving(true), [])
+  const endCartSave = useCallback(() => setIsCartSaving(false), [])
 
   return (
     <ShopContext.Provider value={{ 
@@ -508,7 +428,10 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
       products,
       categories,
       isLoadingData,
-      refreshData: initShopData
+      refreshData,
+      isCartSaving,
+      startCartSave,
+      endCartSave,
     }}>
       <div className="shop-layout">
         {/* Top Header with Profile Link */}
@@ -542,7 +465,6 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
                     width={24}
                     height={24}
                     className="rounded"
-                    unoptimized
                   />
                   <span>{user.minecraftName}</span>
                 </Link>

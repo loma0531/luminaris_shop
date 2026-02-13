@@ -21,6 +21,7 @@ import { apiFetch } from '@/lib/apiFetch'
 import { useShop } from '../layout'
 import { ORDER_CONFIG } from '@/lib/orderConfig'
 import { logger } from '@/lib/logger'
+import { usePendingOrders } from '@/lib/swr-hooks'
 
 type PaymentMethod = 'promptpay' | 'truewallet'
 
@@ -53,7 +54,6 @@ interface User {
 
 export default function OrdersPage() {
   const [pendingOrder, setPendingOrder] = useState<Order | null>(null)
-  const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [qrCode, setQrCode] = useState('')
   const [timeLeft, setTimeLeft] = useState('')
@@ -65,39 +65,43 @@ export default function OrdersPage() {
   const { success, error: toastError } = useToast()
   const { updatePendingCount } = useShop()
   const hasLoadedQR = useRef(false)
-  const currentUserRef = useRef<string | null>(null)
   
   // Confirm Modal State
   const [showConfirm, setShowConfirm] = useState(false)
 
-  const fetchPendingOrder = useCallback(async (userObj: User) => {
-    // Reset state for new user
-    setPendingOrder(null)
-    setQrCode('')
-    setStep('pending')
-    setPaymentMethod(null)
-    hasLoadedQR.current = false
-    setLoading(true)
-
-    try {
-      const res = await apiFetch(`/api/orders/user?minecraftName=${encodeURIComponent(userObj.minecraftName)}&status=pending`)
-      const data = await res.json()
-      
-      if (data.orders && data.orders.length > 0) {
-        // Get the most recent pending order
-        const pending = data.orders.find((o: Order) => 
-          o.status === 'AWAITING_PAYMENT' || o.status === 'PENDING'
-        )
-        if (pending) {
-          setPendingOrder(pending)
-        }
-      }
-    } catch (error) {
-      logger.error(`Error fetching orders: ${error}`)
-    } finally {
-      setLoading(false)
+  // Load user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user')
+    if (!storedUser) {
+      router.push('/shop')
+      return
     }
-  }, [])
+    try {
+      setUser(JSON.parse(storedUser))
+    } catch {
+      router.push('/shop')
+    }
+  }, [router])
+
+  // SWR: ดึง pending orders อัตโนมัติ (refresh ทุก 10 วินาที)
+  const { data: ordersData, isLoading: loading, mutate: mutatePendingOrders } = usePendingOrders(user?.minecraftName || null)
+
+  // Derive pending order from SWR data
+  useEffect(() => {
+    if (ordersData?.orders && ordersData.orders.length > 0) {
+      const pending = ordersData.orders.find((o: Order) => 
+        o.status === 'AWAITING_PAYMENT' || o.status === 'PENDING'
+      )
+      if (pending) {
+        setPendingOrder(pending)
+      } else {
+        setPendingOrder(null)
+      }
+    } else if (ordersData) {
+      // Data loaded but no orders
+      setPendingOrder(null)
+    }
+  }, [ordersData])
 
   // Load QR when PromptPay is selected
   const loadQRCode = useCallback(async () => {
@@ -127,22 +131,6 @@ export default function OrdersPage() {
       loadQRCode()
     }
   }, [paymentMethod, pendingOrder, loadQRCode])
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user')
-    if (!storedUser) {
-      router.push('/shop')
-      return
-    }
-    const userObj = JSON.parse(storedUser)
-    
-    // Check if user changed - reset everything
-    if (currentUserRef.current !== userObj.minecraftName) {
-      currentUserRef.current = userObj.minecraftName
-      setUser(userObj)
-      fetchPendingOrder(userObj)
-    }
-  }, [router, fetchPendingOrder])
 
   // Timer Effect
   useEffect(() => {
@@ -262,6 +250,7 @@ export default function OrdersPage() {
       if (data.success) {
         success('ยกเลิกรายการเรียบร้อยแล้ว')
         setPendingOrder(null)
+        mutatePendingOrders()
         updatePendingCount()
         router.push('/shop/cart')
       } else {
