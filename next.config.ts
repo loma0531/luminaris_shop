@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256],
     // Use default loader with optimization
     formats: ['image/webp', 'image/avif'],
+    // Disable server-side optimization for external images to avoid 504 errors on restricted networks
+    unoptimized: true,
   },
   
   // Enable compression
