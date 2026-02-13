@@ -16,6 +16,7 @@ import {
   GridIcon,
   MenuIcon,
   WalletIcon,
+  InfoIcon,
 } from '@/components/Icons'
 import { useShopInit } from '@/lib/swr-hooks'
 import type { Product, Category, CartItem } from '@/lib/swr-hooks'
@@ -101,6 +102,7 @@ function ShopSidebar({
   const [shopExpanded, setShopExpanded] = useState(true)
   const [ordersExpanded, setOrdersExpanded] = useState(true)
   const [accountExpanded, setAccountExpanded] = useState(true)
+  const [infoExpanded, setInfoExpanded] = useState(true)
 
   const isActive = (href: string) => {
     if (!pathname) return false
@@ -126,6 +128,10 @@ function ShopSidebar({
   const accountItems = [
     { href: '/shop/profile', label: 'โปรไฟล์', Icon: UserIcon, badge: null, badgeColor: undefined },
     { href: '/shop/stats', label: 'สถิติการเติมเงิน', Icon: WalletIcon, badge: null, badgeColor: undefined },
+  ]
+  
+  const infoItems = [
+    { href: '/shop/about', label: 'เกี่ยวกับ', Icon: InfoIcon, badge: null, badgeColor: undefined },
   ]
 
   // Hook into context to check saving state
@@ -268,6 +274,34 @@ function ShopSidebar({
             {accountExpanded && (
               <div className="sidebar-section-content">
                 {accountItems.map((item) => (
+                  <PrefetchLink
+                    key={item.href}
+                    href={item.href}
+                    label={item.label}
+                    Icon={item.Icon}
+                    badge={item.badge}
+                    badgeColor={item.badgeColor}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Info Section */}
+          <div className="sidebar-section">
+            <button 
+              className="sidebar-section-header"
+              onClick={() => setInfoExpanded(!infoExpanded)}
+            >
+              <div className="sidebar-section-title">
+                <InfoIcon size={14} />
+                <span>ข้อมูล</span>
+              </div>
+              <ChevronIcon expanded={infoExpanded} />
+            </button>
+            {infoExpanded && (
+              <div className="sidebar-section-content">
+                {infoItems.map((item) => (
                   <PrefetchLink
                     key={item.href}
                     href={item.href}
