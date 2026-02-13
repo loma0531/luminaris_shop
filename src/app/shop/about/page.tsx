@@ -78,7 +78,9 @@ export default function AboutPage() {
           </div>
 
           <div className="mt-16 pt-8 border-t border-white/5 text-center">
-            <p className="text-sm text-gray-500">© 2024 Luminaris Shop. All rights reserved.</p>
+            <p className="text-sm text-gray-500">
+              © {new Date().getFullYear() > 2025 ? `2025 - ${new Date().getFullYear()}` : '2025'} Luminaris Shop. All rights reserved.
+            </p>
           </div>
         </div>
       {/* </div> */}
