@@ -17,6 +17,7 @@ import {
   MenuIcon,
   WalletIcon,
   InfoIcon,
+  PaletteIcon,
 } from '@/components/Icons'
 import { useShopInit } from '@/lib/swr-hooks'
 import type { Product, Category, CartItem } from '@/lib/swr-hooks'
@@ -131,6 +132,7 @@ function ShopSidebar({
   ]
   
   const infoItems = [
+    { href: '/shop/gradient-text-generator', label: 'สร้างข้อความไล่ระดับสี', Icon: PaletteIcon, badge: null, badgeColor: undefined },
     { href: '/shop/about', label: 'เกี่ยวกับ', Icon: InfoIcon, badge: null, badgeColor: undefined },
   ]
 
