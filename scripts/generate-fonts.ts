@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 const FONTS_DIR = path.join(process.cwd(), 'src/app/fonts')
+const MANIFEST_OUTPUT = path.join(process.cwd(), 'public/fonts-manifest.json')
 const CSS_OUTPUT = path.join(process.cwd(), 'src/app/fonts.css')
 
 // Supported font extensions
@@ -64,18 +65,13 @@ function generateFontCSS(): void {
     const ext = path.extname(file)
     const basename = path.basename(file, ext)
     
-    // Extract font family name by removing weight/style keywords
+    // Format font family name (e.g., from 'Kanit-Medium' to 'Kanit Medium')
     let familyName = basename
-    for (const keyword of Object.keys(WEIGHT_KEYWORDS)) {
-      familyName = familyName.replace(new RegExp(keyword, 'gi'), '')
-    }
-    familyName = familyName
-      .replace(/italic/gi, '')
       .replace(/[-_]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
     
-    // If family name is empty after cleaning, use the original basename
+    // Fallback if empty
     if (!familyName) {
       familyName = basename
     }
@@ -94,6 +90,18 @@ function generateFontCSS(): void {
   css += '/* To add fonts: Drop .ttf/.otf/.woff/.woff2 files into src/app/fonts and rebuild */\n\n'
 
   let primaryFontFamily = ''
+
+  // Attempt to read the primary font from the manifest if it exists
+  if (fs.existsSync(MANIFEST_OUTPUT)) {
+    try {
+      const manifestData = JSON.parse(fs.readFileSync(MANIFEST_OUTPUT, 'utf-8'))
+      if (manifestData.primary && fontFamilies.has(manifestData.primary)) {
+        primaryFontFamily = manifestData.primary
+      }
+    } catch (e) {
+      console.error('Error reading fonts-manifest.json:', e)
+    }
+  }
 
   for (const [family, variants] of fontFamilies) {
     if (!primaryFontFamily) {
@@ -124,8 +132,18 @@ function generateFontCSS(): void {
   }
 
   fs.writeFileSync(CSS_OUTPUT, css)
+  
+  // Update manifest with new families, keeping user's primary choice
+  const fontFamilyList = Array.from(fontFamilies.keys())
+  const manifest = {
+    primary: primaryFontFamily || null,
+    families: fontFamilyList,
+  }
+  fs.writeFileSync(MANIFEST_OUTPUT, JSON.stringify(manifest, null, 2))
+
   console.log(`✅ Generated fonts.css with ${fontFiles.length} font file(s)`)
   console.log(`   Primary font family: ${primaryFontFamily || 'None'}`)
+  console.log(`   Font manifest: ${fontFamilyList.length} families → public/fonts-manifest.json`)
 }
 
 function getFormat(filename: string): string {

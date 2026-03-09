@@ -2,16 +2,72 @@
 /* To add fonts: Drop .ttf/.otf/.woff/.woff2 files into src/app/fonts and rebuild */
 
 @font-face {
-  font-family: 'Kanit';
-  src: url('./fonts/Kanit-Medium.ttf') format('truetype');
+  font-family: 'MaliRegular';
+  src: url('./fonts/MaliRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MaliMedium';
+  src: url('./fonts/MaliMedium.ttf') format('truetype');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 
-/* Primary font: Kanit */
+@font-face {
+  font-family: 'NotoSansMedium';
+  src: url('./fonts/NotoSansMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NotoSansRegular';
+  src: url('./fonts/NotoSansRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'KanitMedium';
+  src: url('./fonts/KanitMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'zhcn';
+  src: url('./fonts/zhcn.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ItimRegular';
+  src: url('./fonts/ItimRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'KanitRegular';
+  src: url('./fonts/KanitRegular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Primary font: KanitMedium */
 :root {
-  --font-primary: 'Kanit', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-primary: 'KanitMedium', 'Noto Sans Thai', system-ui, sans-serif;
 }
 
 html, body {
