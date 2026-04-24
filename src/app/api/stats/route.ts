@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger } from '@/lib/logger'
 import { getCachedStats, setCachedStats } from '@/lib/redis'
 

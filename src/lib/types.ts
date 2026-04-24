@@ -49,8 +49,9 @@ export interface PaymentData {
   paymentId: number
   minecraftName: string
   amount: number
-  slipImage: string | null
-  slipRef: string | null
+  paymentMethod: string | null
+  stripeSessionId: string | null
+  stripePaymentIntentId: string | null
   status: PaymentStatus
   verifiedAt: Date | null
   createdAt: Date

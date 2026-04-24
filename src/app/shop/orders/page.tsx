@@ -2,18 +2,19 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+
 import { useRouter } from 'next/navigation'
 import {
   CreditCardIcon,
   ClockIcon,
   TrashIcon,
   PackageIcon,
-  UploadIcon,
   CheckCircleIcon,
   CartIcon,
   HistoryIcon,
   LinkIcon,
+  QrCodeIcon,
+  GiftIcon,
 } from '@/components/Icons'
 import { useToast } from '@/context/ToastContext'
 import ConfirmModal from '@/components/ConfirmModal'
@@ -22,8 +23,11 @@ import { useShop } from '../layout'
 import { ORDER_CONFIG } from '@/lib/orderConfig'
 import { logger } from '@/lib/logger'
 import { usePendingOrders } from '@/lib/swr-hooks'
+import StripePaymentForm from '@/components/StripePaymentForm'
+import PromptPayForm from '@/components/PromptPayForm'
+import './orders.css'
 
-type PaymentMethod = 'promptpay' | 'truewallet'
+type PaymentMethod = 'stripe' | 'promptpay' | 'truewallet'
 
 interface OrderItem {
   productId: string
@@ -55,7 +59,7 @@ interface User {
 export default function OrdersPage() {
   const [pendingOrder, setPendingOrder] = useState<Order | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [qrCode, setQrCode] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
   const [timeLeft, setTimeLeft] = useState('')
   const [step, setStep] = useState<'pending' | 'success'>('pending')
   const [user, setUser] = useState<User | null>(null)
@@ -64,7 +68,7 @@ export default function OrdersPage() {
   const router = useRouter()
   const { success, error: toastError } = useToast()
   const { updatePendingCount } = useShop()
-  const hasLoadedQR = useRef(false)
+  const hasLoadedStripe = useRef(false)
   
   // Confirm Modal State
   const [showConfirm, setShowConfirm] = useState(false)
@@ -82,6 +86,23 @@ export default function OrdersPage() {
       router.push('/shop')
     }
   }, [router])
+
+  // Handle Stripe Redirect Status
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const redirectStatus = urlParams.get('redirect_status')
+      
+      if (redirectStatus === 'succeeded') {
+        setStep('success')
+        success('ชำระเงินสำเร็จ! ไอเทมกำลังถูกจัดส่ง')
+        window.history.replaceState({}, '', '/shop/orders')
+      } else if (redirectStatus === 'failed' || redirectStatus === 'requires_payment_method') {
+        toastError('การชำระเงินไม่สำเร็จ หรือถูกยกเลิก')
+        window.history.replaceState({}, '', '/shop/orders')
+      }
+    }
+  }, [success, toastError])
 
   // SWR: ดึง pending orders อัตโนมัติ (refresh ทุก 10 วินาที)
   const { data: ordersData, isLoading: loading, mutate: mutatePendingOrders } = usePendingOrders(user?.minecraftName || null)
@@ -103,34 +124,39 @@ export default function OrdersPage() {
     }
   }, [ordersData])
 
-  // Load QR when PromptPay is selected
-  const loadQRCode = useCallback(async () => {
-    if (!pendingOrder || hasLoadedQR.current) return
+  // Init Stripe Checkout
+  const initStripeCheckout = useCallback(async () => {
+    if (!pendingOrder || !pendingOrder.payment || hasLoadedStripe.current) return
     
-    hasLoadedQR.current = true
+    hasLoadedStripe.current = true
     try {
-      const qrRes = await apiFetch('/api/promptpay', {
+      const res = await apiFetch('/api/checkout/stripe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          amount: pendingOrder.total,
-          orderId: pendingOrder.orderId 
+          orderId: pendingOrder.orderId,
+          paymentId: pendingOrder.payment.paymentId
         }),
       })
-      const qrData = await qrRes.json()
-      if (qrData.success) {
-        setQrCode(qrData.qrCode)
+      const data = await res.json()
+      if (data.clientSecret) {
+        setClientSecret(data.clientSecret)
+      } else if (data.error) {
+        toastError(data.error)
+        hasLoadedStripe.current = false
       }
     } catch (e) {
-      logger.error(`Error generating QR: ${e}`)
+      logger.error(`Error init Stripe: ${e}`)
+      toastError('เกิดข้อผิดพลาดในการโหลดช่องทางชำระเงิน')
+      hasLoadedStripe.current = false
     }
-  }, [pendingOrder])
+  }, [pendingOrder, toastError])
 
   useEffect(() => {
-    if (paymentMethod === 'promptpay' && pendingOrder) {
-      loadQRCode()
+    if (paymentMethod === 'stripe' && pendingOrder) {
+      initStripeCheckout()
     }
-  }, [paymentMethod, pendingOrder, loadQRCode])
+  }, [paymentMethod, pendingOrder, initStripeCheckout])
 
   // Timer Effect
   useEffect(() => {
@@ -156,42 +182,34 @@ export default function OrdersPage() {
     return () => clearInterval(interval)
   }, [pendingOrder])
 
-  const handleSlipUpload = async (file: File) => {
-    if (!file || !user || !pendingOrder || !pendingOrder.payment) return
+  // Order Status Polling (Every 3 seconds)
+  useEffect(() => {
+    if (!pendingOrder || step === 'success') return
 
-    setUploading(true)
-
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('amount', pendingOrder.total.toString())
-      formData.append('minecraftName', user.minecraftName)
-      formData.append('paymentId', pendingOrder.payment.paymentId.toString())
-      formData.append('orderId', pendingOrder.orderId.toString())
-
-      const res = await apiFetch('/api/orders/checkout', {
-        method: 'PUT',
-        body: formData,
-      })
-
-      const data = await res.json()
-
-      if (data.error) {
-        toastError(data.error)
-        setUploading(false)
-        return
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`/api/orders/${pendingOrder.id}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.order && data.order.status === 'COMPLETED') {
+            success('ชำระเงินสำเร็จ! ไอเทมถูกส่งไปยังตัวละครแล้ว')
+            setStep('success')
+            updatePendingCount()
+            mutatePendingOrders()
+          }
+        }
+      } catch (err) {
+        // Ignore fetch errors during polling
       }
+    }, 3000)
 
-      // Success
-      success('ชำระเงินสำเร็จ! สินค้าถูกส่งเข้าตัวแล้ว')
-      setStep('success')
-      updatePendingCount() // Refresh pending badge immediately
-    } catch (err) {
-      logger.error(`Error uploading slip: ${err}`)
-      toastError('ไม่สามารถอัปโหลดสลิปได้')
-    } finally {
-      setUploading(false)
-    }
+    return () => clearInterval(pollInterval)
+  }, [pendingOrder, step, success, updatePendingCount, mutatePendingOrders])
+
+  const handleStripeSuccess = () => {
+    success('ชำระเงินสำเร็จ! ไอเทมถูกส่งไปยังตัวละครแล้ว')
+    setStep('success')
+    updatePendingCount()
   }
 
   const handleTruewalletPayment = async () => {
@@ -264,404 +282,329 @@ export default function OrdersPage() {
 
   const isExpired = timeLeft === '00:00'
 
-  // Handle file input change
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) handleSlipUpload(file)
+  // ========== RENDER ==========
+
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div className="checkout-page">
+        <div className="checkout-header">
+          <CreditCardIcon size={24} />
+          <h1>รายการรอชำระเงิน</h1>
+        </div>
+        <div className="skeleton w-full h-[48px] rounded-xl mb-6" />
+        <div className="checkout-skeleton">
+          <div className="checkout-panel">
+            <div className="skeleton w-[100px] h-3 mb-4 rounded" />
+            <div className="skeleton w-[180px] h-5 mb-3 rounded" />
+            <div className="skeleton w-full h-12 mb-2 rounded-lg" />
+            <div className="skeleton w-full h-12 mb-4 rounded-lg" />
+            <div className="skeleton w-full h-8 rounded" />
+          </div>
+          <div className="checkout-panel">
+            <div className="skeleton w-[120px] h-3 mb-4 rounded" />
+            <div className="skeleton w-full h-20 mb-3 rounded-xl" />
+            <div className="skeleton w-full h-20 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  // Handle paste event for clipboard images
-  useEffect(() => {
-    const handlePaste = (e: ClipboardEvent) => {
-      // Only handle paste when we're on PromptPay and not expired
-      if (!pendingOrder || isExpired || uploading || paymentMethod !== 'promptpay') return
-      
-      const items = e.clipboardData?.items
-      if (!items) return
-      
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          const file = items[i].getAsFile()
-          if (file) {
-            e.preventDefault()
-            handleSlipUpload(file)
-            break
-          }
-        }
-      }
-    }
-    
-    document.addEventListener('paste', handlePaste)
-    return () => document.removeEventListener('paste', handlePaste)
-  }, [pendingOrder, isExpired, uploading, paymentMethod])
-
-  // Payment Method Selection Card Component
-  const PaymentMethodCard = ({ 
-    method, 
-    logo, 
-    title, 
-    subtitle,
-    color 
-  }: { 
-    method: PaymentMethod
-    logo: string
-    title: string
-    subtitle: string
-    color: string
-  }) => (
-    <button
-      onClick={() => setPaymentMethod(method)}
-      className={`
-        relative flex items-center gap-4 p-5 rounded-2xl border-2 transition-colors duration-200
-        hover:border-white/50
-        ${paymentMethod === method 
-          ? `border-${color} bg-gradient-to-br from-${color}/10 to-${color}/5 shadow-lg shadow-${color}/20` 
-          : 'border-border bg-card'
-        }
-      `}
-      style={{
-        borderColor: paymentMethod === method ? (color === 'orange' ? '#f97316' : '#3b82f6') : undefined,
-        background: paymentMethod === method 
-          ? (color === 'orange' 
-              ? 'linear-gradient(135deg, rgba(249,115,22,0.15) 0%, rgba(249,115,22,0.05) 100%)' 
-              : 'linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(59,130,246,0.05) 100%)')
-          : undefined,
-        boxShadow: paymentMethod === method 
-          ? (color === 'orange' 
-              ? '0 10px 40px rgba(249,115,22,0.2)' 
-              : '0 10px 40px rgba(59,130,246,0.2)')
-          : undefined,
-      }}
-    >
-      {/* Selection Indicator */}
-      <div 
-        className={`
-          absolute top-3 right-3 w-6 h-6 rounded-full border-2 flex items-center justify-center
-          transition-all duration-300
-        `}
-        style={{
-          borderColor: paymentMethod === method ? (color === 'orange' ? '#f97316' : '#3b82f6') : '#6b7280',
-          background: paymentMethod === method ? (color === 'orange' ? '#f97316' : '#3b82f6') : 'transparent',
-        }}
-      >
-        {paymentMethod === method && (
-          <CheckCircleIcon size={14} className="text-white" />
-        )}
-      </div>
-
-      {/* Logo */}
-      <div className="w-16 h-16 rounded-xl overflow-hidden bg-white flex items-center justify-center shadow-md flex-shrink-0">
-        <Image 
-          src={logo} 
-          alt={title} 
-          width={48} 
-          height={48} 
-          className="object-contain"
-        />
-      </div>
-
-      {/* Text */}
-      <div className="text-left flex-1">
-        <h3 className="font-bold text-lg">{title}</h3>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
-      </div>
-    </button>
-  )
-
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-        <CreditCardIcon size={24} />
-        รายการรอชำระเงิน
-      </h1>
-
-        {loading ? (
-          <div className="card p-6">
-            {/* Timer skeleton */}
-            <div className="skeleton w-full h-[50px] mb-6 rounded-md" />
-            {/* Order info skeleton */}
-            <div className="flex justify-between mb-4 pb-4 border-b border-border">
-              <div>
-                <div className="skeleton w-[150px] h-5 mb-2" />
-                <div className="skeleton w-[100px] h-3.5" />
-              </div>
-            </div>
-            {/* Items skeleton */}
-            <div className="mb-6">
-              <div className="skeleton w-[100px] h-4 mb-3" />
-              <div className="skeleton w-full h-11 mb-2" />
-              <div className="skeleton w-full h-11 mb-2" />
-            </div>
-            {/* Payment method skeleton */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="skeleton h-24 rounded-2xl" />
-              <div className="skeleton h-24 rounded-2xl" />
-            </div>
+  // Success state
+  if (step === 'success') {
+    return (
+      <div className="checkout-page">
+        <div className="checkout-success">
+          <div className="success-icon-wrap">
+            <CheckCircleIcon size={40} />
           </div>
-        ) : step === 'success' ? (
-          <div className="card text-center">
-            <div className="success-icon">
-              <CheckCircleIcon size={48} />
-            </div>
-            <h2 className="mb-2 text-2xl font-semibold">
-              ชำระเงินสำเร็จ!
-            </h2>
-            <p className="text-muted-foreground mb-8">
-              ไอเทมถูกส่งไปยังตัวละครของคุณแล้ว
-            </p>
-            <div className="bg-muted p-4 rounded-lg mb-8">
-              <p>หมายเลขคำสั่งซื้อ: <strong>#{pendingOrder?.orderId}</strong></p>
-            </div>
-            <div className="flex gap-4 justify-center">
-              <Link href="/shop" className="btn btn-primary btn-lg">
-                <CartIcon size={20} />
-                กลับไปร้านค้า
-              </Link>
-              <Link href="/shop/history" className="btn btn-lg">
-                <HistoryIcon size={20} />
-                ดูประวัติการซื้อ
-              </Link>
-            </div>
+          <h2>ชำระเงินสำเร็จ!</h2>
+          <p className="success-subtitle">
+            ไอเทมถูกส่งไปยังตัวละครของคุณแล้ว
+          </p>
+          <div className="success-order-badge">
+            <PackageIcon size={16} />
+            หมายเลขคำสั่งซื้อ: <strong>#{pendingOrder?.orderId}</strong>
           </div>
-        ) : !pendingOrder ? (
-          <div className="empty-state">
-            <PackageIcon size={48} className="opacity-50 mb-4" />
-            <p className="mb-4">ไม่มีรายการรอชำระเงิน</p>
-            <Link href="/shop/cart" className="btn btn-primary">
-              <CartIcon size={16} />
-              ไปที่ตะกร้าสินค้า
+          <div className="success-actions">
+            <Link href="/shop" className="btn btn-primary btn-lg">
+              <CartIcon size={18} />
+              กลับไปร้านค้า
+            </Link>
+            <Link href="/shop/history" className="btn btn-lg">
+              <HistoryIcon size={18} />
+              ดูประวัติการซื้อ
             </Link>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Empty state
+  if (!pendingOrder) {
+    return (
+      <div className="checkout-page">
+        <div className="checkout-header">
+          <CreditCardIcon size={24} />
+          <h1>รายการรอชำระเงิน</h1>
+        </div>
+        <div className="checkout-empty">
+          <PackageIcon size={48} />
+          <p>ไม่มีรายการรอชำระเงิน</p>
+          <Link href="/shop/cart" className="btn btn-primary">
+            <CartIcon size={16} />
+            ไปที่ตะกร้าสินค้า
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Main checkout view
+  return (
+    <div className="checkout-page">
+      {/* Header */}
+      <div className="checkout-header">
+        <CreditCardIcon size={24} />
+        <h1>รายการรอชำระเงิน</h1>
+      </div>
+
+      {/* Timer */}
+      <div className={`checkout-timer ${isExpired ? 'expired' : ''}`}>
+        <ClockIcon size={18} />
+        {isExpired ? (
+          'หมดเวลาชำระเงิน'
         ) : (
-          <div className="card">
-            {/* Timer */}
-            <div className={`p-3 rounded-xl mb-6 text-center text-xl font-bold flex items-center justify-center gap-2 ${isExpired ? 'bg-red-500 text-white' : 'bg-white text-black'}`}>
-              <ClockIcon size={20} />
-              {isExpired ? 'หมดเวลาชำระเงิน' : `เหลือเวลา ${timeLeft} นาที`}
-            </div>
-
-            {/* Order Info */}
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-border">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  Order #{pendingOrder.orderId}
-                </h2>
-                <span className="text-sm text-muted-foreground">
-                  {new Date(pendingOrder.createdAt).toLocaleString('th-TH')}
-                </span>
-              </div>
-            </div>
-
-            {/* Items */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold mb-3 text-muted-foreground flex items-center gap-2">
-                <PackageIcon size={14} />
-                รายการสินค้า
-              </h3>
-              <div className="flex flex-col gap-2">
-                {pendingOrder.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm p-3 bg-muted/50 rounded-lg">
-                    <span>{item.name} x {item.quantity}</span>
-                    <span className="font-medium">{(item.price * item.quantity).toLocaleString()} บาท</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex justify-between mt-4 pt-4 border-t border-border text-xl font-bold">
-                <span>รวมทั้งสิ้น</span>
-                <span className="text-primary">{pendingOrder.total.toLocaleString()} บาท</span>
-              </div>
-            </div>
-
-            {/* Payment Method Selection */}
-            {!isExpired && !paymentMethod && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-4 text-center">
-                  เลือกวิธีชำระเงิน
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <PaymentMethodCard
-                    method="promptpay"
-                    logo="/promptpay-logo.png"
-                    title="PromptPay"
-                    subtitle="สแกน QR โอนเงินผ่านธนาคาร"
-                    color="blue"
-                  />
-                  <PaymentMethodCard
-                    method="truewallet"
-                    logo="/truewallet-logo.png"
-                    title="TrueMoney"
-                    subtitle="ใช้ลิงก์ซองอั่งเปา"
-                    color="orange"
-                  />
-                </div>
-                <button 
-                  className="btn btn-danger w-full mt-4"
-                  onClick={() => setShowConfirm(true)}
-                  disabled={uploading}
-                >
-                  <TrashIcon size={16} />
-                  ยกเลิกรายการ
-                </button>
-              </div>
-            )}
-
-            {/* PromptPay Section */}
-            {!isExpired && paymentMethod === 'promptpay' && (
-              <div className="mb-6">
-                {/* Back Button */}
-                <button 
-                  onClick={() => { setPaymentMethod(null); hasLoadedQR.current = false; setQrCode(''); }}
-                  className="text-sm text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1"
-                >
-                  ← เปลี่ยนวิธีชำระเงิน
-                </button>
-
-                <div className="text-center p-6 bg-black rounded-2xl">
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Image src="/promptpay-logo.png" alt="PromptPay" width={32} height={32} />
-                    <h3 className="font-bold text-lg text-white">PromptPay</h3>
-                  </div>
-                  <p className="text-sm text-gray-300 mb-4">
-                    สแกน QR Code เพื่อชำระเงิน
-                  </p>
-                  
-                  {qrCode ? (
-                    <div className="bg-white p-4 rounded-xl inline-block mb-4">
-                      <Image src={qrCode} alt="PromptPay QR Code" width={200} height={200} />
-                    </div>
-                  ) : (
-                    <div className="p-8">
-                      <div className="spinner" />
-                    </div>
-                  )}
-
-                  <p className="text-2xl font-bold text-white mt-2">
-                    {pendingOrder.total.toLocaleString()} บาท
-                  </p>
-
-                  <p className="text-xs text-gray-400 mt-4">
-                    ต้องเป็นสลิปธนาคารที่มี QR Code ในสลิปเท่านั้น
-                  </p>
-                </div>
-
-                {/* Upload Button */}
-                <label
-                  className={`btn btn-primary btn-lg w-full flex-col gap-1 justify-center mt-4 ${uploading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
-                >
-                  {uploading ? (
-                    <>
-                      <div className="spinner w-4 h-4" />
-                      กำลังตรวจสอบสลิป...
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <UploadIcon size={20} />
-                        อัปโหลดสลิปการโอนเงิน
-                      </div>
-                      <span className="text-xs opacity-70 font-normal">
-                        หรือกด Ctrl+V เพื่อวางรูปจาก clipboard
-                      </span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileInputChange}
-                    className="hidden"
-                  disabled={uploading}
-                  />
-                </label>
-
-                {/* Cancel Button - inside promptpay section */}
-                <button 
-                  className="btn btn-danger w-full mt-4"
-                  onClick={() => setShowConfirm(true)}
-                  disabled={uploading}
-                >
-                  <TrashIcon size={16} />
-                  ยกเลิกรายการ
-                </button>
-              </div>
-            )}
-
-            {/* Truewallet Section */}
-            {!isExpired && paymentMethod === 'truewallet' && (
-              <div className="mb-6">
-                {/* Back Button */}
-                <button 
-                  onClick={() => { setPaymentMethod(null); setVoucherUrl(''); }}
-                  className="text-sm text-muted-foreground hover:text-foreground mb-4 flex items-center gap-1"
-                >
-                  ← เปลี่ยนวิธีชำระเงิน
-                </button>
-
-                <div className="p-6 bg-black rounded-2xl">
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Image src="/truewallet-logo.png" alt="TrueMoney" width={32} height={32} />
-                    <h3 className="font-bold text-lg text-white">TrueMoney Wallet</h3>
-                  </div>
-                  
-                  <p className="text-center text-sm text-gray-300 mb-6">
-                    วางลิงก์ซองอั่งเปาด้านล่าง
-                  </p>
-
-                  <p className="text-center text-2xl font-bold text-white mb-4">
-                    {pendingOrder.total.toLocaleString()} บาท
-                  </p>
-                  
-                  {/* Voucher URL Input */}
-                  <div className="relative mb-4">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500">
-                      <LinkIcon size={20} />
-                    </div>
-                    <input
-                      type="url"
-                      value={voucherUrl}
-                      onChange={(e) => setVoucherUrl(e.target.value)}
-                      placeholder="https://gift.truemoney.com/campaign/?v=..."
-                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-white/10 text-white placeholder-gray-400 focus:bg-white/20 focus:outline-none transition-colors text-sm"
-                      disabled={uploading}
-                    />
-                  </div>
-
-                  {/* Submit Button - styled like PromptPay upload button */}
-                  <button
-                    onClick={handleTruewalletPayment}
-                    disabled={uploading || !voucherUrl.trim()}
-                    className={`btn btn-primary btn-lg w-full flex-col gap-1 justify-center ${uploading || !voucherUrl.trim() ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
-                  >
-                    {uploading ? (
-                      <>
-                        <div className="spinner w-4 h-4" />
-                        กำลังตรวจสอบ...
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <CheckCircleIcon size={20} />
-                          ยืนยันการชำระเงิน
-                        </div>
-                        <span className="text-xs opacity-70 font-normal">
-                          ระบบจะตรวจสอบซองอั่งเปาโดยอัตโนมัติ
-                        </span>
-                      </>
-                    )}
-                  </button>
-                  {/* Cancel Button - inside truewallet section like promptpay */}
-                <button 
-                  className="btn btn-danger w-full mt-4"
-                  onClick={() => setShowConfirm(true)}
-                  disabled={uploading}
-                >
-                  <TrashIcon size={16} />
-                  ยกเลิกรายการ
-                </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <>
+            เหลือเวลา <span className="timer-value">{timeLeft}</span> นาที
+          </>
         )}
+      </div>
+
+      {/* Two-column grid */}
+      <div className="checkout-grid">
+        {/* LEFT — Order Summary */}
+        <div className="checkout-panel order-summary">
+          <div className="panel-label">สรุปคำสั่งซื้อ</div>
+
+          <div className="order-meta">
+            <h2>Order #{pendingOrder.orderId}</h2>
+            <span className="order-date">
+              {new Date(pendingOrder.createdAt).toLocaleString('th-TH')}
+            </span>
+          </div>
+
+          <div className="order-items">
+            {pendingOrder.items.map((item, idx) => (
+              <div key={idx} className="order-item-row">
+                <span className="item-name">{item.name} × {item.quantity}</span>
+                <span className="item-price">{(item.price * item.quantity).toLocaleString()} ฿</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="order-total">
+            <span className="total-label">รวมทั้งสิ้น</span>
+            <span className="total-value">{pendingOrder.total.toLocaleString()} ฿</span>
+          </div>
+        </div>
+
+        {/* RIGHT — Payment */}
+        <div className="checkout-panel payment-panel">
+          <div className="panel-label">ช่องทางชำระเงิน</div>
+
+          {/* Step 1: Method Selection */}
+          {!isExpired && !paymentMethod && (
+            <>
+              <div className="method-grid">
+                <button
+                  className="method-card"
+                  onClick={() => setPaymentMethod('promptpay')}
+                >
+                  <div className="method-logo">
+                    <QrCodeIcon size={22} />
+                  </div>
+                  <div className="method-info">
+                    <h3>พร้อมเพย์</h3>
+                    <p>สแกน QR Code</p>
+                  </div>
+                  <div className="method-radio">
+                    <div className="method-radio-dot" />
+                  </div>
+                </button>
+
+                <button
+                  className="method-card"
+                  onClick={() => setPaymentMethod('stripe')}
+                >
+                  <div className="method-logo">
+                    <CreditCardIcon size={24} />
+                  </div>
+                  <div className="method-info">
+                    <h3>บัตรเครดิต / เดบิต</h3>
+                    <p>Visa, Mastercard</p>
+                  </div>
+                  <div className="method-radio">
+                    <div className="method-radio-dot" />
+                  </div>
+                </button>
+
+                <button
+                  className="method-card"
+                  onClick={() => setPaymentMethod('truewallet')}
+                >
+                  <div className="method-logo">
+                    <GiftIcon size={22} />
+                  </div>
+                  <div className="method-info">
+                    <h3>TrueMoney</h3>
+                    <p>ใช้ลิงก์ซองอั่งเปา</p>
+                  </div>
+                  <div className="method-radio">
+                    <div className="method-radio-dot" />
+                  </div>
+                </button>
+              </div>
+
+              <button
+                className="cancel-btn"
+                onClick={() => setShowConfirm(true)}
+                disabled={uploading}
+              >
+                <TrashIcon size={15} />
+                ยกเลิกรายการ
+              </button>
+            </>
+          )}
+
+          {/* Step 2a: PromptPay (Custom QR) */}
+          {!isExpired && paymentMethod === 'promptpay' && pendingOrder.payment && (
+            <div className="stripe-section">
+              <button
+                onClick={() => setPaymentMethod(null)}
+                className="back-link"
+              >
+                ← เปลี่ยนวิธีชำระเงิน
+              </button>
+
+              <PromptPayForm
+                orderId={pendingOrder.orderId}
+                paymentId={pendingOrder.payment.paymentId}
+                amount={pendingOrder.total}
+                onSuccess={handleStripeSuccess}
+                onError={(msg) => toastError(msg)}
+              />
+
+              <button
+                className="cancel-btn"
+                onClick={() => setShowConfirm(true)}
+              >
+                <TrashIcon size={15} />
+                ยกเลิกรายการ
+              </button>
+            </div>
+          )}
+
+          {/* Step 2b: Card (Stripe PaymentElement) */}
+          {!isExpired && paymentMethod === 'stripe' && (
+            <div className="stripe-section">
+              <button
+                onClick={() => { setPaymentMethod(null); hasLoadedStripe.current = false; setClientSecret(''); }}
+                className="back-link"
+              >
+                ← เปลี่ยนวิธีชำระเงิน
+              </button>
+
+              <div className="stripe-embed">
+                {clientSecret ? (
+                  <StripePaymentForm
+                    clientSecret={clientSecret}
+                    amount={pendingOrder.total}
+                    onSuccess={handleStripeSuccess}
+                    onError={(msg) => toastError(msg)}
+                  />
+                ) : (
+                  <div className="stripe-loading-state">
+                    <div className="spinner-ring" />
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="cancel-btn"
+                onClick={() => setShowConfirm(true)}
+              >
+                <TrashIcon size={15} />
+                ยกเลิกรายการ
+              </button>
+            </div>
+          )}
+
+          {/* Step 2b: TrueWallet */}
+          {!isExpired && paymentMethod === 'truewallet' && (
+            <div className="truewallet-section">
+              <button
+                onClick={() => { setPaymentMethod(null); setVoucherUrl(''); }}
+                className="back-link"
+              >
+                ← เปลี่ยนวิธีชำระเงิน
+              </button>
+
+              <div className="tw-amount-display">
+                <div className="tw-amount-label">ยอดที่ต้องชำระ</div>
+                <div className="tw-amount-value">{pendingOrder.total.toLocaleString()} ฿</div>
+              </div>
+
+              <div className="tw-input-group">
+                <div className="tw-icon">
+                  <LinkIcon size={18} />
+                </div>
+                <input
+                  type="url"
+                  value={voucherUrl}
+                  onChange={(e) => setVoucherUrl(e.target.value)}
+                  placeholder="https://gift.truemoney.com/campaign/?v=..."
+                  disabled={uploading}
+                />
+              </div>
+
+              <button
+                onClick={handleTruewalletPayment}
+                disabled={uploading || !voucherUrl.trim()}
+                className="tw-submit-btn"
+              >
+                {uploading ? (
+                  <>
+                    <div className="spinner-ring" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                    กำลังตรวจสอบ...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon size={18} />
+                    ยืนยันการชำระเงิน
+                  </>
+                )}
+              </button>
+              {!uploading && (
+                <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginBottom: '0.5rem' }}>
+                  ระบบจะตรวจสอบซองอั่งเปาโดยอัตโนมัติ
+                </div>
+              )}
+
+              <button
+                className="cancel-btn"
+                onClick={() => setShowConfirm(true)}
+                disabled={uploading}
+              >
+                <TrashIcon size={15} />
+                ยกเลิกรายการ
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <ConfirmModal
         isOpen={showConfirm}

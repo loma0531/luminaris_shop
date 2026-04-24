@@ -119,22 +119,24 @@ type OrderItem {
 }
 
 model Payment {
-  id            String        @id @default(auto()) @map("_id") @db.ObjectId
-  paymentId     Int           @unique
-  minecraftName String
-  amount        Float
-  slipImage     String?
-  slipRef       String?
-  status        PaymentStatus @default(PENDING)
-  verifiedAt    DateTime?
-  order         Order?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                     String        @id @default(auto()) @map("_id") @db.ObjectId
+  paymentId              Int           @unique
+  minecraftName          String
+  amount                 Float
+  paymentMethod          String?       // "stripe", "truewallet"
+  stripeSessionId        String?
+  stripePaymentIntentId  String?
+  status                 PaymentStatus @default(PENDING)
+  verifiedAt             DateTime?
+  order                  Order?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 
   @@index([minecraftName])
   @@index([status])
   @@index([createdAt(sort: Desc)])
 }
+
 
 enum OrderStatus {
   PENDING

@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getRedis, getCachedProducts } from '@/lib/redis'
+import { getCachedProducts, getCachedCategories } from '@/lib/redis'
 import { isValidMinecraftName } from '@/lib/inputValidation'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic' // Ensure dynamic execution
@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
       return products
     }),
 
-    // 2. Categories (Cached in Redis 5m)
-    getRedis().get('cache:categories').then(async (cached) => {
-      if (cached) return JSON.parse(cached)
+    // 2. Categories (Cached via adapter)
+    getCachedCategories().then(async (cached: unknown[] | null) => {
+      if (cached) return cached
       // Fallback DB
       return prisma.category.findMany({
         orderBy: { sortOrder: 'asc' }

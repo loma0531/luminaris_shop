@@ -1,132 +1,67 @@
 /**
  * File Validation Utilities
- * ตรวจสอบความถูกต้องของไฟล์ที่อัพโหลด ทั้ง Magic Bytes และ MIME Type
+ * ตรวจสอบไฟล์อัปโหลดด้วย Magic Bytes
  */
 
-// Magic bytes (file signatures) for image validation
-const MAGIC_BYTES: Record<string, number[]> = {
-  'image/jpeg': [0xFF, 0xD8, 0xFF],
-  'image/png': [0x89, 0x50, 0x4E, 0x47],
-  'image/gif': [0x47, 0x49, 0x46],
-  'image/webp': [0x52, 0x49, 0x46, 0x46], // RIFF header
-}
-
-export interface FileValidationResult {
+interface ValidationResult {
   valid: boolean
-  error?: string
   detectedType?: string
+  error?: string
 }
 
 /**
- * Validate file by checking magic bytes (file signature)
- * This is more secure than just checking MIME type which can be spoofed
+ * Validate file type using magic bytes
+ * ป้องกันการอัปโหลดไฟล์อันตรายที่เปลี่ยนนามสกุล
  */
-export function validateFileMagicBytes(buffer: Buffer, claimedType: string): FileValidationResult {
-  if (buffer.length < 12) {
-    return { valid: false, error: 'File too small to validate' }
+export function validateFileMagicBytes(buffer: Buffer, expectedMimeType: string): ValidationResult {
+  if (buffer.length < 4) {
+    return { valid: false, error: 'File too small', detectedType: 'unknown' }
   }
 
-  // Check against all known magic bytes
-  for (const [type, magic] of Object.entries(MAGIC_BYTES)) {
-    const headerMatches = magic.every((byte, index) => buffer[index] === byte)
-    if (headerMatches) {
-      // For WebP, also check for WEBP string at offset 8-12
-      if (type === 'image/webp') {
-        const webpSignature = buffer.slice(8, 12).toString('ascii')
-        if (webpSignature !== 'WEBP') {
-          continue
-        }
-      }
-      
-      // Check if claimed type matches detected type (with some flexibility)
-      if (claimedType !== type && !isCompatibleType(claimedType, type)) {
-        return { 
-          valid: false, 
-          error: `MIME type mismatch: claimed ${claimedType}, actual ${type}`,
-          detectedType: type
-        }
-      }
-      
-      return { valid: true, detectedType: type }
+  const signatures: { bytes: number[]; type: string; mime: string[] }[] = [
+    { bytes: [0x89, 0x50, 0x4E, 0x47], type: 'png', mime: ['image/png'] },
+    { bytes: [0xFF, 0xD8, 0xFF], type: 'jpeg', mime: ['image/jpeg', 'image/jpg'] },
+    { bytes: [0x47, 0x49, 0x46, 0x38], type: 'gif', mime: ['image/gif'] },
+  ]
+
+  // Check WebP (RIFF....WEBP)
+  if (buffer.length >= 12 &&
+      buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
+    return { valid: true, detectedType: 'webp' }
+  }
+
+  for (const sig of signatures) {
+    const matches = sig.bytes.every((byte, i) => buffer[i] === byte)
+    if (matches) {
+      return { valid: true, detectedType: sig.type }
     }
   }
 
-  return { valid: false, error: 'Unknown or unsupported file type' }
+  return { valid: false, error: 'Unrecognized file format', detectedType: 'unknown' }
 }
 
 /**
- * Check if two MIME types are compatible (e.g., image/jpg -> image/jpeg)
+ * Sanitize crop/process options from client
+ * จำกัดค่าให้อยู่ในขอบเขตที่ปลอดภัย
  */
-function isCompatibleType(claimed: string, detected: string): boolean {
-  const allowedMappings: Record<string, string[]> = {
-    'image/jpg': ['image/jpeg'],
-  }
-  return allowedMappings[claimed]?.includes(detected) ?? false
-}
-
-/**
- * Sanitize and validate processing options to prevent injection attacks
- * Ensures all numeric values are within safe bounds
- */
-export function sanitizeProcessOptions(options: unknown): {
-  crop?: { 
-    x?: number
-    y?: number
-    width?: number
-    height?: number
-    xPercent?: number
-    yPercent?: number
-    widthPercent?: number
-    heightPercent?: number
-  }
-  flipH?: boolean
-  flipV?: boolean
-  rotation?: number
+export function sanitizeProcessOptions(raw: Record<string, unknown>): {
+  crop?: { x: number; y: number; width: number; height: number }
 } {
-  if (!options || typeof options !== 'object') {
-    return {}
-  }
+  if (!raw || typeof raw !== 'object') return {}
 
-  const sanitized: ReturnType<typeof sanitizeProcessOptions> = {}
-  const opts = options as Record<string, unknown>
-
-  // Validate crop - ensure all values are safe numbers
-  if (opts.crop && typeof opts.crop === 'object') {
-    const crop = opts.crop as Record<string, unknown>
-    const sanitizedCrop: Record<string, number> = {}
-    
-    // Percentage-based values (0-100)
-    for (const key of ['xPercent', 'yPercent', 'widthPercent', 'heightPercent']) {
-      if (typeof crop[key] === 'number' && isFinite(crop[key] as number)) {
-        sanitizedCrop[key] = Math.max(0, Math.min(100, crop[key] as number))
+  const crop = raw.crop as Record<string, unknown> | undefined
+  if (crop && typeof crop === 'object') {
+    const MAX_DIM = 10000
+    return {
+      crop: {
+        x: Math.max(0, Math.min(Number(crop.x) || 0, MAX_DIM)),
+        y: Math.max(0, Math.min(Number(crop.y) || 0, MAX_DIM)),
+        width: Math.max(1, Math.min(Number(crop.width) || 1, MAX_DIM)),
+        height: Math.max(1, Math.min(Number(crop.height) || 1, MAX_DIM)),
       }
     }
-    
-    // Pixel-based values (0-10000 max for safety)
-    for (const key of ['x', 'y', 'width', 'height']) {
-      if (typeof crop[key] === 'number' && isFinite(crop[key] as number)) {
-        sanitizedCrop[key] = Math.max(0, Math.min(10000, Math.floor(crop[key] as number)))
-      }
-    }
-    
-    if (Object.keys(sanitizedCrop).length > 0) {
-      sanitized.crop = sanitizedCrop as typeof sanitized.crop
-    }
   }
 
-  // Validate flips - must be boolean
-  if (typeof opts.flipH === 'boolean') sanitized.flipH = opts.flipH
-  if (typeof opts.flipV === 'boolean') sanitized.flipV = opts.flipV
-
-  // Validate rotation - must be 0, 90, 180, or 270
-  if (typeof opts.rotation === 'number') {
-    const validRotations = [0, 90, 180, 270]
-    sanitized.rotation = validRotations.includes(opts.rotation) ? opts.rotation : 0
-  }
-
-  return sanitized
+  return {}
 }
-
-// Constants for file validation
-export const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']

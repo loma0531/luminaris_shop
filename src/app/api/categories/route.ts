@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireAdminAuth } from '@/lib/adminAuth'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { sanitizeString } from '@/lib/inputValidation'
 import { logger, createTimer } from '@/lib/logger'
 import { getCachedCategories, setCachedCategories, invalidateCategoryCache } from '@/lib/redis'

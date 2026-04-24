@@ -118,13 +118,18 @@ export async function POST(request: NextRequest) {
         where: { paymentId },
         data: { 
           status: 'VERIFIED', 
-          slipRef: transRef, 
+          paymentMethod: 'truewallet',
+          stripePaymentIntentId: transRef, 
           verifiedAt: new Date() 
         },
       }),
       prisma.order.update({ 
         where: { orderId }, 
         data: { status: 'COMPLETED' } 
+      }),
+      prisma.user.update({
+        where: { minecraftName },
+        data: { totalSpent: { increment: order.total } }
       })
     ])
 

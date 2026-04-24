@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { SearchIcon, CheckIcon, CloseIcon, CreditCardIcon, ClockIcon } from '@/components/Icons'
-import { adminGet } from '@/lib/adminFetch'
+import { SearchIcon, CheckIcon, CloseIcon, CreditCardIcon, ClockIcon, PlusIcon } from '@/components/Icons'
+import { adminGet, adminPost } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
+import { useToast } from '@/context/ToastContext'
+import { useAdminData } from '../layout'
 
 interface OrderItem {
   productId: string
@@ -25,6 +27,14 @@ interface Order {
 
 type StatusFilter = 'ALL' | 'PENDING' | 'AWAITING_PAYMENT' | 'COMPLETED' | 'CANCELLED'
 
+interface ManualItem {
+  productId: string
+  name: string
+  price: number
+  quantity: number
+  commands: string[]
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,6 +42,18 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+
+  // Manual Order Modal
+  const [showManualModal, setShowManualModal] = useState(false)
+  const [manualName, setManualName] = useState('')
+  const [manualNote, setManualNote] = useState('')
+  const [manualItems, setManualItems] = useState<ManualItem[]>([
+    { productId: '', name: '', price: 0, quantity: 1, commands: [] }
+  ])
+  const [submitting, setSubmitting] = useState(false)
+
+  const { products } = useAdminData()
+  const { success, error: toastError } = useToast()
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -75,9 +97,117 @@ export default function AdminOrdersPage() {
     }
   }
 
+  // === Manual Order Helpers ===
+  const handleProductSelect = (index: number, productId: string) => {
+    const newItems = [...manualItems]
+    
+    if (productId === '__custom__') {
+      // Custom item — let user type name and price
+      newItems[index] = {
+        productId: '__custom__',
+        name: newItems[index].name || '',
+        price: newItems[index].price || 0,
+        quantity: newItems[index].quantity || 1,
+        commands: [],
+      }
+    } else {
+      const product = products.find((p: any) => p.id === productId)
+      if (!product) return
+      newItems[index] = {
+        productId: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: newItems[index].quantity || 1,
+        commands: product.commands || [],
+      }
+    }
+    setManualItems(newItems)
+  }
+
+  const updateManualItem = (index: number, field: keyof ManualItem, value: any) => {
+    const newItems = [...manualItems]
+    newItems[index] = { ...newItems[index], [field]: value }
+    setManualItems(newItems)
+  }
+
+  const addManualItem = () => {
+    setManualItems([...manualItems, { productId: '', name: '', price: 0, quantity: 1, commands: [] }])
+  }
+
+  const removeManualItem = (index: number) => {
+    if (manualItems.length <= 1) return
+    setManualItems(manualItems.filter((_, i) => i !== index))
+  }
+
+  const manualTotal = manualItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+
+  const resetManualForm = () => {
+    setManualName('')
+    setManualNote('')
+    setManualItems([{ productId: '', name: '', price: 0, quantity: 1, commands: [] }])
+  }
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Validate
+    if (!manualName.trim()) {
+      toastError('กรุณากรอกชื่อผู้เล่น')
+      return
+    }
+    const validItems = manualItems.filter(item => (item.productId && item.name) || (item.productId === '__custom__' && item.name.trim()))
+    if (validItems.length === 0) {
+      toastError('กรุณาเลือกหรือกรอกสินค้าอย่างน้อย 1 รายการ')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      // For custom items, generate a dummy productId for validation
+      const itemsToSend = validItems.map(item => ({
+        ...item,
+        productId: item.productId === '__custom__' ? '000000000000000000000000' : item.productId,
+      }))
+      const res = await adminPost('/api/admin/orders', {
+        minecraftName: manualName.trim(),
+        items: itemsToSend,
+        total: manualTotal,
+        note: manualNote.trim() || undefined,
+      })
+
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create order')
+      }
+
+      success(`สร้างออเดอร์ #${data.orderId} สำเร็จ (${manualTotal.toLocaleString()} ฿)`)
+      setShowManualModal(false)
+      resetManualForm()
+      fetchOrders()
+    } catch (error) {
+      const err = error as Error
+      toastError(err.message || 'เกิดข้อผิดพลาดในการสร้างออเดอร์')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div>
-      <h1 className="admin-title mb-6">จัดการคำสั่งซื้อ</h1>
+      <div className="admin-header-actions">
+        <h1 className="admin-title">จัดการคำสั่งซื้อ</h1>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            resetManualForm()
+            setShowManualModal(true)
+          }}
+        >
+          <PlusIcon size={16} />
+          เสกออเดอร์
+        </button>
+      </div>
 
       {/* Filters */}
       <div className="flex gap-4 mb-6 flex-wrap items-center">
@@ -193,6 +323,285 @@ export default function AdminOrdersPage() {
           )}
         </>
       )}
+
+      {/* Manual Order Modal */}
+      {showManualModal && (
+        <div className="modal-backdrop" onClick={() => setShowManualModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">เสกออเดอร์ (Admin)</h2>
+              <button className="btn btn-icon btn-ghost" onClick={() => setShowManualModal(false)}>
+                <CloseIcon size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleManualSubmit} className="modal-form">
+              {/* Player Name */}
+              <div className="form-section">
+                <div className="form-group">
+                  <label className="form-label">ชื่อผู้เล่น <span className="text-red">*</span></label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    placeholder="Minecraft Name"
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="form-section">
+                <label className="form-label">สินค้า <span className="text-red">*</span></label>
+                <div className="manual-items-list">
+                  {manualItems.map((item, index) => (
+                    <div key={index} className="manual-item-block">
+                      <div className="manual-item-row">
+                        <select
+                          className="input manual-product-select"
+                          value={item.productId}
+                          onChange={(e) => handleProductSelect(index, e.target.value)}
+                        >
+                          <option value="">เลือกสินค้า</option>
+                          {products.map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name} ({p.price}฿)
+                            </option>
+                          ))}
+                          <option value="__custom__">✏️ กำหนดเอง (Custom)</option>
+                        </select>
+                        <input
+                          type="number"
+                          className="input manual-qty-input"
+                          value={item.quantity}
+                          onChange={(e) => updateManualItem(index, 'quantity', Math.max(1, parseInt(e.target.value) || 1))}
+                          min={1}
+                          max={99}
+                        />
+                        {item.productId && (
+                          <span className="manual-item-subtotal">
+                            {(item.price * item.quantity).toLocaleString()}฿
+                          </span>
+                        )}
+                        {manualItems.length > 1 && (
+                          <button type="button" className="btn btn-icon btn-danger-outline btn-sm" onClick={() => removeManualItem(index)}>
+                            <CloseIcon size={14} />
+                          </button>
+                        )}
+                      </div>
+                      {item.productId === '__custom__' && (
+                        <div className="manual-custom-fields">
+                          <input
+                            type="text"
+                            className="input"
+                            value={item.name}
+                            onChange={(e) => updateManualItem(index, 'name', e.target.value)}
+                            placeholder="ชื่อสินค้า"
+                            required
+                          />
+                          <input
+                            type="number"
+                            className="input manual-price-input"
+                            value={item.price || ''}
+                            onChange={(e) => updateManualItem(index, 'price', parseFloat(e.target.value) || 0)}
+                            placeholder="ราคา (฿)"
+                            min={0}
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="btn btn-sm btn-secondary mt-2" onClick={addManualItem}>
+                  <PlusIcon size={14} /> เพิ่มสินค้า
+                </button>
+              </div>
+
+              {/* Note */}
+              <div className="form-section">
+                <div className="form-group">
+                  <label className="form-label">หมายเหตุ</label>
+                  <input
+                    type="text"
+                    className="input"
+                    value={manualNote}
+                    onChange={(e) => setManualNote(e.target.value)}
+                    placeholder="เช่น เสกให้เป็นรางวัลกิจกรรม"
+                  />
+                </div>
+              </div>
+
+              {/* Total & Submit */}
+              <div className="modal-footer">
+                <div className="manual-total">
+                  รวม: <strong>{manualTotal.toLocaleString()} ฿</strong>
+                </div>
+                <div className="footer-right">
+                  <button type="button" className="btn btn-outline" onClick={() => setShowManualModal(false)}>
+                    ยกเลิก
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary min-w-[140px]" 
+                    disabled={submitting || !manualName.trim() || !manualItems.some(i => i.productId && (i.productId !== '__custom__' || i.name.trim()))}
+                  >
+                    {submitting ? (
+                      <><div className="spinner w-4 h-4" /> กำลังสร้าง...</>
+                    ) : (
+                      'สร้างออเดอร์'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        .admin-header-actions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 1.5rem;
+        }
+        .text-red { color: #ef4444; margin-left: 2px; }
+        .mt-2 { margin-top: 0.5rem; }
+
+        /* Modal */
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(4px);
+          z-index: 50;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1rem;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .modal-content {
+          background: var(--card);
+          border: 1px solid var(--border);
+          border-radius: 1rem;
+          width: 100%;
+          max-width: 560px;
+          max-height: 90vh;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+          animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .modal-header {
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .modal-title {
+          font-size: 1.1rem;
+          font-weight: 600;
+        }
+        .modal-form {
+          padding: 1.5rem;
+          overflow-y: auto;
+          flex: 1;
+        }
+        .form-section {
+          margin-bottom: 1.5rem;
+          padding-bottom: 1.5rem;
+          border-bottom: 1px solid var(--border);
+        }
+        .form-section:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+          margin-bottom: 0;
+        }
+        .modal-footer {
+          padding: 1.25rem 1.5rem;
+          border-top: 1px solid var(--border);
+          background: var(--muted);
+          border-bottom-left-radius: 1rem;
+          border-bottom-right-radius: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .footer-right {
+          display: flex;
+          gap: 0.75rem;
+        }
+
+        /* Manual Order Items */
+        .manual-items-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+          margin-top: 0.5rem;
+        }
+        .manual-item-block {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .manual-item-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .manual-product-select {
+          flex: 1;
+          min-width: 0;
+        }
+        .manual-qty-input {
+          width: 70px;
+          text-align: center;
+        }
+        .manual-custom-fields {
+          display: flex;
+          gap: 0.5rem;
+          padding-left: 0.25rem;
+        }
+        .manual-custom-fields .input:first-child {
+          flex: 1;
+        }
+        .manual-price-input {
+          width: 100px;
+        }
+        .manual-item-subtotal {
+          font-size: 0.85rem;
+          color: var(--muted-foreground);
+          min-width: 60px;
+          text-align: right;
+          font-weight: 500;
+        }
+        .manual-total {
+          font-size: 1rem;
+          color: var(--foreground);
+        }
+        .manual-total strong {
+          color: var(--primary);
+          font-size: 1.1rem;
+        }
+
+        /* Buttons */
+        .btn-ghost { background: transparent; border: none; }
+        .btn-ghost:hover { background: var(--muted); }
+        .btn-danger-outline {
+          color: #ef4444; border-color: rgba(239,68,68,0.3); background: transparent;
+        }
+        .btn-danger-outline:hover {
+          background: rgba(239,68,68,0.1); border-color: #ef4444;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      `}</style>
     </div>
   )
 }

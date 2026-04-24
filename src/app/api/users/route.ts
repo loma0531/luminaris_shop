@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireAdminAuth, generateShopToken } from '@/lib/adminAuth'
 import { validatePagination } from '@/lib/inputValidation'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger, createTimer } from '@/lib/logger'
 import { z } from 'zod'
 

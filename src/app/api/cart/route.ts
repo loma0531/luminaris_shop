@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { isValidMinecraftName, isValidObjectId } from '@/lib/inputValidation'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { logger, createTimer } from '@/lib/logger'
 import { CartItemData } from '@/lib/types'

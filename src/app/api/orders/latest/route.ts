@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { isValidMinecraftName } from '@/lib/inputValidation'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger, createTimer } from '@/lib/logger'
 import { ORDER_CONFIG } from '@/lib/orderConfig'
 

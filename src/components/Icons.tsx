@@ -458,3 +458,27 @@ export const MoveIcon: React.FC<IconProps> = ({ size = 20, className, style }) =
     <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M19 9l3 3-3 3M15 19l-3 3-3-3M2 12h20M12 2v20" />
   </svg>
 )
+
+// QR Code Icon
+export const QrCodeIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect x="2" y="2" width="8" height="8" rx="1" />
+    <rect x="14" y="2" width="8" height="8" rx="1" />
+    <rect x="2" y="14" width="8" height="8" rx="1" />
+    <rect x="14" y="14" width="4" height="4" rx="0.5" />
+    <path d="M22 14h-4v4" />
+    <path d="M22 22h-4M18 18h4" />
+    <rect x="5" y="5" width="2" height="2" />
+    <rect x="17" y="5" width="2" height="2" />
+    <rect x="5" y="17" width="2" height="2" />
+  </svg>
+)
+
+// Gift Icon (สำหรับ TrueMoney ซองอั่งเปา)
+export const GiftIcon: React.FC<IconProps> = ({ size = 20, className, style }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect x="3" y="8" width="18" height="4" rx="1" />
+    <path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7" />
+    <path d="M7.5 8a2.5 2.5 0 010-5C9 3 12 8 12 8s3-5 4.5-5a2.5 2.5 0 010 5" />
+  </svg>
+)

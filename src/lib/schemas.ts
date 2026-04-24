@@ -39,6 +39,11 @@ export const CheckoutSchema = z.object({
   csrfToken: z.string().length(64),
 })
 
+export const StripeCheckoutSchema = z.object({
+  orderId: z.number().int().positive('Invalid order ID'),
+  paymentId: z.number().int().positive('Invalid payment ID'),
+})
+
 // RCON
 export const RconExecuteSchema = z.object({
   playerName: MinecraftNameSchema,

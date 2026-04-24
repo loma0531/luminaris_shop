@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireAdminAuth } from '@/lib/adminAuth'
 import { validatePagination } from '@/lib/inputValidation'
-import { CACHE_HEADERS } from '@/lib/cache'
+import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger, createTimer } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
       prisma.payment.findMany({
         skip, take: limit,
         select: {
-          id: true, paymentId: true, minecraftName: true, amount: true, slipImage: true,
-          slipRef: true, status: true, verifiedAt: true, createdAt: true, updatedAt: true,
+          id: true, paymentId: true, minecraftName: true, amount: true, paymentMethod: true,
+          stripeSessionId: true, stripePaymentIntentId: true, status: true, verifiedAt: true, createdAt: true, updatedAt: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
