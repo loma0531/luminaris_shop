@@ -1,37 +1,25 @@
 /**
  * Rate Limit Configuration
- * Centralized configuration for API rate limiting
+ * ไฟล์นี้ดึงการตั้งค่ามาจาก shop.config.json
+ * หากต้องการแก้ไขตั้งค่า ให้ไปแก้ไขที่ไฟล์ shop.config.json ที่ root directory
  */
+import { getShopConfig } from './config'
 
 export interface RateLimitConfig {
-  windowMs: number   // Time window in milliseconds
-  maxRequests: number // Maximum requests per window
+  windowMs: number
+  maxRequests: number
 }
 
+// ใช้ getter เพื่อให้ค่าถูกดึงมาจาก shop.config.json ตอน runtime เสมอ
 export const RATE_LIMIT = {
-  // File uploads - 10 requests per minute
-  UPLOAD: { windowMs: 60000, maxRequests: 10 },
-  
-  // Login attempts - 20 per minutes (prevent brute force)
-  LOGIN: { windowMs: 60000, maxRequests: 20 },
-  
-  // Admin login - stricter limit (3 per 5 minutes)
-  ADMIN_LOGIN: { windowMs: 300000, maxRequests: 3 },
-  
-  // Checkout - 20 per minute
-  CHECKOUT: { windowMs: 60000, maxRequests: 20 },
-  
-  // RCON verify - 5 per 5 minutes (prevent account enumeration)
-  RCON_VERIFY: { windowMs: 300000, maxRequests: 5 },
-  
-  // RCON commands - 10 per minute
-  RCON: { windowMs: 60000, maxRequests: 10 },
-  
-  // User creation/login - 10 per 5 minutes
-  USERS: { windowMs: 300000, maxRequests: 10 },
-  
-  // Default for other API endpoints
-  DEFAULT: { windowMs: 60000, maxRequests: 100 },
+  get UPLOAD() { return getShopConfig().rateLimit.upload },
+  get LOGIN() { return getShopConfig().rateLimit.login },
+  get ADMIN_LOGIN() { return getShopConfig().rateLimit.adminLogin },
+  get CHECKOUT() { return getShopConfig().rateLimit.checkout },
+  get RCON_VERIFY() { return getShopConfig().rateLimit.rconVerify },
+  get RCON() { return getShopConfig().rateLimit.rcon },
+  get USERS() { return getShopConfig().rateLimit.users },
+  get DEFAULT() { return getShopConfig().rateLimit.default },
 } as const
 
 /**

@@ -132,7 +132,6 @@ export async function processCommandQueue(): Promise<ProcessResult> {
                 lastError: errorMessage.substring(0, 500)
               }
             })
-            result.processed++
           }
         }
         

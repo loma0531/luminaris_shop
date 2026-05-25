@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'minecraftName required' }, { status: 400 })
     }
 
-    const authError = requireUserAuth(request, minecraftName)
+    const authError = await requireUserAuth(request, minecraftName)
     if (authError) return authError
 
     if (!isValidMinecraftName(minecraftName)) {
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'minecraftName required' }, { status: 400 })
     }
 
-    const authError = requireUserAuth(request, minecraftName)
+    const authError = await requireUserAuth(request, minecraftName)
     if (authError) return authError
 
     if (!isValidMinecraftName(minecraftName)) {

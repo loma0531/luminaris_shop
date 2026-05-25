@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Security: Verify user owns this order
-    const authError = requireUserAuth(request, order.minecraftName)
+    const authError = await requireUserAuth(request, order.minecraftName)
     if (authError) {
       logger.security.accessDenied(`Order ${orderId}`, 'Truewallet payment without ownership')
       return authError
@@ -69,6 +69,17 @@ export async function POST(request: NextRequest) {
     if (order.minecraftName !== minecraftName) {
       logger.security.suspiciousActivity(`Name mismatch - Order: ${order.minecraftName}, Request: ${minecraftName}`, minecraftName)
       return NextResponse.json({ success: false, error: 'การยืนยันตัวตนล้มเหลว' }, { status: 403 })
+    }
+
+    // ATOMIC LOCK: ป้องกัน Race Condition (CRIT-5) โดยการเปลี่ยนสถานะก่อนทำงาน
+    const lockedPayment = await prisma.payment.updateMany({
+      where: { paymentId, status: 'PENDING' },
+      data: { status: 'VERIFIED', paymentMethod: 'truewallet_processing' }
+    });
+
+    if (lockedPayment.count === 0) {
+      logger.warn(`Truewallet double-spend attempt blocked for order ${orderId}`, 409)
+      return NextResponse.json({ success: false, error: 'รายการนี้กำลังถูกดำเนินการหรือเสร็จสิ้นแล้ว' }, { status: 409 })
     }
 
     logger.info(`Truewallet payment attempt - Order: ${orderId}, Player: ${minecraftName}`, 200)
@@ -86,6 +97,12 @@ export async function POST(request: NextRequest) {
     if (!redeemResult.success) {
       logger.warn(`Truewallet redeem failed for order ${orderId}: ${redeemResult.error}`, 400)
       
+      // Rollback lock
+      await prisma.payment.updateMany({
+        where: { paymentId },
+        data: { status: 'PENDING', paymentMethod: null }
+      });
+
       // Send failed log to Discord
       await sendTruewalletLog({
         orderId,
@@ -104,6 +121,13 @@ export async function POST(request: NextRequest) {
     const voucherAmount = redeemResult.amount || 0
     if (voucherAmount < order.total) {
       logger.warn(`Truewallet amount mismatch - Expected: ${order.total}, Got: ${voucherAmount}`, 400)
+      
+      // Rollback lock
+      await prisma.payment.updateMany({
+        where: { paymentId },
+        data: { status: 'PENDING', paymentMethod: null }
+      });
+
       return NextResponse.json({ 
         success: false, 
         error: `จำนวนเงินในซองไม่เพียงพอ (ต้องการ ${order.total} บาท, ได้รับ ${voucherAmount} บาท)` 

@@ -16,7 +16,7 @@ const UserCreateSchema = z.object({
 
 export async function GET(request: NextRequest) {
   const timer = createTimer()
-  const authError = requireAdminAuth(request)
+  const authError = await requireAdminAuth(request)
   if (authError) return authError
 
   try {
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate shop session token
-    const shopToken = generateShopToken(minecraftName)
+    const shopToken = await generateShopToken(minecraftName)
 
     return NextResponse.json({ ...user, shopToken })
   } catch {

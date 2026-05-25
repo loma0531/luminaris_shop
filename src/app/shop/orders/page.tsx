@@ -21,6 +21,7 @@ import ConfirmModal from '@/components/ConfirmModal'
 import { apiFetch } from '@/lib/apiFetch'
 import { useShop } from '../layout'
 import { ORDER_CONFIG } from '@/lib/orderConfig'
+import { getShopConfig } from '@/lib/config'
 import { logger } from '@/lib/logger'
 import { usePendingOrders } from '@/lib/swr-hooks'
 import StripePaymentForm from '@/components/StripePaymentForm'
@@ -428,68 +429,79 @@ export default function OrdersPage() {
           <div className="panel-label">ช่องทางชำระเงิน</div>
 
           {/* Step 1: Method Selection */}
-          {!isExpired && !paymentMethod && (
-            <>
-              <div className="method-grid">
-                <button
-                  className="method-card"
-                  onClick={() => setPaymentMethod('promptpay')}
-                >
-                  <div className="method-logo">
-                    <QrCodeIcon size={22} />
-                  </div>
-                  <div className="method-info">
-                    <h3>พร้อมเพย์</h3>
-                    <p>สแกน QR Code</p>
-                  </div>
-                  <div className="method-radio">
-                    <div className="method-radio-dot" />
-                  </div>
-                </button>
+          {!isExpired && !paymentMethod && (() => {
+            const shopConfig = getShopConfig()
+            const enabledPayments = shopConfig.orders.payments
+
+            return (
+              <>
+                <div className="method-grid">
+                  {enabledPayments.promptpay?.enabled && (
+                    <button
+                      className="method-card"
+                      onClick={() => setPaymentMethod('promptpay')}
+                    >
+                      <div className="method-logo">
+                        <QrCodeIcon size={22} />
+                      </div>
+                      <div className="method-info">
+                        <h3>พร้อมเพย์</h3>
+                        <p>สแกน QR Code</p>
+                      </div>
+                      <div className="method-radio">
+                        <div className="method-radio-dot" />
+                      </div>
+                    </button>
+                  )}
+
+                  {enabledPayments.creditCard?.enabled && (
+                    <button
+                      className="method-card"
+                      onClick={() => setPaymentMethod('stripe')}
+                    >
+                      <div className="method-logo">
+                        <CreditCardIcon size={24} />
+                      </div>
+                      <div className="method-info">
+                        <h3>บัตรเครดิต / เดบิต</h3>
+                        <p>Visa, Mastercard</p>
+                      </div>
+                      <div className="method-radio">
+                        <div className="method-radio-dot" />
+                      </div>
+                    </button>
+                  )}
+
+                  {enabledPayments.truewallet?.enabled && (
+                    <button
+                      className="method-card"
+                      onClick={() => setPaymentMethod('truewallet')}
+                    >
+                      <div className="method-logo">
+                        <GiftIcon size={22} />
+                      </div>
+                      <div className="method-info">
+                        <h3>TrueMoney</h3>
+                        <p>ใช้ลิงก์ซองอั่งเปา</p>
+                      </div>
+                      <div className="method-radio">
+                        <div className="method-radio-dot" />
+                      </div>
+                    </button>
+                  )}
+                </div>
 
                 <button
-                  className="method-card"
-                  onClick={() => setPaymentMethod('stripe')}
+                  className="cancel-btn"
+                  onClick={() => setShowConfirm(true)}
+                  disabled={uploading}
                 >
-                  <div className="method-logo">
-                    <CreditCardIcon size={24} />
-                  </div>
-                  <div className="method-info">
-                    <h3>บัตรเครดิต / เดบิต</h3>
-                    <p>Visa, Mastercard</p>
-                  </div>
-                  <div className="method-radio">
-                    <div className="method-radio-dot" />
-                  </div>
+                  <TrashIcon size={15} />
+                  ยกเลิกรายการ
                 </button>
-
-                <button
-                  className="method-card"
-                  onClick={() => setPaymentMethod('truewallet')}
-                >
-                  <div className="method-logo">
-                    <GiftIcon size={22} />
-                  </div>
-                  <div className="method-info">
-                    <h3>TrueMoney</h3>
-                    <p>ใช้ลิงก์ซองอั่งเปา</p>
-                  </div>
-                  <div className="method-radio">
-                    <div className="method-radio-dot" />
-                  </div>
-                </button>
-              </div>
-
-              <button
-                className="cancel-btn"
-                onClick={() => setShowConfirm(true)}
-                disabled={uploading}
-              >
-                <TrashIcon size={15} />
-                ยกเลิกรายการ
-              </button>
-            </>
-          )}
+              </>
+            )
+          })()}
 
           {/* Step 2a: PromptPay (Custom QR) */}
           {!isExpired && paymentMethod === 'promptpay' && pendingOrder.payment && (

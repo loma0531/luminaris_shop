@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No token provided' }, { status: 401 })
     }
 
-    const result = verifyAdminToken(token)
+    const result = await verifyAdminToken(token)
     
     if (!result.valid) {
       logger.auth.tokenInvalid(result.error || 'Invalid token')

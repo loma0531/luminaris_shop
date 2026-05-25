@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ตรวจสิทธิ์
-    const authError = requireUserAuth(request, order.minecraftName)
+    const authError = await requireUserAuth(request, order.minecraftName)
     if (authError) {
       logger.security.accessDenied(`Order ${orderId}`, 'PromptPay checkout without ownership')
       return authError

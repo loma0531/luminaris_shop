@@ -23,6 +23,16 @@ export async function POST(request: NextRequest) {
   const timer = createTimer()
 
   try {
+    // 0. Check if Stripe (Credit Card) is enabled
+    const { getShopConfig } = await import('@/lib/config')
+    const config = getShopConfig()
+    if (!config.orders.payments.creditCard?.enabled) {
+      return NextResponse.json(
+        { error: 'ช่องทางการชำระเงินด้วยบัตรเครดิต/เดบิต ถูกปิดใช้งานชั่วคราว' },
+        { status: 400 }
+      )
+    }
+
     // 1. Rate Limiting (5 requests per minute per IP/Session)
     const ip = request.headers.get('x-forwarded-for') || 'unknown'
     const rateLimitResult = await rateLimit(`stripe-checkout:${ip}`, {
@@ -64,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ตรวจสิทธิ์ — ต้องเป็นเจ้าของ Order
-    const authError = requireUserAuth(request, order.minecraftName)
+    const authError = await requireUserAuth(request, order.minecraftName)
     if (authError) {
       logger.security.accessDenied(
         `Order ${orderId}`,

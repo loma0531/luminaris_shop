@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Security: Verify user authentication
-    const authError = requireUserAuth(request, minecraftName)
+    const authError = await requireUserAuth(request, minecraftName)
     if (authError) return authError
 
     if (!isValidMinecraftName(minecraftName)) {

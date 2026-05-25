@@ -28,13 +28,13 @@ export async function DELETE(
 
     // SECURITY: Verify authorization
     // 1. Check if admin
-    const adminAuthError = requireAdminAuth(request)
+    const adminAuthError = await requireAdminAuth(request)
     const isAdmin = !adminAuthError
 
     // 2. Check if owner (must have valid shopToken matching minecraftName)
     let isOwner = false
     if (!isAdmin) {
-      const userAuthError = requireUserAuth(request, order.minecraftName)
+      const userAuthError = await requireUserAuth(request, order.minecraftName)
       isOwner = !userAuthError
     }
 

@@ -24,21 +24,35 @@ export function validateFileMagicBytes(buffer: Buffer, expectedMimeType: string)
     { bytes: [0x47, 0x49, 0x46, 0x38], type: 'gif', mime: ['image/gif'] },
   ]
 
+  let detectedType = 'unknown'
+  let detectedMime: string[] = []
+
   // Check WebP (RIFF....WEBP)
   if (buffer.length >= 12 &&
       buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
       buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) {
-    return { valid: true, detectedType: 'webp' }
-  }
-
-  for (const sig of signatures) {
-    const matches = sig.bytes.every((byte, i) => buffer[i] === byte)
-    if (matches) {
-      return { valid: true, detectedType: sig.type }
+    detectedType = 'webp'
+    detectedMime = ['image/webp']
+  } else {
+    for (const sig of signatures) {
+      const matches = sig.bytes.every((byte, i) => buffer[i] === byte)
+      if (matches) {
+        detectedType = sig.type
+        detectedMime = sig.mime
+        break
+      }
     }
   }
 
-  return { valid: false, error: 'Unrecognized file format', detectedType: 'unknown' }
+  if (detectedType === 'unknown') {
+    return { valid: false, error: 'Unrecognized file format', detectedType: 'unknown' }
+  }
+
+  if (expectedMimeType && !detectedMime.includes(expectedMimeType)) {
+    return { valid: false, error: `File type mismatch. Expected ${expectedMimeType}, got ${detectedType}`, detectedType }
+  }
+
+  return { valid: true, detectedType }
 }
 
 /**

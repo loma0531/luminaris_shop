@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
 import "./globals.css";
 import "./fonts.css";
+import { shopConfig } from "../../shop.config";
 
 // Fallback font if no local fonts are provided
 const notoSansThai = Noto_Sans_Thai({
@@ -12,8 +13,8 @@ const notoSansThai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "Luminaris Shop - ร้านค้า Minecraft",
-  description: "ร้านค้าไอเทม Minecraft สำหรับเซิร์ฟเวอร์ Luminaris",
+  title: `${shopConfig.shop.name}`,
+  description: shopConfig.shop.description,
   icons: {
     icon: "/Legacy_of_Luminaris_World_Logo_NoBG_1-1_03.png",
     shortcut: "/Legacy_of_Luminaris_World_Logo_NoBG_1-1_03.png",

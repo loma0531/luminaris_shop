@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     */
 
     // Security: Verify user authentication
-    const authError = requireUserAuth(request, minecraftName)
+    const authError = await requireUserAuth(request, minecraftName)
     if (authError) return authError
 
     if (items.length > CART_LIMITS.MAX_ITEM_TYPES) {

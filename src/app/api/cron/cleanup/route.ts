@@ -14,8 +14,9 @@ export async function GET(request: NextRequest) {
   const cronSecret = request.headers.get('x-cron-secret')
   const expectedSecret = process.env.CRON_SECRET
 
-  if (cronSecret !== expectedSecret) {
-    const authError = requireAdminAuth(request)
+  const isAuthorizedByCron = !!expectedSecret && cronSecret === expectedSecret
+  if (!isAuthorizedByCron) {
+    const authError = await requireAdminAuth(request)
     if (authError) return authError
   }
 

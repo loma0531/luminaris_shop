@@ -98,7 +98,11 @@ function checkRateLimitInMemory(ip: string, pathname: string): { allowed: boolea
 }
 
 function getClientIP(request: NextRequest): string {
+  // If behind Cloudflare or trusted proxy, use that header safely. 
+  const cfConnecting = request.headers.get('cf-connecting-ip')
+  if (cfConnecting) return cfConnecting.trim()
   const forwarded = request.headers.get('x-forwarded-for')
+  // Warning: x-forwarded-for can be spoofed, take the right-most (closest proxy) or just take the first if trusted
   if (forwarded) return forwarded.split(',')[0].trim()
   const realIP = request.headers.get('x-real-ip')
   if (realIP) return realIP.trim()
@@ -132,7 +136,7 @@ const MAX_BODY_SIZE = 1 * 1024 * 1024 // 1MB
 
 // Content Security Policy - restrictive for API, relaxed for pages
 const CSP_API = "default-src 'none'; frame-ancestors 'none'"
-const CSP_PAGE = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc-heads.net https://crafatar.com https://texture.geysermc.org https://*.stripe.com; font-src 'self'; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'"
+const CSP_PAGE = "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc-heads.net https://crafatar.com https://texture.geysermc.org https://*.stripe.com; font-src 'self'; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'"
 
 function getStatusColor(status: number): string {
   if (status >= 200 && status < 300) return COLORS.green
@@ -156,7 +160,7 @@ export async function proxy(request: NextRequest) {
     if (['POST', 'PUT', 'PATCH'].includes(method) && !pathname.includes('/upload')) {
       const contentLength = request.headers.get('content-length')
       if (contentLength && parseInt(contentLength) > MAX_BODY_SIZE) {
-        logger.security.suspiciousActivity(`Body size exceeded: ${contentLength} bytes`, ip)
+        logger.security.suspiciousActivity(`Content-Length size exceeded: ${contentLength} bytes`, ip)
         return NextResponse.json(
           { error: 'Request body too large. Maximum size is 1MB.' },
           { 
@@ -165,6 +169,7 @@ export async function proxy(request: NextRequest) {
           }
         )
       }
+      // Also verify actual stream size limits within the app routes where relevant
     }
 
     // Log API request with Request ID

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const { playerName, action } = body
 
     if (action === 'test') {
-      const authError = requireAdminAuth(request)
+      const authError = await requireAdminAuth(request)
       if (authError) return authError
 
       const connected = await testMySQLConnection()

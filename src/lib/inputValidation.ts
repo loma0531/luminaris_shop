@@ -105,13 +105,19 @@ export function isValidPaymentStatus(status: unknown): status is 'PENDING' | 'VE
  * Sanitize array of commands for RCON
  * Remove any commands that might be dangerous
  */
+import { getShopConfig } from './config'
+
 export function sanitizeCommands(commands: unknown[]): string[] {
   if (!Array.isArray(commands)) return []
   
+  const config = getShopConfig()
+  const dangerousPatterns = config.security.dangerousCommandPatterns.map((p: string) => new RegExp(p, 'i'))
+
   return commands
     .filter((cmd): cmd is string => typeof cmd === 'string')
     .map(cmd => cmd.trim())
     .filter(cmd => cmd.length > 0 && cmd.length < 500)
+    .filter(cmd => !dangerousPatterns.some((pattern: RegExp) => pattern.test(cmd)))
 }
 
 // ========== Custom Input Validation ==========
@@ -135,7 +141,7 @@ const DANGEROUS_PATTERNS = [
 ]
 
 // ความยาวสูงสุดของ customInput
-const MAX_CUSTOM_INPUT_LENGTH = 2000
+const getCustomInputLength = () => getShopConfig().security.maxCustomInputLength
 
 /**
  * ตรวจสอบ customInput ให้ปลอดภัย
@@ -153,8 +159,9 @@ export function validateCustomInput(input: string): { valid: boolean; error?: st
     return { valid: false, error: 'กรุณากรอกข้อมูล' }
   }
 
-  if (trimmed.length > MAX_CUSTOM_INPUT_LENGTH) {
-    return { valid: false, error: `ข้อมูลยาวเกินไป (สูงสุด ${MAX_CUSTOM_INPUT_LENGTH} ตัวอักษร)` }
+  const maxLength = getCustomInputLength()
+  if (trimmed.length > maxLength) {
+    return { valid: false, error: `ข้อมูลยาวเกินไป (สูงสุด ${maxLength} ตัวอักษร)` }
   }
 
   // ตรวจสอบ patterns อันตราย
@@ -184,7 +191,7 @@ export function sanitizeCustomInput(input: string): string {
   // ลบตัวอักษรอันตราย
   sanitized = sanitized
     .replace(/[;\n\r\/\\$`|><{}'\"]/g, '')
-    .substring(0, MAX_CUSTOM_INPUT_LENGTH)
+    .substring(0, getCustomInputLength())
 
   return sanitized
 }

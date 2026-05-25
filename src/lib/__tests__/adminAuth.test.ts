@@ -23,17 +23,17 @@ describe('Admin Authentication Logic', () => {
     expect(token.split('.').length).toBe(2)
   })
 
-  it('should verify a valid admin token', () => {
+  it('should verify a valid admin token', async () => {
     const token = generateAdminToken()
-    const result = verifyAdminToken(token)
+    const result = await verifyAdminToken(token)
     expect(result.valid).toBe(true)
     expect(result.error).toBeUndefined()
   })
 
-  it('should REJECT a shop token when verifying as admin', () => {
+  it('should REJECT a shop token when verifying as admin', async () => {
     // This reproduces the "Invalid token type" error
-    const shopToken = generateShopToken('testUser')
-    const result = verifyAdminToken(shopToken)
+    const shopToken = await generateShopToken('testUser')
+    const result = await verifyAdminToken(shopToken)
     
     expect(result.valid).toBe(false)
     expect(result.error).toContain('Invalid token type')
@@ -45,7 +45,7 @@ describe('Admin Authentication Logic', () => {
     const [payload] = token.split('.')
     const fakeToken = `${payload}.fakesignature`
     
-    const result = verifyAdminToken(fakeToken)
+    const result = await verifyAdminToken(fakeToken)
     expect(result.valid).toBe(false)
     expect(result.error).toBe('Invalid token signature')
   })

@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
   // For now, let's protect with Admin Auth to prevent abuse, 
   // but if this is for a cron job, we might need a secret key check instead.
   // Given the context, manual trigger or admin-triggered is safest.
-  const authError = requireAdminAuth(request)
+  const authError = await requireAdminAuth(request)
   if (authError) return authError
 
   try {

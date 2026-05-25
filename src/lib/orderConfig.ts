@@ -1,14 +1,14 @@
 /**
  * Order Configuration
- * ตั้งค่าเวลาสำหรับระบบ Order ที่นี่
+ * ไฟล์นี้ดึงการตั้งค่ามาจาก shop.config.json
+ * หากต้องการแก้ไขตั้งค่า ให้ไปแก้ไขที่ไฟล์ shop.config.json ที่ root directory
  */
+import { getShopConfig } from './config'
 
 export const ORDER_CONFIG = {
-  /**
-   * ระยะเวลาที่ให้ชำระเงิน (เป็นนาที)
-   * เมื่อหมดเวลา order จะถูกยกเลิกอัตโนมัติ
-   */
-  PAYMENT_TIMEOUT_MINUTES: 60,
+  get PAYMENT_TIMEOUT_MINUTES() {
+    return getShopConfig().orders.paymentTimeoutMinutes
+  },
 
   /**
    * ระยะเวลาที่ให้ชำระเงิน (เป็น milliseconds)

@@ -40,16 +40,10 @@ async function getPooledConnection(): Promise<Rcon> {
   
   // Return existing connection if still valid
   if (pooledConnection && (now - lastUsed) < RCON_CONFIG.maxIdleTime) {
-    try {
-      // Test connection is still alive
-      await pooledConnection.send('list')
-      lastUsed = now
-      return pooledConnection
-    } catch {
-      // Connection dead, will create new one
-      pooledConnection = null
-    }
+    // The connection is alive as long as it hasn't emitted 'end'
+    return pooledConnection
   }
+
   
   // If already connecting, wait for that connection
   if (connectionPromise) {

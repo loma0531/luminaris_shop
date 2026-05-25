@@ -28,11 +28,11 @@ export default function ToastContainer() {
   const { toasts, removeToast } = useToast()
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
+    <div className="fixed top-24 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="toast-card bg-card border border-border rounded-xl p-4 flex items-center gap-4 min-w-[300px] max-w-[400px] shadow-2xl relative pointer-events-auto animate-[toastSlideIn_0.3s_ease-out_forwards]"
+          className="card flex items-center gap-4 min-w-[300px] max-w-max p-4 relative pointer-events-auto animate-[toastSlideIn_0.3s_ease-out_forwards]"
         >
           {/* Close Button */}
           <button
@@ -48,8 +48,8 @@ export default function ToastContainer() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 text-foreground">
-            <h3 className="m-0 text-base font-semibold leading-snug">
+          <div className="flex-1 text-foreground pr-8">
+            <h3 className="m-0 text-base font-semibold leading-snug whitespace-nowrap">
               {toast.message}
             </h3>
           </div>

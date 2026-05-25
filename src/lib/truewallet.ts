@@ -4,6 +4,7 @@
  * 
  * ใช้ melody191-fetcher package เพื่อ bypass Cloudflare protection
  */
+import { logger } from '@/lib/logger'
 
 export interface TruewalletRedeemResult {
   success: boolean;
@@ -57,16 +58,17 @@ export async function redeemTruewalletVoucher(
   }
 
   // Validate URL format
-  if (!voucherUrl.includes('gift.truemoney.com')) {
-    return {
-      success: false,
-      error: 'รูปแบบ URL ไม่ถูกต้อง กรุณาใช้ลิงก์จาก TrueMoney Gift',
-    };
+  try {
+    const parsedUrl = new URL(voucherUrl)
+    if (parsedUrl.hostname !== 'gift.truemoney.com') {
+      return { success: false, error: 'รูปแบบ URL ไม่ถูกต้อง กรุณาใช้ลิงก์จาก TrueMoney Gift' }
+    }
+  } catch {
+    return { success: false, error: 'รูปแบบ URL ไม่ถูกต้อง' }
   }
 
-  console.log(`[Truewallet] Attempting redeem with melody191-fetcher`);
-  console.log(`[Truewallet] Phone: ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-3)}`);
-  console.log(`[Truewallet] URL: ${voucherUrl.slice(0, 45)}...`);
+  logger.debug(`[Truewallet] Attempting redeem with melody191-fetcher`, 200)
+  logger.debug(`[Truewallet] Phone: ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-3)}`, 200)
 
   try {
     // ใช้ require แทน dynamic import เพื่อหลีกเลี่ยงปัญหา Turbopack
@@ -75,13 +77,11 @@ export async function redeemTruewalletVoucher(
     
     // ใช้ melody191-fetcher สำหรับ redeem
     const result: MelodyVoucherResult = await Melodyshop_Voucher(voucherUrl, cleanPhone);
-    
-    console.log('[Truewallet] API Response:', JSON.stringify(result, null, 2));
 
     // ตรวจสอบผลลัพธ์สำเร็จ
     if (result.ok === 'success') {
       const amount = parseFloat(result.amount || '0') || 0;
-      console.log(`[Truewallet] Success! Amount: ${amount} THB, Owner: ${result.name_owner}`);
+      logger.info(`[Truewallet] Success! Amount: ${amount} THB, Owner: ${result.name_owner}`, 200);
       
       return {
         success: true,
@@ -95,7 +95,7 @@ export async function redeemTruewalletVoucher(
     const errorCode = result.errorData || -1;
     const errorMsg = result.mes_err || errorMessages[errorCode] || 'เกิดข้อผิดพลาดที่ไม่รู้จัก';
     
-    console.error(`[Truewallet] Redeem failed - Code: ${errorCode}, Message: ${errorMsg}`);
+    logger.warn(`[Truewallet] Redeem failed - Code: ${errorCode}, Message: ${errorMsg}`, 400);
     
     return {
       success: false,
@@ -103,7 +103,7 @@ export async function redeemTruewalletVoucher(
     };
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error('[Truewallet] Exception:', errorMessage, err);
+    logger.error(`[Truewallet] Exception: ${errorMessage}`, 500);
     
     return {
       success: false,

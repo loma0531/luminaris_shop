@@ -68,18 +68,14 @@ export async function POST(request: NextRequest) {
     }
 
     const isPasswordValid = await bcrypt.compare(password, adminUser.passwordHash)
-    if (!isPasswordValid) {
-      logger.auth.adminLoginFailed(email, 'Invalid password')
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-    }
-
     const isTokenValid = await bcrypt.compare(token, adminUser.tokenHash)
-    if (!isTokenValid) {
-      logger.auth.adminLoginFailed(email, 'Invalid token')
+
+    if (!isPasswordValid || !isTokenValid) {
+      logger.auth.adminLoginFailed(email, 'Invalid credentials')
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
-    const sessionToken = generateAdminToken()
+    const sessionToken = await generateAdminToken()
     
     logger.auth.adminLoginSuccess(email, timer())
 

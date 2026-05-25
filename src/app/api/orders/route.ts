@@ -7,7 +7,7 @@ import { logger, createTimer } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   const timer = createTimer()
-  const authError = requireAdminAuth(request)
+  const authError = await requireAdminAuth(request)
   if (authError) return authError
 
   try {

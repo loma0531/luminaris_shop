@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger'
  * Use this after database reset or when cache is stale
  */
 export async function POST(request: NextRequest) {
-  const authError = requireAdminAuth(request)
+  const authError = await requireAdminAuth(request)
   if (authError) return authError
 
   try {
