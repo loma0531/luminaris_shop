@@ -65,12 +65,18 @@ export function SkeletonCard({ height = 200 }: { height?: number }) {
 
 export function SkeletonProductCard() {
   return (
-    <div className="card p-4 flex gap-4">
-      <Skeleton width={80} height={80} />
-      <div className="flex-1">
-        <Skeleton width="60%" height="1.25rem" className="mb-2" />
-        <Skeleton width="40%" height="1rem" className="mb-3" />
-        <Skeleton width="30%" height="1.5rem" />
+    <div className="product-card">
+      <div className="product-image bg-muted">
+        <Skeleton width="100%" height="100%" />
+      </div>
+      <div className="product-info">
+        <Skeleton width="70%" height="1.25rem" className="mb-2" />
+        <Skeleton width="100%" height="0.875rem" className="mb-1" />
+        <Skeleton width="40%" height="0.875rem" className="mb-3" />
+        <Skeleton width="30%" height="1.2rem" className="mt-auto" />
+      </div>
+      <div className="product-actions">
+        <Skeleton width="100%" height="42px" borderRadius="0.375rem" />
       </div>
     </div>
   )
@@ -78,14 +84,37 @@ export function SkeletonProductCard() {
 
 export function SkeletonCartItem() {
   return (
-    <div className="card p-4 flex items-center gap-4">
-      <Skeleton width={20} height={20} borderRadius={4} />
-      <Skeleton width={80} height={80} />
-      <div className="flex-1">
-        <Skeleton width="50%" height="1rem" className="mb-2" />
-        <Skeleton width="30%" height="0.875rem" />
+    <div className="card cart-item-card opacity-60 border-2 border-transparent">
+      {/* Checkbox wrapper */}
+      <div className="flex items-center p-2 shrink-0">
+        <Skeleton width="1.25rem" height="1.25rem" borderRadius={4} />
       </div>
-      <Skeleton width={100} height={36} />
+
+      {/* Product Image */}
+      <div className="cart-item-image w-20 h-20 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden">
+        <Skeleton width="100%" height="100%" />
+      </div>
+
+      {/* Product Info + Price (Desktop) */}
+      <div className="cart-item-info flex-1 min-w-0 flex justify-between items-center gap-4">
+        <div className="w-full max-w-[180px]">
+          <Skeleton width="80%" height="1.2rem" className="mb-2" />
+          <Skeleton width="50%" height="0.875rem" />
+        </div>
+        <div className="cart-item-price">
+          <Skeleton width="50px" height="1.2rem" className="ml-auto" />
+        </div>
+      </div>
+
+      {/* Quantity Controls + Delete */}
+      <div className="cart-item-controls">
+        <div className="cart-qty-controls">
+          <Skeleton width={28} height={28} borderRadius={4} />
+          <Skeleton width={24} height={20} className="mx-1" />
+          <Skeleton width={28} height={28} borderRadius={4} />
+        </div>
+        <Skeleton width={28} height={28} borderRadius={4} />
+      </div>
     </div>
   )
 }

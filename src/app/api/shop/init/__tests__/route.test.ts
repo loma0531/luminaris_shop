@@ -14,6 +14,7 @@ vi.mock('@/lib/redis', () => ({
   setCachedProducts: vi.fn(),
   getCachedCategories: vi.fn().mockResolvedValue(null),
   setCachedCategories: vi.fn(),
+  getCachedCart: vi.fn().mockResolvedValue(null),
 }))
 
 // Mock Prisma with inline factory

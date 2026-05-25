@@ -102,6 +102,23 @@ function SkinViewer3D({ minecraftName }: { minecraftName: string }) {
     const initViewer = async () => {
       if (!canvasRef.current) return
 
+      // Proactively check for WebGL support to avoid THREE context crashes in sandboxed or virtual environments
+      const isWebGLSupported = (() => {
+        try {
+          const canvas = document.createElement('canvas')
+          return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')))
+        } catch (e) {
+          return false
+        }
+      })()
+
+      if (!isWebGLSupported) {
+        logger.warn('WebGL is not supported or disabled in this browser context. Falling back to 2D avatar render.')
+        setIsWebglError(true)
+        setIsLoaded(true)
+        return
+      }
+
       try {
         const skinview3d = await import('skinview3d')
         
@@ -350,13 +367,13 @@ export default function ProfilePage() {
           align-items: center;
           gap: 0.5rem;
           margin-bottom: 2rem;
-          color: #ffffff;
+          color: var(--foreground);
         }
 
         .profile-header-title h1 {
           font-size: 1.375rem;
           font-weight: 600;
-          color: #ffffff;
+          color: var(--foreground);
         }
 
         .profile-main-grid {
@@ -373,19 +390,21 @@ export default function ProfilePage() {
         }
 
         .model-card {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--card);
+          border: 1px solid var(--border);
           border-radius: 16px;
           padding: 1.25rem;
           overflow: hidden;
           position: relative;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
         }
 
         .model-card::before {
           content: '';
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.05) 0%, transparent 60%);
+          background: radial-gradient(circle at 50% 0%, var(--border-hover) 0%, transparent 60%);
           pointer-events: none;
         }
 
@@ -395,7 +414,8 @@ export default function ProfilePage() {
           gap: 0.5rem;
           font-size: 0.875rem;
           font-weight: 500;
-          color: rgba(255, 255, 255, 0.7);
+          color: var(--foreground);
+          opacity: 0.85;
           margin-bottom: 0.75rem;
           position: relative;
           z-index: 1;
@@ -404,7 +424,7 @@ export default function ProfilePage() {
         .model-hint {
           text-align: center;
           font-size: 0.75rem;
-          color: rgba(255, 255, 255, 0.4);
+          color: var(--muted-foreground);
           margin-top: 0.75rem;
           position: relative;
           z-index: 1;
@@ -418,22 +438,24 @@ export default function ProfilePage() {
         }
 
         .info-card {
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          background: var(--card);
+          border: 1px solid var(--border);
           border-radius: 16px;
           padding: 1.25rem;
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
           transition: all 0.3s ease;
         }
 
         .info-card:hover {
-          border-color: rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.05);
+          border-color: var(--border-hover);
+          background: var(--card-hover);
         }
 
         /* Profile Main Card */
         .profile-card-main {
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: var(--card);
+          border: 1px solid var(--border-hover);
         }
 
         .profile-identity {
@@ -456,16 +478,16 @@ export default function ProfilePage() {
         .avatar-glow {
           position: absolute;
           inset: -4px;
-          background: rgba(255, 255, 255, 0.2);
+          background: var(--border-hover);
           border-radius: 20px;
-          opacity: 0.5;
+          opacity: 0.3;
           filter: blur(8px);
           animation: pulse-glow 3s ease-in-out infinite;
         }
 
         @keyframes pulse-glow {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 0.5; }
+          0%, 100% { opacity: 0.15; }
+          50% { opacity: 0.3; }
         }
 
         .identity-info {
@@ -476,7 +498,7 @@ export default function ProfilePage() {
         .display-name {
           font-size: 1.375rem;
           font-weight: 700;
-          color: #ffffff;
+          color: var(--foreground);
           margin-bottom: 0.375rem;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -491,7 +513,7 @@ export default function ProfilePage() {
 
         .username {
           font-size: 0.875rem;
-          color: rgba(255, 255, 255, 0.5);
+          color: var(--muted-foreground);
         }
 
         .platform-badge {
@@ -503,9 +525,9 @@ export default function ProfilePage() {
         }
 
         .platform-badge.bedrock {
-          background: rgba(255, 255, 255, 0.15);
-          color: #ffffff;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: var(--secondary);
+          color: var(--foreground);
+          border: 1px solid var(--border);
         }
 
         /* UUID Card */
@@ -522,7 +544,7 @@ export default function ProfilePage() {
           gap: 0.5rem;
           font-size: 0.875rem;
           font-weight: 500;
-          color: rgba(255, 255, 255, 0.6);
+          color: var(--muted-foreground);
         }
 
         .toggle-btn {
@@ -532,34 +554,35 @@ export default function ProfilePage() {
           padding: 0.375rem 0.75rem;
           font-size: 0.75rem;
           font-weight: 500;
-          background: rgba(255, 255, 255, 0.08);
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: var(--secondary);
+          border: 1px solid var(--border);
           border-radius: 8px;
-          color: #ffffff;
+          color: var(--foreground);
           cursor: pointer;
           transition: all 0.2s ease;
         }
 
         .toggle-btn:hover {
-          background: rgba(255, 255, 255, 0.12);
-          border-color: rgba(255, 255, 255, 0.25);
+          background: var(--card-hover);
+          border-color: var(--border-hover);
         }
 
         .uuid-value {
           font-family: 'SF Mono', 'Menlo', monospace;
           font-size: 0.8125rem;
-          color: rgba(255, 255, 255, 0.8);
+          color: var(--foreground);
+          opacity: 0.9;
           word-break: break-all;
           line-height: 1.5;
           padding: 0.75rem;
-          background: rgba(0, 0, 0, 0.3);
+          background: var(--muted);
           border-radius: 8px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid var(--border);
         }
 
         /* Activity Card */
         .activity-card {
-          background: rgba(255, 255, 255, 0.03);
+          background: var(--card);
         }
 
         .activity-header {
@@ -570,8 +593,8 @@ export default function ProfilePage() {
           font-weight: 600;
           margin-bottom: 1rem;
           padding-bottom: 0.75rem;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          color: #ffffff;
+          border-bottom: 1px solid var(--border);
+          color: var(--foreground);
         }
 
         .activity-grid {
@@ -583,31 +606,31 @@ export default function ProfilePage() {
         .activity-item {
           text-align: center;
           padding: 1rem;
-          background: rgba(255, 255, 255, 0.02);
+          background: var(--muted);
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid var(--border);
           transition: all 0.2s ease;
         }
 
         .activity-item:hover {
-          border-color: rgba(255, 255, 255, 0.15);
-          background: rgba(255, 255, 255, 0.05);
+          border-color: var(--border-hover);
+          background: var(--card-hover);
         }
 
         .activity-label {
           font-size: 0.75rem;
-          color: rgba(255, 255, 255, 0.5);
+          color: var(--muted-foreground);
           margin-bottom: 0.5rem;
         }
 
         .activity-value {
           font-size: 0.9375rem;
           font-weight: 600;
-          color: #ffffff;
+          color: var(--foreground);
         }
 
         .activity-value.highlight {
-          color: #ffffff;
+          color: var(--foreground);
           font-size: 1.125rem;
         }
 
@@ -687,15 +710,15 @@ export default function ProfilePage() {
           align-items: center;
           justify-content: center;
           gap: 1rem;
-          color: rgba(255, 255, 255, 0.5);
+          color: var(--muted-foreground);
           font-size: 0.875rem;
         }
 
         .skin-loader-spinner {
           width: 40px;
           height: 40px;
-          border: 3px solid rgba(255, 255, 255, 0.1);
-          border-top-color: #ffffff;
+          border: 3px solid var(--border);
+          border-top-color: var(--foreground);
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -711,7 +734,7 @@ export default function ProfilePage() {
           transform: translateX(-50%);
           width: 120px;
           height: 20px;
-          background: radial-gradient(ellipse, rgba(255, 255, 255, 0.2), transparent 70%);
+          background: radial-gradient(ellipse, var(--border-hover), transparent 70%);
           filter: blur(10px);
           pointer-events: none;
         }

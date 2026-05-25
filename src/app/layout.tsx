@@ -34,6 +34,8 @@ export default function RootLayout({
   return (
     <html lang="th">
       <body className={notoSansThai.variable}>
+        {/* Third ambient glow blob — positioned centrally, animates slowly */}
+        <div className="liquid-glass-blob" aria-hidden="true" />
         <ErrorBoundary>
           <SWRProvider>
             <ToastProvider>

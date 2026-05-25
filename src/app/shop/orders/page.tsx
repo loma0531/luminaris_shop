@@ -288,10 +288,10 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <div className="checkout-page">
-        <div className="checkout-header">
+        {/* <div className="checkout-header">
           <CreditCardIcon size={24} />
           <h1>รายการรอชำระเงิน</h1>
-        </div>
+        </div> */}
         <div className="skeleton w-full h-[48px] rounded-xl mb-6" />
         <div className="checkout-skeleton">
           <div className="checkout-panel">
@@ -346,17 +346,29 @@ export default function OrdersPage() {
   if (!pendingOrder) {
     return (
       <div className="checkout-page">
-        <div className="checkout-header">
+        {/* <div className="checkout-header">
           <CreditCardIcon size={24} />
           <h1>รายการรอชำระเงิน</h1>
-        </div>
-        <div className="checkout-empty">
-          <PackageIcon size={48} />
-          <p>ไม่มีรายการรอชำระเงิน</p>
-          <Link href="/shop/cart" className="btn btn-primary">
-            <CartIcon size={16} />
-            ไปที่ตะกร้าสินค้า
-          </Link>
+        </div> */}
+        <div className="checkout-empty-container">
+          <div className="checkout-empty-card">
+            <div className="checkout-empty-icon-wrap">
+              <PackageIcon size={44} />
+            </div>
+            <h3>ไม่มีรายการรอชำระเงิน</h3>
+            <p>
+              คุณไม่มีรายการสั่งซื้อที่ค้างชำระในขณะนี้ เลือกซื้อไอเทมสุดพิเศษหรือตรวจสอบสินค้าในตะกร้าของคุณเพื่อดำเนินการชำระเงินได้ทันที
+            </p>
+            <div className="checkout-empty-actions">
+              <Link href="/shop" className="btn btn-primary btn-lg empty-action-primary">
+                <CartIcon size={18} />
+                เลือกซื้อสินค้า
+              </Link>
+              <Link href="/shop/cart" className="btn btn-lg empty-action-secondary">
+                ดูตะกร้าสินค้า
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     )

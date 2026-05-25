@@ -294,8 +294,11 @@ function AdminContent({ children }: AdminLayoutProps) {
           align-items: center;
           justify-content: space-between;
           padding: 0 1rem;
-          background: var(--background);
-          border-bottom: 1px solid var(--border);
+          background: var(--sidebar-bg);
+          border-bottom: 1px solid var(--sidebar-border);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          box-shadow: 0 1px 20px rgba(0, 0, 0, calc(var(--shadow-opacity) * 0.4));
           z-index: 30;
         }
         

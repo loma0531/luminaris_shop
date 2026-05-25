@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { getCachedProducts, getCachedCategories } from '@/lib/redis'
+import { getCachedProducts, getCachedCategories, getCachedCart } from '@/lib/redis'
 import { isValidMinecraftName } from '@/lib/inputValidation'
 import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger } from '@/lib/logger'
@@ -61,11 +61,22 @@ export async function GET(request: NextRequest) {
   // 3. User Specific Data (if logged in)
   if (minecraftName && isValidMinecraftName(minecraftName)) {
     promises.push(
-      // Cart
-      prisma.cart.findUnique({
-        where: { minecraftName },
-        select: { items: true }
-      }).then(cart => cart?.items || [])
+      // Cart (Read from Redis first, fallback to MongoDB)
+      getCachedCart(minecraftName).then(async (cachedCart) => {
+        if (cachedCart) {
+          return cachedCart.items.map(item => ({
+            productId: item.productId || item.product?.id,
+            quantity: item.quantity,
+            customInput: item.customInput || null
+          }))
+        }
+        // Fallback DB
+        const cart = await prisma.cart.findUnique({
+          where: { minecraftName },
+          select: { items: true }
+        })
+        return cart?.items || []
+      })
     )
     
     promises.push(

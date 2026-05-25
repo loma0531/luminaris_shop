@@ -17,6 +17,7 @@ import { validateCustomInput } from '@/lib/inputValidation'
 import { getCartKey } from '@/lib/swr-hooks'
 import { mutate as globalMutate } from 'swr'
 import { cartSaveStarted, cartSaveCompleted, hasCartSavesInFlight } from '@/lib/cartSaveTracker'
+import { SkeletonProductCard } from '@/components/Skeleton'
 
 // Product Image with error handling and fallback
 function ProductImage({ src, alt, priority = false }: { src: string | null; alt: string; priority?: boolean }) {
@@ -368,12 +369,7 @@ export default function ShopPage() {
       {loading ? (
         <div className="product-grid">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="card p-4">
-              <div className="skeleton w-full h-[120px] mb-4" />
-              <div className="skeleton w-3/5 h-5 mb-2" />
-              <div className="skeleton w-2/5 h-4 mb-3" />
-              <div className="skeleton w-full h-10" />
-            </div>
+            <SkeletonProductCard key={i} />
           ))}
         </div>
       ) : filteredProducts.length === 0 ? (

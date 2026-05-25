@@ -42,11 +42,40 @@ export class OrderService {
     const timer = createTimer()
     const { minecraftName, items, total } = input
 
-    // Double check ราคาจากฝั่ง server
-    const calculatedTotal = items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    )
+    // Security: Fetch products from database to prevent price manipulation and command injection
+    const productIds = items.map(item => item.productId)
+    const dbProducts = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        isActive: true,
+      },
+    })
+
+    const productMap = new Map(dbProducts.map((p) => [p.id, p]))
+
+    const sanitizedItems = []
+    let calculatedTotal = 0
+
+    for (const item of items) {
+      const dbProduct = productMap.get(item.productId)
+      if (!dbProduct) {
+        logger.security.suspiciousActivity(`Product not found or inactive during OrderService create: ${item.productId}`, minecraftName)
+        throw new Error('สินค้าไม่ถูกต้องหรือถูกปิดใช้งานแล้ว')
+      }
+
+      // Overwrite name, price, and commands with values from the database
+      const verifiedItem = {
+        productId: dbProduct.id,
+        name: dbProduct.name,
+        price: dbProduct.price,
+        quantity: item.quantity,
+        commands: dbProduct.commands, // CRITICAL: Server-controlled commands!
+        customInput: item.customInput || null,
+      }
+
+      sanitizedItems.push(verifiedItem)
+      calculatedTotal += verifiedItem.price * verifiedItem.quantity
+    }
 
     if (Math.abs(calculatedTotal - total) > 1) {
       logger.security.priceManipulation(total, calculatedTotal, minecraftName)
@@ -74,7 +103,7 @@ export class OrderService {
         total: calculatedTotal,
         status: 'AWAITING_PAYMENT',
         paymentId: payment.id,
-        items,
+        items: sanitizedItems,
       },
     })
 

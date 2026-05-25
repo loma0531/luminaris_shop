@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { SearchIcon, CheckIcon, CloseIcon, CreditCardIcon, ClockIcon, PlusIcon } from '@/components/Icons'
 import { adminGet, adminPost } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
@@ -42,6 +42,10 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  
+  // Custom dropdown state
+  const [isStatusOpen, setIsStatusOpen] = useState(false)
+  const statusDropdownRef = useRef<HTMLDivElement>(null)
 
   // Manual Order Modal
   const [showManualModal, setShowManualModal] = useState(false)
@@ -54,6 +58,17 @@ export default function AdminOrdersPage() {
 
   const { products } = useAdminData()
   const { success, error: toastError } = useToast()
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+        setIsStatusOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -224,19 +239,76 @@ export default function AdminOrdersPage() {
         </div>
 
         {/* Status Filter */}
-        <select
-          className="input min-w-[160px] px-4 py-2 bg-card border border-border rounded-md text-foreground"
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as StatusFilter)
-            setPage(1)
-          }}
-        >
-          <option value="ALL">ทุกสถานะ</option>
-          <option value="COMPLETED">สำเร็จ</option>
-          <option value="AWAITING_PAYMENT">รอชำระ</option>
-          <option value="CANCELLED">ยกเลิก</option>
-        </select>
+        <div className="custom-dropdown min-w-[180px]" ref={statusDropdownRef}>
+          <button 
+            type="button"
+            className={`dropdown-trigger ${isStatusOpen ? 'active' : ''}`}
+            onClick={() => setIsStatusOpen(!isStatusOpen)}
+          >
+            <span>
+              {statusFilter === 'ALL' && 'ทุกสถานะ'}
+              {statusFilter === 'COMPLETED' && 'สำเร็จ'}
+              {statusFilter === 'AWAITING_PAYMENT' && 'รอชำระ'}
+              {statusFilter === 'CANCELLED' && 'ยกเลิก'}
+            </span>
+            <div className="dropdown-arrow">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+          </button>
+          
+          <div className={`dropdown-menu ${isStatusOpen ? 'open' : ''}`}>
+            <button
+              type="button"
+              className={`dropdown-item ${statusFilter === 'ALL' ? 'selected' : ''}`}
+              onClick={() => {
+                setStatusFilter('ALL')
+                setPage(1)
+                setIsStatusOpen(false)
+              }}
+            >
+              <span>ทุกสถานะ</span>
+              {statusFilter === 'ALL' && <div className="item-check"><CheckIcon size={14} /></div>}
+            </button>
+            <button
+              type="button"
+              className={`dropdown-item ${statusFilter === 'COMPLETED' ? 'selected' : ''}`}
+              onClick={() => {
+                setStatusFilter('COMPLETED')
+                setPage(1)
+                setIsStatusOpen(false)
+              }}
+            >
+              <span>สำเร็จ</span>
+              {statusFilter === 'COMPLETED' && <div className="item-check"><CheckIcon size={14} /></div>}
+            </button>
+            <button
+              type="button"
+              className={`dropdown-item ${statusFilter === 'AWAITING_PAYMENT' ? 'selected' : ''}`}
+              onClick={() => {
+                setStatusFilter('AWAITING_PAYMENT')
+                setPage(1)
+                setIsStatusOpen(false)
+              }}
+            >
+              <span>รอชำระ</span>
+              {statusFilter === 'AWAITING_PAYMENT' && <div className="item-check"><CheckIcon size={14} /></div>}
+            </button>
+            <button
+              type="button"
+              className={`dropdown-item ${statusFilter === 'CANCELLED' ? 'selected' : ''}`}
+              onClick={() => {
+                setStatusFilter('CANCELLED')
+                setPage(1)
+                setIsStatusOpen(false)
+              }}
+            >
+              <span>ยกเลิก</span>
+              {statusFilter === 'CANCELLED' && <div className="item-check"><CheckIcon size={14} /></div>}
+            </button>
+          </div>
+        </div>
       </div>
 
       {loading ? (

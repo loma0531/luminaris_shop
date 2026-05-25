@@ -53,22 +53,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Too many items in order (max ${CART_LIMITS.MAX_ITEM_TYPES})` }, { status: 400 })
     }
 
-    // Double check total calculation for safety
-    const calculatedTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    // Security: Fetch products from database to prevent price manipulation and command injection
+    const productIds = items.map(item => item.productId)
+    const dbProducts = await prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        isActive: true,
+      },
+    })
+
+    const productMap = new Map(dbProducts.map((p) => [p.id, p]))
+
+    const sanitizedItems = []
+    let calculatedTotal = 0
+
+    for (const item of items) {
+      const dbProduct = productMap.get(item.productId)
+      if (!dbProduct) {
+        logger.security.suspiciousActivity(`Product not found or inactive during checkout: ${item.productId}`, minecraftName)
+        return NextResponse.json({ error: 'สินค้าไม่ถูกต้องหรือถูกปิดใช้งานแล้ว' }, { status: 400 })
+      }
+
+      // Overwrite name, price, and commands with values from the database
+      const verifiedItem = {
+        productId: dbProduct.id,
+        name: dbProduct.name,
+        price: dbProduct.price,
+        quantity: item.quantity,
+        commands: dbProduct.commands, // CRITICAL: Server-controlled commands!
+        customInput: item.customInput || null,
+      }
+
+      sanitizedItems.push(verifiedItem)
+      calculatedTotal += verifiedItem.price * verifiedItem.quantity
+    }
+
     if (Math.abs(calculatedTotal - total) > 1) {
        logger.security.priceManipulation(total, calculatedTotal, minecraftName)
-       return NextResponse.json({ error: 'Total amount mismatch' }, { status: 400 })
+       return NextResponse.json({ error: 'ยอดชำระเงินไม่ถูกต้อง' }, { status: 400 })
     }
     
     // Check total quantity limit
-    const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
+    const totalQuantity = sanitizedItems.reduce((sum, item) => sum + item.quantity, 0)
     if (totalQuantity > CART_LIMITS.MAX_TOTAL_QUANTITY) {
       logger.security.suspiciousActivity(`Total quantity ${totalQuantity} exceeds limit`, minecraftName)
       return NextResponse.json({ error: `Total quantity exceeds limit (max ${CART_LIMITS.MAX_TOTAL_QUANTITY})` }, { status: 400 })
     }
-
-    // Prepare sanitized items for Prisma (mapping Zod result to exact Prisma needs if necessary, though they match)
-    const sanitizedItems = items // Zod already guaranteed structure
 
     const paymentSeqId = await getNextSequence('payment_id')
     const orderSeqId = await getNextSequence('order_id')

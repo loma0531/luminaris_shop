@@ -61,20 +61,71 @@ export class CartRepository {
   }
 
   /**
-   * บันทึกตะกร้า (Write-Through: Redis ทันที + MongoDB เบื้องหลัง)
+   * บันทึกตะกร้า (Write-Back: Redis ทันที + MongoDB เบื้องหลัง)
    */
   static async saveCart(minecraftName: string, items: CartItemInput[]): Promise<void> {
     const cache = getCache()
 
-    // 1. เขียน MongoDB ทันที (ข้อมูลต้อง consistent)
-    await prisma.cart.upsert({
+    // 1. ดึงข้อมูลสินค้าจากแคชหรือ DB เพื่อสร้าง CartWithProducts ที่สมบูรณ์
+    const productIds = items.map(i => i.productId)
+    
+    let products: any[] = []
+    try {
+      const cachedProds = await cache.get<any[]>(CACHE_KEYS.PRODUCTS)
+      if (cachedProds) {
+        products = cachedProds.filter(p => productIds.includes(p.id))
+      }
+    } catch {}
+
+    if (products.length === 0) {
+      try {
+        products = await prisma.product.findMany({
+          where: { id: { in: productIds } },
+          select: {
+            id: true, name: true, price: true, image: true, commands: true,
+            requiresInput: true, inputLabel: true, inputPlaceholder: true
+          }
+        })
+      } catch {}
+    }
+
+    const productMap = new Map(products.map(p => [p.id, p]))
+
+    const cartItems = items
+      .map(item => {
+        const product = productMap.get(item.productId)
+        if (!product) return null
+        return {
+          product: {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            commands: product.commands,
+            requiresInput: product.requiresInput,
+            inputLabel: product.inputLabel,
+            inputPlaceholder: product.inputPlaceholder
+          },
+          quantity: item.quantity,
+          customInput: item.customInput
+        }
+      })
+      .filter(Boolean) as CartWithProducts['items']
+
+    const count = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+    const cartData: CartWithProducts = { items: cartItems, count }
+
+    // 2. เขียนลง Redis ทันที (<1ms)
+    await cache.set(CACHE_KEYS.CART(minecraftName), cartData, CACHE_TTL.CART)
+
+    // 3. เขียน MongoDB แบบ Asynchronous (เบื้องหลัง)
+    prisma.cart.upsert({
       where: { minecraftName },
       update: { items },
       create: { minecraftName, items },
+    }).catch((err) => {
+      logger.system.error(`Background MongoDB save in CartRepository failed: ${err}`)
     })
-
-    // 2. Invalidate cache เพื่อให้ครั้งถัดไปดึง fresh data
-    await cache.del(CACHE_KEYS.CART(minecraftName))
 
     logger.cart.saved(minecraftName, items.length)
   }

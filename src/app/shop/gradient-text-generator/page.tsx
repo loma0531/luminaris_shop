@@ -384,10 +384,8 @@ export default function GradientGeneratorPage() {
     { key: 'italic', label: 'I', style: { transform: 'rotate(10deg)' }, className: 'font-bold' },
     { key: 'underline', label: 'U', className: 'underline' },
     { key: 'strikethrough', label: 'S', className: 'line-through' },
-  ];
-
-  return (
-    <div className="min-h-screen bg-[#0A0A0A] text-white w-full py-4 md:py-6" style={{ fontFamily: "var(--font-primary)" }}>
+  ];  return (
+    <div className="min-h-screen bg-transparent text-foreground w-full py-4 md:py-6" style={{ fontFamily: "var(--font-primary)" }}>
       {/* Maximum width container roughly matching the design proportions */}
       <div className="max-w-[1392px] mx-auto px-4 md:px-8 space-y-6">
         
@@ -400,19 +398,19 @@ export default function GradientGeneratorPage() {
           <div className="relative">
              {/* Subtitle & Format Buttons in same perceived line */}
              <div className="flex justify-between items-end mb-3">
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-muted-foreground">
                   พิมพ์ที่นี่เพื่อสร้างข้อความ
                 </p>
                 
                 {/* Format Buttons (B I U S) */}
-                <div className="flex rounded-md overflow-hidden bg-[#0F0F0F] border border-[#404040]">
+                <div className="flex rounded-md overflow-hidden bg-card border border-border">
                   {formatBtns.map((btn, i) => (
                     <button
                       key={btn.key}
                       onClick={() => setOptions(p => ({...p, [btn.key]: !p[btn.key]}))}
                       className={`w-10 h-10 flex items-center justify-center text-xl transition-colors
-                        ${i !== 0 ? 'border-l border-[#404040]' : ''}
-                        ${options[btn.key] ? 'bg-transparent text-white' : 'bg-transparent text-gray-500 hover:bg-[#1A1A1A] hover:text-white'}
+                        ${i !== 0 ? 'border-l border-border' : ''}
+                        ${options[btn.key] ? 'bg-transparent text-foreground font-bold' : 'bg-transparent text-muted-foreground hover:bg-card-hover hover:text-foreground'}
                       `}
                     >
                       <span className={btn.className} style={btn.style}>{btn.label}</span>
@@ -422,19 +420,19 @@ export default function GradientGeneratorPage() {
              </div>
 
              {/* Main Input Box */}
-             <div className="flex bg-[#0F0F0F] border border-[#404040] rounded-md h-[50px] relative">
+             <div className="flex bg-card border border-border rounded-md h-[50px] relative">
                <div className="flex items-center px-6 h-full shrink-0">
-                 <span className="text-white font-bold text-base whitespace-nowrap">{'>_'} ใส่ข้อความ</span>
+                 <span className="text-foreground font-bold text-base whitespace-nowrap">{'>_'} ใส่ข้อความ</span>
                </div>
                {/* Vertical Divider line */}
-               <div className="h-full w-[1px] bg-[#404040] my-auto"></div>
+               <div className="h-full w-[1px] bg-border my-auto"></div>
                <div className="flex-1 relative h-full">
                  <input
                    type="text"
                    value={text}
                    onChange={e => setText(e.target.value)}
-                   className="absolute inset-0 w-full h-full bg-transparent px-6 text-xl font-bold outline-none text-transparent caret-white z-10"
-                   style={{ caretColor: 'white' }}
+                   className="absolute inset-0 w-full h-full bg-transparent px-6 text-xl font-bold outline-none text-transparent caret-foreground z-10"
+                   style={{ caretColor: 'var(--foreground)' }}
                  />
                  <div className="absolute inset-0 flex items-center px-6 pointer-events-none text-xl font-bold whitespace-nowrap z-0">
                    {renderInputPreview()}
@@ -481,19 +479,19 @@ export default function GradientGeneratorPage() {
             
             <div className="space-y-4">
                <div className="flex flex-col space-y-2 max-w-[334px]">
-                 <label className="text-lg md:text-xl font-medium">จำนวนสี</label>
+                 <label className="text-lg md:text-xl font-medium text-foreground">จำนวนสี</label>
                  
                  {/* Color Amount Controls */}
-                 <div className="flex bg-[#0F0F0F] border border-[#404040] rounded-md h-[40px] overflow-hidden">
-                   <button onClick={() => handleColorAmountChange(-1)} className="w-[50px] md:w-[60px] h-full text-white hover:bg-[#1A1A1A] font-bold text-xl">−</button>
-                   <div className="flex-1 text-center flex items-center justify-center font-bold text-lg pointer-events-none">
+                 <div className="flex bg-card border border-border rounded-md h-[40px] overflow-hidden">
+                   <button onClick={() => handleColorAmountChange(-1)} className="w-[50px] md:w-[60px] h-full text-foreground hover:bg-card-hover font-bold text-xl">−</button>
+                   <div className="flex-1 text-center flex items-center justify-center font-bold text-lg pointer-events-none text-foreground">
                      {colors.length}
                    </div>
-                   <button onClick={() => handleColorAmountChange(1)} className="w-[50px] md:w-[60px] h-full text-white hover:bg-[#1A1A1A] font-bold text-xl">+</button>
+                   <button onClick={() => handleColorAmountChange(1)} className="w-[50px] md:w-[60px] h-full text-foreground hover:bg-card-hover font-bold text-xl">+</button>
                  </div>
                  
                  {/* Random Button */}
-                 <button onClick={randomizeColors} className="w-full h-[40px] bg-[#0F0F0F] border border-[#404040] rounded-md text-white font-medium text-base hover:bg-[#1A1A1A]">
+                 <button onClick={randomizeColors} className="w-full h-[40px] bg-card border border-border rounded-md text-foreground font-medium text-base hover:bg-card-hover">
                    Random
                  </button>
                </div>
@@ -506,8 +504,8 @@ export default function GradientGeneratorPage() {
                        {/* Arrow Button */}
                        <button
                          onClick={() => moveColor(i, i === 0 ? 'down' : 'up')}
-                         className={`w-[40px] h-[40px] flex items-center justify-center bg-[#0F0F0F] border border-[#404040] rounded-md transition-colors font-bold
-                           ${colors.length <= 1 ? 'opacity-30 cursor-default' : 'hover:bg-[#1A1A1A]'}
+                         className={`w-[40px] h-[40px] flex items-center justify-center bg-card border border-border rounded-md transition-colors font-bold text-foreground
+                           ${colors.length <= 1 ? 'opacity-30 cursor-default' : 'hover:bg-card-hover'}
                          `}
                          disabled={colors.length <= 1}
                        >
@@ -518,7 +516,7 @@ export default function GradientGeneratorPage() {
                        {/* Color Hex Block */}
                        <button
                          onClick={() => setOpenColorPickerId(openColorPickerId === c.id ? null : c.id)}
-                         className="flex-1 h-[40px] rounded-md flex items-center px-4 font-mono text-lg uppercase transition-transform active:scale-[0.98] border border-[#404040]"
+                         className="flex-1 h-[40px] rounded-md flex items-center px-4 font-mono text-lg uppercase transition-transform active:scale-[0.98] border border-border"
                          style={{ backgroundColor: c.hex, color: isLightColor(c.hex) ? '#000' : '#fff' }}
                        >
                          {c.hex.replace('#', '# ')}
@@ -527,7 +525,7 @@ export default function GradientGeneratorPage() {
                        {/* Minus Delete Button */}
                        <button
                          onClick={() => deleteColor(c.id)}
-                         className={`w-[40px] h-[40px] flex items-center justify-center bg-[#0F0F0F] border border-red-600 rounded-md transition-colors text-white text-3xl pb-1
+                         className={`w-[40px] h-[40px] flex items-center justify-center bg-card border border-red-600 rounded-md transition-colors text-foreground text-3xl pb-1
                            ${colors.length <= 1 ? 'opacity-30 cursor-default' : 'hover:bg-red-900/30'}
                          `}
                          disabled={colors.length <= 1}
@@ -538,13 +536,13 @@ export default function GradientGeneratorPage() {
 
                     {/* Color Picker Popup */}
                      {openColorPickerId === c.id && (
-                       <div className="absolute z-50 left-12 bottom-full mb-2 p-3 bg-[#1A1A1A] border border-[#404040] rounded-md shadow-2xl w-[220px]">
+                       <div className="absolute z-50 left-12 bottom-full mb-2 p-3 bg-card border border-border rounded-md shadow-2xl w-[220px]">
                          {/* Wrapper to force react-colorful to take full width */}
                          <div className="react-colorful-custom-wrapper">
                            <HexColorPicker color={c.hex} onChange={(hex) => updateColorHex(c.id, hex)} />
                          </div>
-                         <div className="mt-3 flex items-center bg-[#0F0F0F] rounded border border-[#404040] px-3">
-                           <span className="text-gray-500 font-mono">#</span>
+                         <div className="mt-3 flex items-center bg-card rounded border border-border px-3">
+                           <span className="text-muted-foreground font-mono">#</span>
                            <input
                              type="text"
                              value={c.hex.replace('#', '')}
@@ -554,7 +552,7 @@ export default function GradientGeneratorPage() {
                                  updateColorHex(c.id, '#' + val);
                                }
                              }}
-                             className="w-full bg-transparent py-2 px-1 text-white font-mono outline-none uppercase"
+                             className="w-full bg-transparent py-2 px-1 text-foreground font-mono outline-none uppercase"
                              maxLength={6}
                            />
                          </div>
@@ -573,13 +571,13 @@ export default function GradientGeneratorPage() {
             {/* Output Segment */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-wide">ผลลัพธ์</h2>
+                <h2 className="text-2xl md:text-3xl font-bold tracking-wide text-foreground">ผลลัพธ์</h2>
                 <button 
                   onClick={handleCopy}
                   className={`px-4 py-1.5 rounded-md font-bold text-sm transition-colors flex items-center gap-2 border
                     ${copySuccess 
                       ? 'bg-green-600/20 text-green-400 border-green-600/50' 
-                      : 'bg-[#1A1A1A] text-gray-300 border-[#404040] hover:bg-[#2A2A2A] hover:text-white'
+                      : 'bg-card text-muted-foreground border-border hover:bg-card-hover hover:text-foreground'
                     }
                   `}
                 >
@@ -596,8 +594,8 @@ export default function GradientGeneratorPage() {
                   )}
                 </button>
               </div>
-              <div className="bg-[#0F0F0F] border border-[#404040] rounded-md p-4 min-h-[140px]">
-                 <p className="text-white text-lg md:text-xl font-normal leading-relaxed break-all whitespace-pre-wrap font-mono">
+              <div className="bg-card border border-border rounded-md p-4 min-h-[140px]">
+                 <p className="text-foreground text-lg md:text-xl font-normal leading-relaxed break-all whitespace-pre-wrap font-mono">
                    {outputText || 'No output text.'}
                  </p>
               </div>
@@ -606,34 +604,34 @@ export default function GradientGeneratorPage() {
             {/* Java Edition Preview Segment */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2 text-foreground">
                   Java Edition Preview
                 </h2>
                 {/* Custom Font Selector for Java Preview */}
-                 <div className="flex items-center gap-3 bg-[#161616] pr-1 pl-4 py-1 rounded-md border border-[#404040]">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">ฟอนต์</span>
-                    <div className="relative border-l border-[#333] pl-2">
+                 <div className="flex items-center gap-3 bg-muted pr-1 pl-4 py-1 rounded-md border border-border">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ฟอนต์</span>
+                    <div className="relative border-l border-border pl-2">
                       <select 
                         title="Java Font" 
                         value={javaFont} 
                         onChange={e => setJavaFont(e.target.value)}
-                        className="appearance-none bg-[#1A1A1A] hover:bg-[#222] border border-[#555] text-sm text-gray-200 font-medium px-4 py-1.5 pr-8 rounded cursor-pointer outline-none w-[140px] transition-colors focus:border-[#FFAC2B] focus:text-white"
+                        className="appearance-none bg-card hover:bg-card-hover border border-border text-sm text-foreground font-medium px-4 py-1.5 pr-8 rounded cursor-pointer outline-none w-[140px] transition-colors focus:border-foreground"
                       >
                         {fonts?.families.map(f => (
-                          <option key={f} value={f} className="bg-[#1A1A1A] text-white py-1" style={{ fontFamily: f }}>{f}</option>
+                          <option key={f} value={f} className="bg-card text-foreground py-1" style={{ fontFamily: f }}>{f}</option>
                         ))}
-                        <option value="inherit" className="bg-[#1A1A1A] text-gray-400">System Default</option>
+                        <option value="inherit" className="bg-card text-muted-foreground">System Default</option>
                       </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
                         <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </div>
                     </div>
-                 </div>
+                  </div>
               </div>
-              <div className="bg-[#0F0F0F] border border-[#404040] rounded-md px-6 py-4 min-h-[86px] flex flex-col justify-center">
-                 <span className="text-[36px] font-bold drop-shadow-md whitespace-nowrap overflow-x-auto custom-scrollbar overflow-y-hidden">
+              <div className="bg-card border border-border rounded-md px-6 py-4 min-h-[86px] flex flex-col justify-center">
+                 <span className="text-[36px] font-bold drop-shadow-md whitespace-nowrap overflow-x-auto custom-scrollbar overflow-y-hidden text-foreground">
                    {renderPreviewText(outputText, 'java', javaFont)}
                  </span>
               </div>
@@ -642,34 +640,34 @@ export default function GradientGeneratorPage() {
             {/* Bedrock Edition Preview Segment */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2 text-foreground">
                   Bedrock Edition Preview
                 </h2>
                 {/* Custom Font Selector for Bedrock Preview */}
-                 <div className="flex items-center gap-3 bg-[#161616] pr-1 pl-4 py-1 rounded-md border border-[#404040]">
-                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">ฟอนต์</span>
-                    <div className="relative border-l border-[#333] pl-2">
+                 <div className="flex items-center gap-3 bg-muted pr-1 pl-4 py-1 rounded-md border border-border">
+                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ฟอนต์</span>
+                    <div className="relative border-l border-border pl-2">
                       <select 
                         title="Bedrock Font" 
                         value={bedrockFont} 
                         onChange={e => setBedrockFont(e.target.value)}
-                        className="appearance-none bg-[#1A1A1A] hover:bg-[#222] border border-[#555] text-sm text-gray-200 font-medium px-4 py-1.5 pr-8 rounded cursor-pointer outline-none w-[140px] transition-colors focus:border-[#FFAC2B] focus:text-white"
+                        className="appearance-none bg-card hover:bg-card-hover border border-border text-sm text-foreground font-medium px-4 py-1.5 pr-8 rounded cursor-pointer outline-none w-[140px] transition-colors focus:border-foreground"
                       >
                         {fonts?.families.map(f => (
-                          <option key={f} value={f} className="bg-[#1A1A1A] text-white py-1" style={{ fontFamily: f }}>{f}</option>
+                          <option key={f} value={f} className="bg-card text-foreground py-1" style={{ fontFamily: f }}>{f}</option>
                         ))}
-                        <option value="inherit" className="bg-[#1A1A1A] text-gray-400">System Default</option>
+                        <option value="inherit" className="bg-card text-muted-foreground">System Default</option>
                       </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
                         <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </div>
                     </div>
-                 </div>
+                  </div>
               </div>
-              <div className="bg-[#0F0F0F] border border-[#404040] rounded-md px-6 py-4 min-h-[86px] flex flex-col justify-center">
-                 <span className="text-[36px] font-bold drop-shadow-md whitespace-nowrap overflow-x-auto custom-scrollbar overflow-y-hidden">
+              <div className="bg-card border border-border rounded-md px-6 py-4 min-h-[86px] flex flex-col justify-center">
+                 <span className="text-[36px] font-bold drop-shadow-md whitespace-nowrap overflow-x-auto custom-scrollbar overflow-y-hidden text-foreground">
                    {renderPreviewText(outputText, 'bedrock', bedrockFont)}
                  </span>
               </div>

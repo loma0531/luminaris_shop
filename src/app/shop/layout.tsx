@@ -18,6 +18,8 @@ import {
   WalletIcon,
   InfoIcon,
   PaletteIcon,
+  SunIcon,
+  MoonIcon,
 } from '@/components/Icons'
 import { useShopInit } from '@/lib/swr-hooks'
 import type { Product, Category, CartItem } from '@/lib/swr-hooks'
@@ -167,15 +169,11 @@ function ShopSidebar({
         onMouseEnter={handlePrefetch}
       >
         <Icon size={20} />
-        {shopExpanded && (
-          <>
-            <span className="flex-1">{label}</span>
-            {badge && (
-              <span className="badge" style={badgeColor ? { background: badgeColor } : undefined}>
-                {badge}
-              </span>
-            )}
-          </>
+        <span className="flex-1">{label}</span>
+        {badge && (
+          <span className="badge" style={badgeColor ? { background: badgeColor } : undefined}>
+            {badge}
+          </span>
         )}
       </SafeLink>
     )
@@ -370,6 +368,33 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
   const [cartAnimating, setCartAnimating] = useState(false)
   const router = useRouter()
 
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+  const [navScrolled, setNavScrolled] = useState(false)
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light'
+    if (savedTheme) {
+      setTheme(savedTheme)
+      document.documentElement.setAttribute('data-theme', savedTheme)
+    } else {
+      document.documentElement.setAttribute('data-theme', 'dark')
+    }
+  }, [])
+
+  // Scroll listener — add .scrolled to navbar when page is scrolled
+  useEffect(() => {
+    const handleScroll = () => setNavScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(nextTheme)
+    localStorage.setItem('theme', nextTheme)
+    document.documentElement.setAttribute('data-theme', nextTheme)
+  }
+
   // ─── SWR: ดึงข้อมูล shop ทั้งหมดด้วย useShopInit ───────────
   const minecraftName = user?.minecraftName || null
   const { data: shopData, isLoading: isLoadingData, mutate: mutateShopData } = useShopInit(minecraftName)
@@ -471,7 +496,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     }}>
       <div className="shop-layout">
         {/* Top Header with Profile Link */}
-        <header className="shop-top-header">
+        <header className={`shop-top-header${navScrolled ? ' scrolled' : ''}`}>
           <div className="shop-top-header-left">
             <button 
               className="btn shop-menu-btn"
@@ -491,7 +516,14 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
             )}
           </div>
           
-          <div className="shop-top-header-right">
+          <div className="shop-top-header-right flex items-center gap-3">
+            <button 
+              className="btn btn-sm btn-icon"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}
+            >
+              {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+            </button>
             {user ? (
               <div className="flex items-center gap-3">
                 <Link href="/shop/profile" className="shop-header-profile">
