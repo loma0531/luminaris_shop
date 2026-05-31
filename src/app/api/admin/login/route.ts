@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { generateAdminToken } from '@/lib/adminAuth'
+import { verifyTOTP } from '@/lib/totp'
 import { logger, createTimer, getClientIP } from '@/lib/logger'
 import { RATE_LIMIT } from '@/lib/rateLimitConfig'
 
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
     if (!rateCheck.allowed) {
       logger.security.rateLimitExceeded('/api/admin/login')
       return NextResponse.json(
-        { error: 'Too many login attempts. Please try again later.' },
+        { error: 'ส่งคำขอเข้าสู่ระบบมากเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
         { status: 429, headers: { 'Retry-After': '300' } }
       )
     }
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (entry && now < entry.resetTime && entry.count >= RATE_LIMIT.ADMIN_LOGIN.maxRequests) {
       logger.security.rateLimitExceeded('/api/admin/login')
       return NextResponse.json(
-        { error: 'Too many login attempts. Please try again later.' },
+        { error: 'ส่งคำขอเข้าสู่ระบบมากเกินไป กรุณาลองใหม่อีกครั้งในภายหลัง' },
         { status: 429, headers: { 'Retry-After': '300' } }
       )
     }
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password || !token) {
       logger.auth.adminLoginFailed(email || 'unknown', 'Missing credentials')
-      return NextResponse.json({ error: 'Email, password, and token are required' }, { status: 400 })
+      return NextResponse.json({ error: 'จำเป็นต้องระบุอีเมล รหัสผ่าน และโทเคน' }, { status: 400 })
     }
 
     logger.auth.adminLoginAttempt(email)
@@ -64,15 +65,23 @@ export async function POST(request: NextRequest) {
       await bcrypt.compare(password, '$2a$10$dummyhashforcomparison')
       await bcrypt.compare(token, '$2a$10$dummyhashforcomparison')
       logger.auth.adminLoginFailed(email, 'User not found')
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      return NextResponse.json({ error: 'อีเมล รหัสผ่าน หรือโทเคนไม่ถูกต้อง' }, { status: 401 })
     }
 
     const isPasswordValid = await bcrypt.compare(password, adminUser.passwordHash)
-    const isTokenValid = await bcrypt.compare(token, adminUser.tokenHash)
+    
+    let isTokenValid = false
+    if (adminUser.twoFactorSecret) {
+      // Verify using Google Authenticator TOTP 2FA
+      isTokenValid = verifyTOTP(token, adminUser.twoFactorSecret)
+    } else if (adminUser.tokenHash) {
+      // Fallback to legacy static token
+      isTokenValid = await bcrypt.compare(token, adminUser.tokenHash)
+    }
 
     if (!isPasswordValid || !isTokenValid) {
       logger.auth.adminLoginFailed(email, 'Invalid credentials')
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+      return NextResponse.json({ error: 'อีเมล รหัสผ่าน หรือโทเคนไม่ถูกต้อง' }, { status: 401 })
     }
 
     const sessionToken = await generateAdminToken()
@@ -82,6 +91,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, sessionToken })
   } catch {
     logger.system.error('Admin login failed')
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
+    return NextResponse.json({ error: 'เข้าสู่ระบบล้มเหลว' }, { status: 500 })
   }
 }

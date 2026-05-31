@@ -51,7 +51,8 @@ export const shopConfig = {
     payments: {
       truewallet: {
         enabled: true,
-        feePercentage: 0 // ค่าธรรมเนียม (%)
+        feePercentage: 0, // ค่าธรรมเนียม (%)
+        minAmount: 10 // ยอดเงินขั้นต่ำที่จ่ายด้วยทรูวอลเล็ตได้
       },
       promptpay: {
         enabled: true
@@ -88,7 +89,20 @@ export const shopConfig = {
     rcon:       { windowMs: 60000, maxRequests: 10 },
     users:      { windowMs: 300000, maxRequests: 10 },
     default:    { windowMs: 60000, maxRequests: 100 }
+  },
+
+  // ------------------------------------------
+  // 6. Coupon Settings (ตั้งค่าระบบคูปอง)
+  // ------------------------------------------
+  coupons: {
+    // คำนำหน้ารหัสคูปองที่สร้างแบบสุ่ม
+    randomPrefix: "LLW-",
+    // ความยาวของอักขระสุ่มที่จะต่อท้าย
+    randomLength: 8,
+    // อักขระที่ใช้อัตโนมัติในการสุ่ม
+    randomChars: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
   }
 } as const;
 
 export type ShopConfig = typeof shopConfig;
+

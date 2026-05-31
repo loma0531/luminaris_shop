@@ -199,7 +199,7 @@ export default function OrdersPage() {
             mutatePendingOrders()
           }
         }
-      } catch (err) {
+      } catch {
         // Ignore fetch errors during polling
       }
     }, 3000)
@@ -472,23 +472,41 @@ export default function OrdersPage() {
                     </button>
                   )}
 
-                  {enabledPayments.truewallet?.enabled && (
-                    <button
-                      className="method-card"
-                      onClick={() => setPaymentMethod('truewallet')}
-                    >
-                      <div className="method-logo">
-                        <GiftIcon size={22} />
-                      </div>
-                      <div className="method-info">
-                        <h3>TrueMoney</h3>
-                        <p>ใช้ลิงก์ซองอั่งเปา</p>
-                      </div>
-                      <div className="method-radio">
-                        <div className="method-radio-dot" />
-                      </div>
-                    </button>
-                  )}
+                  {enabledPayments.truewallet?.enabled && (() => {
+                    const twMinAmount = enabledPayments.truewallet.minAmount || 10
+                    const isTwDisabled = pendingOrder.total < twMinAmount
+                    
+                    return (
+                      <button
+                        className={`method-card ${isTwDisabled ? 'disabled opacity-40 cursor-not-allowed' : ''}`}
+                        onClick={() => !isTwDisabled && setPaymentMethod('truewallet')}
+                        disabled={isTwDisabled}
+                        title={isTwDisabled ? `ยอดชำระเงินต่ำกว่าขั้นต่ำ ${twMinAmount} บาท` : ''}
+                        type="button"
+                      >
+                        <div className="method-logo">
+                          <GiftIcon size={22} />
+                        </div>
+                        <div className="method-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <h3>TrueMoney</h3>
+                          <p>ใช้ลิงก์ซองอั่งเปา</p>
+                          {isTwDisabled && (
+                            <span className="text-danger flex items-center gap-1 text-[0.7rem] mt-1" style={{ color: '#ef4444', display: 'inline-flex', alignItems: 'center' }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                              </svg>
+                              ยอดชำระขั้นต่ำ {twMinAmount} บาท
+                            </span>
+                          )}
+                        </div>
+                        <div className="method-radio">
+                          <div className={`method-radio-dot ${isTwDisabled ? 'bg-neutral-600' : ''}`} />
+                        </div>
+                      </button>
+                    )
+                  })()}
                 </div>
 
                 <button
@@ -516,7 +534,6 @@ export default function OrdersPage() {
               <PromptPayForm
                 orderId={pendingOrder.orderId}
                 paymentId={pendingOrder.payment.paymentId}
-                amount={pendingOrder.total}
                 onSuccess={handleStripeSuccess}
                 onError={(msg) => toastError(msg)}
               />
@@ -567,66 +584,93 @@ export default function OrdersPage() {
           )}
 
           {/* Step 2b: TrueWallet */}
-          {!isExpired && paymentMethod === 'truewallet' && (
-            <div className="truewallet-section">
-              <button
-                onClick={() => { setPaymentMethod(null); setVoucherUrl(''); }}
-                className="back-link"
-              >
-                ← เปลี่ยนวิธีชำระเงิน
-              </button>
+          {!isExpired && paymentMethod === 'truewallet' && (() => {
+            const twMinAmount = getShopConfig().orders.payments.truewallet?.minAmount || 10
+            const isTwDisabled = pendingOrder.total < twMinAmount
 
-              <div className="tw-amount-display">
-                <div className="tw-amount-label">ยอดที่ต้องชำระ</div>
-                <div className="tw-amount-value">{pendingOrder.total.toLocaleString()} ฿</div>
-              </div>
-
-              <div className="tw-input-group">
-                <div className="tw-icon">
-                  <LinkIcon size={18} />
+            if (isTwDisabled) {
+              return (
+                <div className="truewallet-section">
+                  <button
+                    onClick={() => { setPaymentMethod(null); setVoucherUrl(''); }}
+                    className="back-link"
+                  >
+                    ← เปลี่ยนวิธีชำระเงิน
+                  </button>
+                  
+                  <div className="alert-box error" style={{ padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem', color: '#f87171', display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '1rem' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>ยอดเงินของออเดอร์นี้คือ {pendingOrder.total} ฿ ซึ่งต่ำกว่าเกณฑ์ขั้นต่ำของ TrueMoney ({twMinAmount} ฿) กรุณาใช้ช่องทางการชำระเงินอื่น</span>
+                  </div>
                 </div>
-                <input
-                  type="url"
-                  value={voucherUrl}
-                  onChange={(e) => setVoucherUrl(e.target.value)}
-                  placeholder="https://gift.truemoney.com/campaign/?v=..."
-                  disabled={uploading}
-                />
-              </div>
+              )
+            }
 
-              <button
-                onClick={handleTruewalletPayment}
-                disabled={uploading || !voucherUrl.trim()}
-                className="tw-submit-btn"
-              >
-                {uploading ? (
-                  <>
-                    <div className="spinner-ring" style={{ width: 18, height: 18, borderWidth: 2 }} />
-                    กำลังตรวจสอบ...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircleIcon size={18} />
-                    ยืนยันการชำระเงิน
-                  </>
+            return (
+              <div className="truewallet-section">
+                <button
+                  onClick={() => { setPaymentMethod(null); setVoucherUrl(''); }}
+                  className="back-link"
+                >
+                  ← เปลี่ยนวิธีชำระเงิน
+                </button>
+
+                <div className="tw-amount-display">
+                  <div className="tw-amount-label">ยอดที่ต้องชำระ</div>
+                  <div className="tw-amount-value">{pendingOrder.total.toLocaleString()} ฿</div>
+                </div>
+
+                <div className="tw-input-group">
+                  <div className="tw-icon">
+                    <LinkIcon size={18} />
+                  </div>
+                  <input
+                    type="url"
+                    value={voucherUrl}
+                    onChange={(e) => setVoucherUrl(e.target.value)}
+                    placeholder="https://gift.truemoney.com/campaign/?v=..."
+                    disabled={uploading}
+                  />
+                </div>
+
+                <button
+                  onClick={handleTruewalletPayment}
+                  disabled={uploading || !voucherUrl.trim()}
+                  className="tw-submit-btn"
+                >
+                  {uploading ? (
+                    <>
+                      <div className="spinner-ring" style={{ width: 18, height: 18, borderWidth: 2 }} />
+                      กำลังตรวจสอบ...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircleIcon size={18} />
+                      ยืนยันการชำระเงิน
+                    </>
+                  )}
+                </button>
+                {!uploading && (
+                  <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginBottom: '0.5rem' }}>
+                    ระบบจะตรวจสอบซองอั่งเปาโดยอัตโนมัติ
+                  </div>
                 )}
-              </button>
-              {!uploading && (
-                <div style={{ textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginBottom: '0.5rem' }}>
-                  ระบบจะตรวจสอบซองอั่งเปาโดยอัตโนมัติ
-                </div>
-              )}
 
-              <button
-                className="cancel-btn"
-                onClick={() => setShowConfirm(true)}
-                disabled={uploading}
-              >
-                <TrashIcon size={15} />
-                ยกเลิกรายการ
-              </button>
-            </div>
-          )}
+                <button
+                  className="cancel-btn"
+                  onClick={() => setShowConfirm(true)}
+                  disabled={uploading}
+                >
+                  <TrashIcon size={15} />
+                  ยกเลิกรายการ
+                </button>
+              </div>
+            )
+          })()}
         </div>
       </div>
 

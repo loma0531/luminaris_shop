@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react'
+import React, { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -22,7 +22,7 @@ import {
   MoonIcon,
 } from '@/components/Icons'
 import { useShopInit } from '@/lib/swr-hooks'
-import type { Product, Category, CartItem } from '@/lib/swr-hooks'
+import type { Product, Category } from '@/lib/swr-hooks'
 import { logger } from '@/lib/logger'
 
 // Re-export types for backward compatibility
@@ -142,7 +142,7 @@ function ShopSidebar({
   const { isCartSaving } = useShop()
 
   // Wrapper for links to block navigation when saving
-  const SafeLink = ({ href, children, className, ...props }: any) => {
+  const SafeLink = ({ href, children, className, ...props }: React.ComponentProps<typeof Link>) => {
     if (isCartSaving) {
       return (
         <div className={`${className} opacity-50 cursor-not-allowed`} title="กำลังบันทึกข้อมูล...">
@@ -154,7 +154,7 @@ function ShopSidebar({
   }
   
   // Custom PrefetchLink that uses SafeLink
-  const PrefetchLink = ({ href, label, Icon, badge, badgeColor }: any) => {
+  const PrefetchLink = ({ href, label, Icon, badge, badgeColor }: { href: string; label: string; Icon: React.ElementType; badge: number | null; badgeColor?: string }) => {
     const handlePrefetch = () => {
       // Basic prefetch logic
       if (typeof window !== 'undefined' && !isCartSaving) {

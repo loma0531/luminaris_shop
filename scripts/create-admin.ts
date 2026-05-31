@@ -15,6 +15,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import * as dotenv from 'dotenv'
+import { generateTOTPSecret, getOTPAuthURL } from '../src/lib/totp'
 
 // Load environment variables
 dotenv.config()
@@ -43,6 +44,10 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, saltRounds)
   const tokenHash = await bcrypt.hash(token, saltRounds)
 
+  // Generate TOTP Secret for Google Authenticator
+  const twoFactorSecret = generateTOTPSecret()
+  const otpauthUrl = getOTPAuthURL(email, 'Luminaris Shop', twoFactorSecret)
+
   // Check if admin already exists
   const existingAdmin = await prisma.adminUser.findUnique({
     where: { email: email.toLowerCase() },
@@ -56,6 +61,7 @@ async function main() {
       data: {
         passwordHash,
         tokenHash,
+        twoFactorSecret,
         updatedAt: new Date(),
       },
     })
@@ -67,6 +73,7 @@ async function main() {
         email: email.toLowerCase(),
         passwordHash,
         tokenHash,
+        twoFactorSecret,
       },
     })
     
@@ -77,7 +84,12 @@ async function main() {
   console.log('📝 Login with:')
   console.log(`   Email: ${email}`)
   console.log(`   Password: (your ADMIN_PASSWORD)`)
-  console.log(`   Token: (your ADMIN_TOKEN)`)
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log('🔑 Google Authenticator Setup:')
+  console.log(`   Secret Key: ${twoFactorSecret}`)
+  console.log(`   OTPAuth URL: ${otpauthUrl}`)
+  console.log('   (ป้อน Secret Key ด้านบนในแอป Google Authenticator)')
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 }
 
 main()

@@ -5,7 +5,9 @@ import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { logger, createTimer } from '@/lib/logger'
 import { CartItemData } from '@/lib/types'
-import { getCachedCart, setCachedCart, invalidateCartCache, CachedCartItem, getCachedProducts } from '@/lib/redis'
+import { getCachedCart, setCachedCart, CachedCartItem, getCachedProducts } from '@/lib/redis'
+
+
 
 export async function GET(request: NextRequest) {
   const timer = createTimer()
@@ -24,58 +26,86 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid minecraft name format' }, { status: 400 })
     }
 
-    // Try cache first
+    // Load raw cart items from Cache or DB
+    let cartItems: { productId: string; quantity: number; customInput: string | null }[] = []
+    let isFromCache = false
+
     const cachedCart = await getCachedCart(minecraftName)
-    if (cachedCart) {
-      logger.cart.loaded(minecraftName, cachedCart.items.length, timer())
-      // Add X-Cache header for debugging
-      return NextResponse.json({ items: cachedCart.items }, { 
-        headers: { 
-          ...CACHE_HEADERS.NONE,
-          'X-Cache': 'HIT'
-        } 
+    if (cachedCart && cachedCart.items) {
+      isFromCache = true
+      cartItems = cachedCart.items.map(item => ({
+        productId: item.productId || (item as { product?: { id: string } }).product?.id || '',
+        quantity: item.quantity,
+        customInput: item.customInput || null
+      })).filter(item => item.productId && isValidObjectId(item.productId))
+    } else {
+      const cart = await prisma.cart.findUnique({
+        where: { minecraftName },
+        select: { items: true }
       })
+      if (cart && cart.items) {
+        cartItems = cart.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          customInput: item.customInput || null
+        })).filter(item => item.productId && isValidObjectId(item.productId))
+      }
     }
 
-    const cart = await prisma.cart.findUnique({
-      where: { minecraftName },
-      select: { items: true }
-    })
-
-    if (!cart || !cart.items || cart.items.length === 0) {
+    if (cartItems.length === 0) {
       logger.cart.loaded(minecraftName, 0, timer())
       return NextResponse.json({ items: [] }, { headers: CACHE_HEADERS.NONE })
     }
 
-    const productIds = cart.items
-      .map(item => item.productId)
-      .filter(id => isValidObjectId(id))
+    const productIds = cartItems.map(item => item.productId)
 
-    if (productIds.length === 0) {
-      return NextResponse.json({ items: [] })
-    }
-
+    // Revalidate and Hydrate cart with LATEST product pricing and active status from DB
     const products = await prisma.product.findMany({
       where: { id: { in: productIds }, isActive: true },
-      select: { id: true, name: true, price: true, image: true, commands: true, requiresInput: true, inputLabel: true, inputPlaceholder: true }
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        image: true,
+        commands: true,
+        requiresInput: true,
+        inputLabel: true,
+        inputPlaceholder: true,
+        saleActive: true,
+        discountType: true,
+        discountValue: true,
+        saleStart: true,
+        saleEnd: true
+      }
     })
 
     const productMap = new Map(products.map((p) => [p.id, p]))
 
-    const items = cart.items
+    // Map and recalculate active promotional price (Filter out deleted or isActive=false products)
+    const validatedItems = cartItems
       .map(item => {
         const product = productMap.get(item.productId)
-        if (!product) return null
+        if (!product) return null // Auto-remove from cart if product is deleted or disabled
+        
+
+        
         return {
+          productId: product.id,
           product: { 
             id: product.id, 
             name: product.name, 
-            price: product.price, 
+            price: product.price, // Keep original regular price, let front-end apply the discount
+            originalPrice: product.price, 
             image: product.image, 
             commands: product.commands,
             requiresInput: product.requiresInput,
             inputLabel: product.inputLabel,
-            inputPlaceholder: product.inputPlaceholder
+            inputPlaceholder: product.inputPlaceholder,
+            saleActive: product.saleActive,
+            discountType: product.discountType,
+            discountValue: product.discountValue,
+            saleStart: product.saleStart,
+            saleEnd: product.saleEnd
           },
           quantity: Math.max(1, Math.min(100, item.quantity || 1)),
           customInput: item.customInput || null,
@@ -83,17 +113,44 @@ export async function GET(request: NextRequest) {
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
 
-    // Save to cache
-    // Map items to match CachedCartItem interface if needed, but the structure is compatible enough
-    // We cast to CachedCartItem[] to satisfy the type system if strict, or let it infer
+    // Sync validated and cleaned cart back to Cache and MongoDB
+    const cachedMapItems = validatedItems.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      customInput: item.customInput,
+      product: item.product
+    }))
+
     await setCachedCart(minecraftName, { 
-      items: items as unknown as CachedCartItem[], 
+      items: cachedMapItems as unknown as CachedCartItem[], 
       timestamp: Date.now() 
     })
 
-    logger.cart.loaded(minecraftName, items.length, timer())
+    const dbSaveItems = validatedItems.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      customInput: item.customInput
+    }))
 
-    return NextResponse.json({ items }, { headers: { ...CACHE_HEADERS.NONE, 'X-Cache': 'MISS' } })
+    prisma.cart.upsert({
+      where: { minecraftName },
+      update: { items: dbSaveItems },
+      create: { minecraftName, items: dbSaveItems },
+    }).catch(error => {
+      logger.system.error(`Background MongoDB cart revalidation sync failed for ${minecraftName}: ${error}`)
+    })
+
+    logger.cart.loaded(minecraftName, validatedItems.length, timer())
+
+    return NextResponse.json(
+      { items: validatedItems }, 
+      { 
+        headers: { 
+          ...CACHE_HEADERS.NONE, 
+          'X-Cache': isFromCache ? 'HIT-REVALIDATED' : 'MISS' 
+        } 
+      }
+    )
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.system.error(`Failed to fetch cart: ${errorMessage}`)
@@ -142,21 +199,32 @@ export async function POST(request: NextRequest) {
       .filter((item): item is { productId: string; quantity: number; customInput: string | null } => item !== null)
 
     // Fetch products from cache (Redis) or DB to map details and get names
-    const cachedProducts = await getCachedProducts<any>()
-    let productMap = new Map<string, any>()
+    const cachedProducts = await getCachedProducts<{ id: string; name: string; [key: string]: unknown }>()
+    let productMap = new Map<string, { id: string; name: string; [key: string]: unknown }>()
     
     if (cachedProducts && cachedProducts.length > 0) {
-      productMap = new Map(cachedProducts.map((p: any) => [p.id, p]))
+      productMap = new Map(cachedProducts.map((p) => [p.id, p]))
     } else {
       // Fallback: Fetch all active products
       const dbProducts = await prisma.product.findMany({
         where: { isActive: true },
         select: {
-          id: true, name: true, price: true, image: true, commands: true,
-          requiresInput: true, inputLabel: true, inputPlaceholder: true
+          id: true,
+          name: true,
+          price: true,
+          image: true,
+          commands: true,
+          requiresInput: true,
+          inputLabel: true,
+          inputPlaceholder: true,
+          saleActive: true,
+          discountType: true,
+          discountValue: true,
+          saleStart: true,
+          saleEnd: true
         }
       })
-      productMap = new Map(dbProducts.map((p: any) => [p.id, p]))
+      productMap = new Map(dbProducts.map((p: { id: string; name: string; [key: string]: unknown }) => [p.id, p]))
     }
 
     // Get old items before writing if we need to do comparison (Full Mode)
@@ -182,6 +250,9 @@ export async function POST(request: NextRequest) {
       .map(item => {
         const product = productMap.get(item.productId)
         if (!product) return null
+        
+
+        
         return {
           productId: product.id,
           quantity: item.quantity,
@@ -189,12 +260,18 @@ export async function POST(request: NextRequest) {
           product: {
             id: product.id,
             name: product.name,
-            price: product.price,
+            price: product.price, // Save original regular price, let front-end apply the discount
+            originalPrice: product.price, 
             image: product.image,
             commands: product.commands,
             requiresInput: product.requiresInput,
             inputLabel: product.inputLabel,
-            inputPlaceholder: product.inputPlaceholder
+            inputPlaceholder: product.inputPlaceholder,
+            saleActive: product.saleActive,
+            discountType: product.discountType,
+            discountValue: product.discountValue,
+            saleStart: product.saleStart,
+            saleEnd: product.saleEnd
           }
         } as CachedCartItem
       })

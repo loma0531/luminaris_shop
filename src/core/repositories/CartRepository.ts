@@ -69,9 +69,9 @@ export class CartRepository {
     // 1. ดึงข้อมูลสินค้าจากแคชหรือ DB เพื่อสร้าง CartWithProducts ที่สมบูรณ์
     const productIds = items.map(i => i.productId)
     
-    let products: any[] = []
+    let products: { id: string; name: string; price: number; image: string | null; commands: string[]; requiresInput: boolean; inputLabel: string | null; inputPlaceholder: string | null }[] = []
     try {
-      const cachedProds = await cache.get<any[]>(CACHE_KEYS.PRODUCTS)
+      const cachedProds = await cache.get<{ id: string; name: string; price: number; image: string | null; commands: string[]; requiresInput: boolean; inputLabel: string | null; inputPlaceholder: string | null }[]>(CACHE_KEYS.PRODUCTS)
       if (cachedProds) {
         products = cachedProds.filter(p => productIds.includes(p.id))
       }

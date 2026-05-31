@@ -47,7 +47,7 @@ export async function GET(request: Request) {
           }
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore file check errors
     }
 
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       try {
         const response = await fetch(skinUrl)
         if (response.ok && response.body) {
-           await streamPipeline(response.body as any, fs.createWriteStream(localFilePath))
+           await streamPipeline(response.body as unknown as NodeJS.ReadableStream, fs.createWriteStream(localFilePath))
            logger.info(`Downloaded skin for ${name} to local storage`, 200)
         }
       } catch (downloadError) {

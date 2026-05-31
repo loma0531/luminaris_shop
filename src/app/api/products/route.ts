@@ -18,6 +18,12 @@ interface ProductWithCategory {
   createdAt: Date
   commands: string[]
   category: { id: string; name: string }
+  // === ฟิลด์โปรโมชัน ===
+  saleActive: boolean
+  discountType: string | null
+  discountValue: number | null
+  saleStart: Date | null
+  saleEnd: Date | null
 }
 
 export async function GET(request: NextRequest) {
@@ -37,6 +43,7 @@ export async function GET(request: NextRequest) {
           id: true, name: true, description: true, price: true, image: true, isActive: true,
           soldCount: true, categoryId: true, createdAt: true, commands: true,
           requiresInput: true, inputLabel: true, inputPlaceholder: true,
+          saleActive: true, discountType: true, discountValue: true, saleStart: true, saleEnd: true,
           category: { select: { id: true, name: true } }
         },
         orderBy: { createdAt: 'desc' },
@@ -66,6 +73,7 @@ export async function GET(request: NextRequest) {
         id: true, name: true, description: true, price: true, image: true, isActive: true,
         soldCount: true, categoryId: true, createdAt: true, commands: true,
         requiresInput: true, inputLabel: true, inputPlaceholder: true,
+        saleActive: true, discountType: true, discountValue: true, saleStart: true, saleEnd: true,
         category: { select: { id: true, name: true } }
       },
       orderBy: { createdAt: 'desc' },
@@ -90,7 +98,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { name, description, price, image, categoryId, commands, requiresInput, inputLabel, inputPlaceholder } = body
+    const { 
+      name, description, price, image, categoryId, commands, requiresInput, inputLabel, inputPlaceholder,
+      saleActive, discountType, discountValue, saleStart, saleEnd
+    } = body
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json({ error: 'Product name is required' }, { status: 400 })
@@ -145,7 +156,13 @@ export async function POST(request: NextRequest) {
         // Custom Input Fields
         requiresInput: !!requiresInput,
         inputLabel: requiresInput ? sanitizeString(inputLabel, 50) : null,
-        inputPlaceholder: requiresInput && inputPlaceholder ? sanitizeString(inputPlaceholder, 50) : null
+        inputPlaceholder: requiresInput && inputPlaceholder ? sanitizeString(inputPlaceholder, 50) : null,
+        // โปรโมชันลดราคา
+        saleActive: !!saleActive,
+        discountType: saleActive ? discountType : null,
+        discountValue: saleActive && discountValue !== null && discountValue !== undefined ? Number(discountValue) : null,
+        saleStart: saleActive && saleStart ? new Date(saleStart) : null,
+        saleEnd: saleActive && saleEnd ? new Date(saleEnd) : null,
       },
       include: { category: true },
     })

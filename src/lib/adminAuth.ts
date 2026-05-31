@@ -20,7 +20,7 @@ interface TokenPayload {
   type: string
   nonce: string
   minecraftName?: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /**
@@ -53,8 +53,9 @@ async function verifyTokenSignature<T extends TokenPayload>(token: string, expec
     }
 
     return { valid: true, payload: payload as unknown as T }
-  } catch (err: any) {
-    if (err?.code === 'ERR_JWT_EXPIRED') {
+  } catch (err) {
+    const error = err as Error & { code?: string }
+    if (error?.code === 'ERR_JWT_EXPIRED') {
       return { valid: false, error: 'Token expired' }
     }
     return { valid: false, error: 'Invalid token signature or payload' }

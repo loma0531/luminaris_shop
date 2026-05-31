@@ -4,7 +4,7 @@ import React from 'react'
 interface ConfirmModalProps {
   isOpen: boolean
   title: string
-  content?: string
+  content?: React.ReactNode
   confirmText?: string
   cancelText?: string
   onConfirm: () => void
@@ -35,7 +35,7 @@ export default function ConfirmModal({
         </div>
         
         {content && (
-          <div className="mb-6 text-muted-foreground">
+          <div className="mb-6 text-muted-foreground whitespace-pre-line">
             {content}
           </div>
         )}

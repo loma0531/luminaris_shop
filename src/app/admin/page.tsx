@@ -2,24 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import {
   PlusIcon,
   SearchIcon,
   PackageIcon,
   EditIcon,
-  CloseIcon,
-  TrashIcon,
 } from '@/components/Icons'
-import dynamic from 'next/dynamic'
-const ImageEditor = dynamic(() => import('@/components/ImageEditor'), {
-  loading: () => <div className="p-4 text-center text-muted-foreground">Loading editor...</div>,
-  ssr: false
-})
-import { adminDelete, adminPost, adminPut, adminGet } from '@/lib/adminFetch'
+import { adminPost, adminPut } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
 
 import { useToast } from '@/context/ToastContext'
-import ConfirmModal from '@/components/ConfirmModal'
 import { useAdminData } from './layout'
 
 interface Product {
@@ -41,30 +34,14 @@ interface Product {
 
 export default function AdminProductsPage() {
   const { 
-    products, 
-    categories, 
+    products: rawProducts, 
     isLoading: loading, 
     refreshData: fetchProducts 
   } = useAdminData()
   
+  const products = rawProducts as unknown as Product[]
+  
   const [search, setSearch] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    price: 0 as string | number,
-    image: '',
-    categoryId: '',
-    commands: [''],
-    requiresInput: false,
-    inputLabel: '',
-    inputPlaceholder: '',
-  })
-
-  // Confirm Modal
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [idToDelete, setIdToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     // Lazy cleanup: Trigger cleanup of old orders when admin visits
@@ -77,142 +54,27 @@ export default function AdminProductsPage() {
 
   const { success, error: toastError } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleToggleActive = async (product: Product) => {
     try {
-      const submitData = {
-        ...formData,
-        price: Number(formData.price),
-        commands: formData.commands.filter((c) => c.trim() !== ''),
-      }
-
-      if (editingProduct) {
-        await adminPut(`/api/products/${editingProduct.id}`, submitData)
-        success('อัปเดตสินค้าเรียบร้อยแล้ว')
-      } else {
-        await adminPost('/api/products', submitData)
-        success('เพิ่มสินค้าเรียบร้อยแล้ว')
-      }
-
-      setShowModal(false)
-      setEditingProduct(null)
-      resetForm()
-      fetchProducts(true) // Force refresh to get updated data
-    } catch (error) {
-      logger.error(`Error saving product: ${error}`)
-      const err = error as Error
-      toastError(err.message || 'เกิดข้อผิดพลาดในการบันทึกสินค้า')
-    }
-  }
-
-  const handleEdit = async (product: Product) => {
-    try {
-      // Fetch full product data including commands
-      const res = await adminGet(`/api/products/${product.id}`)
-      const fullProduct = await res.json()
-      
-      setEditingProduct(product)
-      setFormData({
-        name: fullProduct.name,
-        description: fullProduct.description || '',
-        price: fullProduct.price,
-        image: fullProduct.image || '',
-        categoryId: fullProduct.categoryId,
-        commands: fullProduct.commands?.length > 0 ? fullProduct.commands : [''],
-        requiresInput: fullProduct.requiresInput || false,
-        inputLabel: fullProduct.inputLabel || '',
-        inputPlaceholder: fullProduct.inputPlaceholder || '',
+      await adminPut(`/api/products/${product.id}`, {
+        isActive: !product.isActive
       })
-      setShowModal(true)
+      success(product.isActive ? `ปิดการขาย "${product.name}" แล้ว` : `เปิดการขาย "${product.name}" แล้ว`)
+      fetchProducts(true) // Force refresh
     } catch (error) {
-      logger.error(`Error fetching product: ${error}`)
-      // Fallback to basic data without commands
-      setEditingProduct(product)
-      setFormData({
-        name: product.name,
-        description: product.description || '',
-        price: product.price,
-        image: product.image || '',
-        categoryId: product.categoryId,
-        commands: [''],
-        requiresInput: product.requiresInput || false,
-        inputLabel: product.inputLabel || '',
-        inputPlaceholder: product.inputPlaceholder || '',
-      })
-      setShowModal(true)
+      logger.error(`Error toggling product active: ${error}`)
+      toastError('ไม่สามารถเปลี่ยนสถานะสินค้าได้')
     }
-  }
-
-  const confirmDelete = (id: string) => {
-    setIdToDelete(id)
-    setShowConfirm(true)
-  }
-
-  const executeDelete = async () => {
-    if (!idToDelete) return
-    const id = idToDelete
-    setShowConfirm(false)
-    setIdToDelete(null)
-
-    if (editingProduct && editingProduct.id === id) {
-        setShowModal(false)
-        setEditingProduct(null)
-    }
-
-    try {
-      await adminDelete(`/api/products/${id}`)
-      success('ลบสินค้าเรียบร้อยแล้ว')
-      fetchProducts(true) // Force refresh to get updated data
-    } catch (error) {
-      logger.error(`Error deleting product: ${error}`)
-      toastError('ไม่สามารถลบสินค้าได้')
-    }
-  }
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      price: 0,
-      image: '',
-      categoryId: '',
-      commands: [''],
-      requiresInput: false,
-      inputLabel: '',
-      inputPlaceholder: '',
-    })
-  }
-
-  const addCommand = () => {
-    setFormData({ ...formData, commands: [...formData.commands, ''] })
-  }
-
-  const updateCommand = (index: number, value: string) => {
-    const newCommands = [...formData.commands]
-    newCommands[index] = value
-    setFormData({ ...formData, commands: newCommands })
-  }
-
-  const removeCommand = (index: number) => {
-    const newCommands = formData.commands.filter((_, i) => i !== index)
-    setFormData({ ...formData, commands: newCommands })
   }
 
   return (
     <div>
       <div className="admin-header-actions">
         <h1 className="admin-title">รายการสินค้าทั้งหมด</h1>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditingProduct(null)
-            resetForm()
-            setShowModal(true)
-          }}
-        >
+      <Link href="/admin/products/new" className="btn btn-primary">
           <PlusIcon size={16} />
           เพิ่มสินค้า
-        </button>
+      </Link>
       </div>
 
       <div className="search-box-wrapper">
@@ -240,7 +102,7 @@ export default function AdminProductsPage() {
       ) : (
         <div className="product-grid">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="product-card">
+            <div key={product.id} className={`product-card ${product.isActive ? '' : 'inactive'}`}>
               <div className="product-image">
                 {product.image ? (
                   <Image src={product.image} alt={product.name} fill className="object-cover" />
@@ -258,211 +120,26 @@ export default function AdminProductsPage() {
                 </p>
               </div>
               <div className="product-actions">
-                <button className="btn btn-outline btn-sm w-full" onClick={() => handleEdit(product)}>
+                <Link href={`/admin/products/${product.id}`} className="btn btn-outline btn-sm" style={{ flex: '1' }}>
                   <EditIcon size={16} />
                   แก้ไข
-                </button>
+                </Link>
+                <div className="switch-container">
+                  <span className="switch-label">{product.isActive ? 'เปิดขาย' : 'ปิดขาย'}</span>
+                  <button 
+                    type="button"
+                    className={`switch-toggle ${product.isActive ? 'active' : ''}`}
+                    onClick={() => handleToggleActive(product)}
+                    aria-label={product.isActive ? 'ปิดการขาย' : 'เปิดการขาย'}
+                  >
+                    <span className="switch-handle" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2 className="modal-title">
-                {editingProduct ? 'แก้ไขสินค้า' : 'เพิ่มสินค้าใหม่'}
-              </h2>
-              <button className="btn btn-icon btn-ghost" onClick={() => setShowModal(false)}>
-                <CloseIcon size={20} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="modal-form">
-              <div className="form-section">
-                <div className="form-group">
-                    <label className="form-label">รูปภาพสินค้า</label>
-                    <ImageEditor
-                    initialImage={formData.image}
-                    onImageChange={(url) => setFormData({ ...formData, image: url })}
-                    />
-                </div>
-              </div>
-
-              <div className="form-section">
-                <div className="form-group">
-                    <label className="form-label">ชื่อสินค้า <span className="text-red">*</span></label>
-                    <input
-                    type="text"
-                    className="input"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    placeholder="เช่น ดาบเพชร"
-                    />
-                </div>
-
-                <div className="grid-2">
-                    <div className="form-group">
-                    <label className="form-label">ราคา (บาท) <span className="text-red">*</span></label>
-                    <input
-                        type="number"
-                        className="input"
-                        value={formData.price}
-                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                        required
-                        min="0"
-                    />
-                    </div>
-                    <div className="form-group">
-                    <label className="form-label">หมวดหมู่ <span className="text-red">*</span></label>
-                    <select
-                        className="input"
-                        value={formData.categoryId}
-                        onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                        required
-                    >
-                        <option value="">เลือกหมวดหมู่</option>
-                        {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                        </option>
-                        ))}
-                    </select>
-                    </div>
-                </div>
-
-                <div className="form-group">
-                    <label className="form-label">รายละเอียด</label>
-                    <textarea
-                    className="input"
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="รายละเอียดสินค้าที่จะแสดงหน้าร้านค้า"
-                    />
-                </div>
-              </div>
-
-              <div className="form-section">
-                <div className="form-group">
-                    <label className="form-label">
-                        คำสั่ง RCON 
-                        <span className="tooltip" title="คำสั่งที่จะรันบนเซิฟเวอร์เมื่อผู้เล่นซื้อสินค้า">?</span>
-                    </label>
-                    <div className="commands-list">
-                        {formData.commands.map((cmd, index) => (
-                        <div key={index} className="command-row">
-                            <span className="command-prefix">/</span>
-                            <input
-                            type="text"
-                            className="input command-input"
-                            value={cmd}
-                            onChange={(e) => updateCommand(index, e.target.value)}
-                            placeholder="give {player} diamond 64"
-                            />
-                            {formData.commands.length > 1 && (
-                            <button type="button" className="btn btn-icon btn-danger-outline" onClick={() => removeCommand(index)}>
-                                <CloseIcon size={16} />
-                            </button>
-                            )}
-                        </div>
-                        ))}
-                    </div>
-                    <button type="button" className="btn btn-sm btn-secondary mt-2" onClick={addCommand}>
-                        <PlusIcon size={14} /> เพิ่มคำสั่ง
-                    </button>
-                    <p className="form-hint">ใช้ <code>{'{player}'}</code> แทนชื่อผู้เล่น และ <code>{'{customInput}'}</code> แทนข้อมูลที่ผู้ใช้กรอก</p>
-                </div>
-              </div>
-
-              {/* Custom Input Settings */}
-              <div className="form-section">
-                <div className="form-group">
-                    <label className="form-label checkbox-label">
-                        <input
-                            type="checkbox"
-                            checked={formData.requiresInput}
-                            onChange={(e) => setFormData({ ...formData, requiresInput: e.target.checked })}
-                            className="checkbox"
-                        />
-                        ต้องการข้อมูลจากผู้ใช้ (เช่น โค้ดสี)
-                    </label>
-                    <p className="form-hint">เปิดใช้สำหรับบริการที่ผู้ใช้ต้องกรอกข้อมูลเอง เช่น เปลี่ยนสีชื่อ</p>
-                </div>
-
-                {formData.requiresInput && (
-                  <>
-                    <div className="grid-2 mt-3">
-                        <div className="form-group">
-                            <label className="form-label">ชื่อ Field</label>
-                            <input
-                                type="text"
-                                className="input"
-                                value={formData.inputLabel}
-                                onChange={(e) => setFormData({ ...formData, inputLabel: e.target.value })}
-                                placeholder="เช่น โค้ดสี"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">Placeholder</label>
-                            <input
-                                type="text"
-                                className="input"
-                                value={formData.inputPlaceholder}
-                                onChange={(e) => setFormData({ ...formData, inputPlaceholder: e.target.value })}
-                                placeholder="เช่น &a&lYourName"
-                            />
-                        </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="modal-footer">
-                <div className="footer-left">
-                     {editingProduct && (
-                    <button
-                        type="button"
-                        className="btn btn-danger-text"
-                        onClick={() => confirmDelete(editingProduct.id)}
-                    >
-                        <TrashIcon size={16} /> ลบสินค้า
-                    </button>
-                    )}
-                </div>
-                <div className="footer-right">
-                    <button
-                        type="button"
-                        className="btn btn-outline"
-                        onClick={() => setShowModal(false)}
-                    >
-                        ยกเลิก
-                    </button>
-                    <button type="submit" className="btn btn-primary min-w-[120px]">
-                        {editingProduct ? 'บันทึกการแก้ไข' : 'เพิ่มสินค้า'}
-                    </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <ConfirmModal
-        isOpen={showConfirm}
-        title="ยืนยันการลบ?"
-        content="การกระทำนี้ไม่สามารถย้อนกลับได้ สินค้าจะถูกลบถาวร"
-        confirmText="ลบข้อมูล"
-        onConfirm={executeDelete}
-        onCancel={() => {
-            setShowConfirm(false)
-            setIdToDelete(null)
-        }}
-        isDestructive={true}
-       />
        
        <style jsx>{`
         .admin-header-actions {
@@ -480,8 +157,9 @@ export default function AdminProductsPage() {
         .modal-backdrop {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(4px);
+            background: rgba(0, 0, 0, 0.8); /* ทึบขึ้น 80% (เพิ่ม 10%) */
+            backdrop-filter: blur(8px);      /* เบลอมากขึ้นเป็น 8px */
+            -webkit-backdrop-filter: blur(8px);
             z-index: 50;
             display: flex;
             align-items: center;
@@ -492,16 +170,23 @@ export default function AdminProductsPage() {
 
         /* Modal Content */
         .modal-content {
-            background: var(--card);
-            border: 1px solid var(--border);
+            background: linear-gradient(135deg, rgba(30, 30, 50, 0.96) 0%, rgba(20, 20, 35, 0.96) 100%); /* ทึบ 96% โทนชาร์โคลน้ำเงินเข้ม */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);      /* เบลอเนื้อหากล่อง 20px */
+            -webkit-backdrop-filter: blur(20px);
             border-radius: 1rem;
             width: 100%;
             max-width: 600px;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
             animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        :global(html[data-theme="light"]) .modal-content {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 250, 0.96) 100%);
+            border: 1px solid rgba(9, 9, 11, 0.08);
         }
 
         .modal-header {
@@ -609,13 +294,92 @@ export default function AdminProductsPage() {
         }
         
         .btn-danger-text {
-            background: transparent; border: none; color: #ef4444; padding: 0.5rem 0;
+            background: transparent !important; 
+            border: none !important; 
+            color: #ef4444; 
+            padding: 0.5rem 0 !important;
+            min-width: auto !important; 
+            min-height: auto !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
         }
         .btn-danger-text:hover {
-            text-decoration: underline; background: transparent;
+            text-decoration: underline; 
+            background: transparent !important;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* Premium Switch */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 0.25rem 0.5rem 0.25rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            user-select: none;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        :global(html[data-theme="light"]) .switch-container {
+            background: rgba(0, 0, 0, 0.03);
+        }
+        .switch-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--muted-foreground);
+            min-width: 42px;
+        }
+        .switch-toggle {
+            position: relative;
+            width: 40px;
+            height: 22px;
+            border-radius: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            padding: 0;
+            outline: none;
+        }
+        :global(html[data-theme="light"]) .switch-toggle {
+            background: rgba(0, 0, 0, 0.08);
+        }
+        .switch-toggle.active {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-color: rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+        .switch-handle {
+            position: absolute;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .switch-toggle.active .switch-handle {
+            left: calc(100% - 18px);
         }
 
         /* Product Card Updates */
+        .product-card.inactive {
+            opacity: 0.55;
+            filter: grayscale(35%);
+            border-color: rgba(255, 255, 255, 0.05);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.1) 100%);
+        }
+        
         .product-header {
             display: flex;
             justify-content: space-between;

@@ -109,27 +109,7 @@ function getClientIP(request: NextRequest): string {
   return 'unknown'
 }
 
-// Format timestamp: DD/MM/YYYY HH:MM:SS
-function formatTimestamp(): string {
-  const now = new Date()
-  const day = String(now.getDate()).padStart(2, '0')
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const year = now.getFullYear()
-  const hours = String(now.getHours()).padStart(2, '0')
-  const minutes = String(now.getMinutes()).padStart(2, '0')
-  const seconds = String(now.getSeconds()).padStart(2, '0')
-  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`
-}
 
-// Color codes for terminal output
-const COLORS = {
-  reset: '\x1b[0m',
-  green: '\x1b[32m',      // 2xx success / INFO
-  yellow: '\x1b[33m',     // 3xx redirect / WARN
-  red: '\x1b[31m',        // 4xx/5xx error
-  cyan: '\x1b[36m',       // DEBUG
-  magenta: '\x1b[35m',    // SECURITY
-}
 
 // Body size limit (1MB) - prevents DoS attacks
 const MAX_BODY_SIZE = 1 * 1024 * 1024 // 1MB
@@ -138,11 +118,7 @@ const MAX_BODY_SIZE = 1 * 1024 * 1024 // 1MB
 const CSP_API = "default-src 'none'; frame-ancestors 'none'"
 const CSP_PAGE = "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc-heads.net https://crafatar.com https://texture.geysermc.org https://*.stripe.com; font-src 'self'; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'"
 
-function getStatusColor(status: number): string {
-  if (status >= 200 && status < 300) return COLORS.green
-  if (status >= 300 && status < 400) return COLORS.yellow
-  return COLORS.red
-}
+
 
 
 

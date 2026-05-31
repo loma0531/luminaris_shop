@@ -13,13 +13,6 @@ export interface StripeSessionResult {
   paymentIntentId: string
 }
 
-export interface TruewalletPaymentResult {
-  success: boolean
-  amount?: number
-  ownerFullName?: string
-  error?: string
-}
-
 export class PaymentService {
   /**
    * สร้าง Stripe Payment Intent สำหรับ Order
@@ -128,64 +121,6 @@ export class PaymentService {
 
       default:
         logger.debug(`Unhandled Stripe event: ${event.type}`, 200)
-    }
-  }
-
-  /**
-   * จัดการ TrueWallet Voucher Payment
-   * Redeem ซอง → ตรวจสอบยอด → Complete Order
-   */
-  static async handleTruewalletPayment(
-    voucherUrl: string,
-    orderId: number,
-    paymentId: number,
-    minecraftName: string
-  ): Promise<TruewalletPaymentResult> {
-    // ดึง Order + Payment
-    const order = await prisma.order.findUnique({ where: { orderId } })
-    if (!order) return { success: false, error: 'ไม่พบคำสั่งซื้อ' }
-    if (order.status !== 'AWAITING_PAYMENT') {
-      return { success: false, error: 'คำสั่งซื้อนี้ถูกดำเนินการไปแล้ว' }
-    }
-
-    const payment = await prisma.payment.findUnique({ where: { paymentId } })
-    if (!payment) return { success: false, error: 'ไม่พบรายการชำระเงิน' }
-    if (payment.status !== 'PENDING') {
-      return { success: false, error: 'รายการนี้ถูกดำเนินการไปแล้ว' }
-    }
-
-    // ดึงเบอร์โทร
-    const phoneNumber = process.env.TRUEWALLET_PHONE
-    if (!phoneNumber) {
-      logger.system.error('TRUEWALLET_PHONE not configured')
-      return { success: false, error: 'ระบบ Truewallet ยังไม่พร้อมใช้งาน' }
-    }
-
-    // Redeem voucher
-    const { redeemTruewalletVoucher } = await import('@/lib/truewallet')
-    const redeemResult = await redeemTruewalletVoucher(phoneNumber, voucherUrl)
-
-    if (!redeemResult.success) {
-      return { success: false, error: redeemResult.error }
-    }
-
-    // ตรวจสอบยอดเงิน
-    const voucherAmount = redeemResult.amount || 0
-    if (voucherAmount < order.total) {
-      return {
-        success: false,
-        error: `จำนวนเงินในซองไม่เพียงพอ (ต้องการ ${order.total} บาท, ได้รับ ${voucherAmount} บาท)`,
-      }
-    }
-
-    // ใช้ OrderService.completeOrder() เพื่อ complete order
-    const transRef = `TW-${redeemResult.code || Date.now()}`
-    await OrderService.completeOrder(orderId, paymentId, 'truewallet', transRef)
-
-    return {
-      success: true,
-      amount: voucherAmount,
-      ownerFullName: redeemResult.ownerFullName,
     }
   }
 }

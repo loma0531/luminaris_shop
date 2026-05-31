@@ -28,11 +28,11 @@ export default function ToastContainer() {
   const { toasts, removeToast } = useToast()
 
   return (
-    <div className="fixed top-24 right-4 z-[9999] flex flex-col gap-3 pointer-events-none">
+    <div className="fixed top-24 right-4 z-[9999] flex flex-col gap-3 items-end pointer-events-none">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="card flex items-center gap-4 min-w-[300px] max-w-max p-4 relative pointer-events-auto animate-[toastSlideIn_0.3s_ease-out_forwards]"
+          className="card toast-card flex items-center gap-4 min-w-[300px] max-w-max p-4 relative pointer-events-auto animate-[toastSlideIn_0.3s_ease-out_forwards]"
         >
           {/* Close Button */}
           <button

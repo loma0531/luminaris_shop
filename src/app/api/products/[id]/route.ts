@@ -5,8 +5,6 @@ import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { sanitizeString, validatePrice, isValidObjectId } from '@/lib/inputValidation'
 import { logger, createTimer } from '@/lib/logger'
 import { invalidateProductCache } from '@/lib/redis'
-import { unlink } from 'fs/promises'
-import path from 'path'
 
 import { deleteFile } from '@/lib/fileUtils'
 
@@ -30,6 +28,7 @@ export async function GET(
         id: true, name: true, description: true, price: true, image: true, isActive: true,
         soldCount: true, categoryId: true, commands: true, createdAt: true,
         requiresInput: true, inputLabel: true, inputPlaceholder: true,
+        saleActive: true, discountType: true, discountValue: true, saleStart: true, saleEnd: true,
         category: { select: { id: true, name: true } }
       },
     })
@@ -63,7 +62,11 @@ export async function PUT(
     }
     
     const body = await request.json()
-    const { name, description, price, image, categoryId, commands, isActive, requiresInput, inputLabel, inputPlaceholder } = body
+    const { 
+      name, description, price, image, categoryId, commands, isActive, 
+      requiresInput, inputLabel, inputPlaceholder,
+      saleActive, discountType, discountValue, saleStart, saleEnd 
+    } = body
 
     const currentProduct = await prisma.product.findUnique({ 
       where: { id }, select: { name: true, price: true, image: true, isActive: true } 
@@ -152,6 +155,11 @@ export async function PUT(
         requiresInput: requiresInput !== undefined ? !!requiresInput : undefined,
         inputLabel: inputLabel !== undefined ? sanitizeString(inputLabel, 50) : undefined,
         inputPlaceholder: inputPlaceholder !== undefined ? sanitizeString(inputPlaceholder, 50) : undefined,
+        saleActive: saleActive !== undefined ? !!saleActive : undefined,
+        discountType: discountType !== undefined ? discountType : undefined,
+        discountValue: discountValue !== undefined ? (discountValue !== null ? Number(discountValue) : null) : undefined,
+        saleStart: saleStart !== undefined ? (saleStart ? new Date(saleStart) : null) : undefined,
+        saleEnd: saleEnd !== undefined ? (saleEnd ? new Date(saleEnd) : null) : undefined,
       },
       include: { category: true },
     })

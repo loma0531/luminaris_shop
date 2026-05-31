@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireAdminAuth } from '@/lib/adminAuth'
 import { getNextSequence } from '@/lib/counter'
-import { isValidMinecraftName } from '@/lib/inputValidation'
 import { logger, createTimer } from '@/lib/logger'
 import { z } from 'zod'
 

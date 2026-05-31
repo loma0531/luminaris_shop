@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
           id: true, name: true, description: true, price: true, image: true, isActive: true,
           categoryId: true, commands: true,
           requiresInput: true, inputLabel: true, inputPlaceholder: true,
+          saleActive: true, discountType: true, discountValue: true, saleStart: true, saleEnd: true,
           category: { select: { id: true, name: true } }
         },
         where: { isActive: true },
@@ -142,7 +143,12 @@ export async function GET(request: NextRequest) {
                commands: product.commands,
                requiresInput: product.requiresInput,
                inputLabel: product.inputLabel,
-               inputPlaceholder: product.inputPlaceholder
+               inputPlaceholder: product.inputPlaceholder,
+               saleActive: product.saleActive,
+               discountType: product.discountType,
+               discountValue: product.discountValue,
+               saleStart: product.saleStart,
+               saleEnd: product.saleEnd
              },
              quantity: item.quantity,
              customInput: item.customInput || null

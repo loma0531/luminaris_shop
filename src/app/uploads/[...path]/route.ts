@@ -59,7 +59,7 @@ export async function GET(
       },
     })
     
-  } catch (error) {
+  } catch {
     return new NextResponse('Not Found', { status: 404 })
   }
 }

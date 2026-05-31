@@ -5,6 +5,7 @@ import { logger, createTimer } from '@/lib/logger'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { CART_LIMITS } from '@/lib/cartLimits'
 import { validateCSRFToken, deleteCSRFToken } from '@/lib/redis'
+import { getProductActivePrice, isProductOnSale } from '@/lib/productPricing'
 
 import { CheckoutSchema } from '@/lib/schemas'
 import * as z from 'zod'
@@ -64,8 +65,10 @@ export async function POST(request: NextRequest) {
 
     const productMap = new Map(dbProducts.map((p) => [p.id, p]))
 
-    const sanitizedItems = []
-    let calculatedTotal = 0
+    const sanitizedItems: { productId: string; name: string; price: number; quantity: number; commands: string[]; customInput: string | null }[] = []
+    let calculatedTotal = 0 // ยอดเงินรวมสินค้า (ที่ลดโปรโมชันแล้ว)
+    let eligibleTotal = 0 // ยอดสินค้าปกติสำหรับนำคูปองไปคิดส่วนลด
+    let discountItemsCount = 0
 
     for (const item of items) {
       const dbProduct = productMap.get(item.productId)
@@ -74,18 +77,92 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'สินค้าไม่ถูกต้องหรือถูกปิดใช้งานแล้ว' }, { status: 400 })
       }
 
+      // คำนวณราคาปัจจุบันของสินค้าแบบไดนามิก (ตามโปรโมชันและช่วงเวลากำหนด)
+      const currentActivePrice = getProductActivePrice(dbProduct)
+
       // Overwrite name, price, and commands with values from the database
       const verifiedItem = {
         productId: dbProduct.id,
         name: dbProduct.name,
-        price: dbProduct.price,
+        price: currentActivePrice,
         quantity: item.quantity,
         commands: dbProduct.commands, // CRITICAL: Server-controlled commands!
         customInput: item.customInput || null,
       }
 
       sanitizedItems.push(verifiedItem)
-      calculatedTotal += verifiedItem.price * verifiedItem.quantity
+      const itemTotalPrice = verifiedItem.price * verifiedItem.quantity
+      calculatedTotal += itemTotalPrice
+      
+      if (isProductOnSale(dbProduct)) {
+        discountItemsCount += 1
+      }
+      eligibleTotal += itemTotalPrice
+    }
+
+    // ─── ตรวจสอบและใช้งานคูปองส่วนลด ───
+    let coupon = null
+    let discountAmount = 0
+    
+    if (validation.data.couponCode) {
+      const cleanCouponCode = validation.data.couponCode.trim().toUpperCase()
+      coupon = await prisma.coupon.findUnique({
+        where: { code: cleanCouponCode }
+      })
+
+      if (!coupon || !coupon.isActive) {
+        return NextResponse.json({ error: 'คูปองไม่ถูกต้องหรือหมดอายุการใช้งานแล้ว' }, { status: 400 })
+      }
+
+      const now = new Date()
+      if (coupon.startDate && now < new Date(coupon.startDate)) {
+        return NextResponse.json({ error: 'คูปองนี้ยังไม่ถึงระยะเวลาเริ่มใช้งาน' }, { status: 400 })
+      }
+      if (coupon.endDate && now > new Date(coupon.endDate)) {
+        return NextResponse.json({ error: 'คูปองนี้หมดอายุการใช้งานแล้ว' }, { status: 400 })
+      }
+      if (coupon.maxUses !== null && coupon.usedCount >= coupon.maxUses) {
+        return NextResponse.json({ error: 'สิทธิ์การใช้งานคูปองนี้เต็มแล้ว' }, { status: 400 })
+      }
+
+      // ตรวจสอบจำนวนสิทธิ์ที่ผู้ใช้รายนี้เคยใช้ไปแล้ว
+      const userUsageCount = await prisma.couponUsage.count({
+        where: {
+          couponId: coupon.id,
+          minecraftName: minecraftName,
+        }
+      })
+      
+      if (userUsageCount >= coupon.maxUsesPerUser) {
+        return NextResponse.json({ 
+          error: `คุณใช้งานคูปองนี้เต็มโควตาแล้ว (จำกัด ${coupon.maxUsesPerUser} ครั้งต่อบัญชี)` 
+        }, { status: 400 })
+      }
+
+
+      // ตรวจยอดซื้อขั้นต่ำ
+      if (calculatedTotal < coupon.minSpend) {
+        return NextResponse.json({ 
+          error: `ยอดรวมสินค้าไม่ถึงเกณฑ์การใช้งานคูปอง (ขั้นต่ำ ฿${coupon.minSpend})` 
+        }, { status: 400 })
+      }
+
+      // คำนวณยอดเงินส่วนลดจากสินค้าที่มีสิทธิ์เข้าร่วม
+      if (coupon.discountType === 'PERCENTAGE') {
+        discountAmount = eligibleTotal * (coupon.discountValue / 100)
+        if (coupon.maxDiscount !== null && discountAmount > coupon.maxDiscount) {
+          discountAmount = coupon.maxDiscount
+        }
+      } else if (coupon.discountType === 'FIXED') {
+        discountAmount = coupon.discountValue
+      }
+
+      const subtotalBeforeCoupon = calculatedTotal
+      const finalDiscountAmount = Math.min(discountAmount, eligibleTotal)
+      
+      // ประกันว่ายอดชำระเงินสุทธิสุดท้ายหลังหักส่วนลดคูปองจะต้องมีมูลค่าอย่างน้อย 1 บาท
+      calculatedTotal = Math.max(1, subtotalBeforeCoupon - finalDiscountAmount)
+      discountAmount = subtotalBeforeCoupon - calculatedTotal
     }
 
     if (Math.abs(calculatedTotal - total) > 1) {
@@ -103,16 +180,54 @@ export async function POST(request: NextRequest) {
     const paymentSeqId = await getNextSequence('payment_id')
     const orderSeqId = await getNextSequence('order_id')
 
-    const payment = await prisma.payment.create({
-      data: { paymentId: paymentSeqId, minecraftName, amount: calculatedTotal, status: 'PENDING' },
+    // รันการเขียนฐานข้อมูลแบบ Transaction-Safe
+    const result = await prisma.$transaction(async (tx) => {
+      if (coupon) {
+        // อัปเดตยอดการใช้คูปองในระบบส่วนกลาง
+        const updatedCoupon = await tx.coupon.update({
+          where: { id: coupon.id },
+          data: { usedCount: { increment: 1 } }
+        })
+
+        // ป้องกันสิทธิ์การใช้เต็มชนเพดานแบบ Real-time
+        if (updatedCoupon.maxUses !== null && updatedCoupon.usedCount > updatedCoupon.maxUses) {
+          throw new Error('COUPON_LIMIT_EXCEEDED')
+        }
+      }
+
+      const payment = await tx.payment.create({
+        data: { paymentId: paymentSeqId, minecraftName, amount: calculatedTotal, status: 'PENDING' },
+      })
+
+      const order = await tx.order.create({
+        data: {
+          orderId: orderSeqId, minecraftName, total: calculatedTotal, status: 'AWAITING_PAYMENT',
+          paymentId: payment.id, items: sanitizedItems,
+        },
+      })
+
+      if (coupon) {
+        // บันทึกประวัติการใช้งานคูปองรายคน
+        await tx.couponUsage.create({
+          data: {
+            couponId: coupon.id,
+            minecraftName: minecraftName,
+            orderId: order.id,
+            discountedAmt: discountAmount,
+          }
+        })
+        
+        // ลบคูปองทิ้งเมื่อสิทธิ์การใช้งานเต็มแล้วตามที่ร้องขอ
+        const updatedCoupon = await tx.coupon.findUnique({ where: { id: coupon.id } })
+        if (updatedCoupon && updatedCoupon.maxUses !== null && updatedCoupon.usedCount >= updatedCoupon.maxUses) {
+          await tx.coupon.delete({ where: { id: coupon.id } })
+        }
+      }
+
+      return { payment, order }
     })
 
-    const order = await prisma.order.create({
-      data: {
-        orderId: orderSeqId, minecraftName, total: calculatedTotal, status: 'AWAITING_PAYMENT',
-        paymentId: payment.id, items: sanitizedItems,
-      },
-    })
+    const { payment, order } = result
 
     logger.order.created(orderSeqId, minecraftName, calculatedTotal, sanitizedItems.length, timer())
     
@@ -130,6 +245,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.system.error(`Failed to create order: ${errorMessage}`)
+    
+    if (errorMessage === 'COUPON_LIMIT_EXCEEDED') {
+      return NextResponse.json({ error: 'สิทธิ์คูปองเต็มหมดแล้วในเสี้ยววินาทีนี้พอดี' }, { status: 400 })
+    }
+    
     return NextResponse.json({ error: 'Failed to create checkout' }, { status: 500 })
   }
 }

@@ -7,9 +7,9 @@ import { QuestionIcon } from '@/components/Icons'
 import { apiFetch } from '@/lib/apiFetch'
 import { logger } from '@/lib/logger'
 
-
 export default function LoginPage() {
   const [playerName, setPlayerName] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
@@ -45,13 +45,13 @@ export default function LoginPage() {
       const userRes = await apiFetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minecraftName: playerName }),
+        body: JSON.stringify({ minecraftName: playerName, password }),
       })
       
       const user = await userRes.json()
       
       if (user.error) {
-        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+        setError(user.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
         setLoading(false)
         return
       }
@@ -95,6 +95,19 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="form-group mt-4">
+            <label className="form-label">รหัสผ่านเซิร์ฟเวอร์ Minecraft</label>
+            <input
+              type="password"
+              className="input"
+              placeholder="รหัสผ่านเดียวกับที่ใช้ในเซิร์ฟเวอร์ (/login)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
           {error && (
             <div className="error-box">
               {error}
@@ -104,7 +117,7 @@ export default function LoginPage() {
           <button
             type="submit"
             className="btn btn-primary w-full"
-            disabled={loading || !playerName.trim()}
+            disabled={loading || !playerName.trim() || !password.trim()}
           >
             {loading ? (
               <>
@@ -131,4 +144,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
-import { useShop, type Product, type Category, type CartItem } from './layout'
+import { useShop, type Product, type CartItem } from './layout'
 import { 
   CartIcon, 
   PackageIcon, 
@@ -18,6 +18,7 @@ import { getCartKey } from '@/lib/swr-hooks'
 import { mutate as globalMutate } from 'swr'
 import { cartSaveStarted, cartSaveCompleted, hasCartSavesInFlight } from '@/lib/cartSaveTracker'
 import { SkeletonProductCard } from '@/components/Skeleton'
+import { getProductActivePrice, isProductOnSale } from '@/lib/productPricing'
 
 // Product Image with error handling and fallback
 function ProductImage({ src, alt, priority = false }: { src: string | null; alt: string; priority?: boolean }) {
@@ -305,6 +306,35 @@ export default function ShopPage() {
         .loading-spinner {
           animation: spin 1s linear infinite;
         }
+
+        /* Sale Ribbon & Price Styles */
+        .sale-ribbon {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+          color: #ffffff;
+          font-size: 0.75rem;
+          font-weight: 700;
+          padding: 0.25rem 0.6rem;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+          z-index: 10;
+          letter-spacing: 0.5px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .original-price {
+          color: var(--muted-foreground);
+          text-decoration: line-through;
+          font-size: 0.85rem;
+          margin-right: 0.35rem;
+          opacity: 0.75;
+        }
+        .sale-price {
+          color: #f87171;
+          font-weight: 700;
+        }
       `}</style>
       
       <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
@@ -380,11 +410,19 @@ export default function ShopPage() {
       ) : (
         <div className="product-grid">
           {filteredProducts.map((product, index) => {
+            const onSale = isProductOnSale(product)
+            const activePrice = getProductActivePrice(product)
+            
             return (
               <div key={product.id} className="product-card">
                 <div className="product-image">
                   <ProductImage src={product.image} alt={product.name} priority={index < 4} />
                   <span className="category-badge">{product.category?.name}</span>
+                  {onSale && (
+                    <div className="sale-ribbon">
+                      {product.discountType === 'PERCENTAGE' ? `-${product.discountValue}%` : `-${product.discountValue}฿`}
+                    </div>
+                  )}
                 </div>
                 <div className="product-info">
                   <h3 className="product-name">{product.name}</h3>
@@ -394,7 +432,14 @@ export default function ShopPage() {
                     </p>
                   )}
                   <p className="product-price">
-                    {product.price.toLocaleString()} บาท
+                    {onSale ? (
+                      <>
+                        <span className="original-price">฿{product.price.toLocaleString()}</span>
+                        <span className="sale-price"> ฿{activePrice.toLocaleString()} บาท</span>
+                      </>
+                    ) : (
+                      `${product.price.toLocaleString()} บาท`
+                    )}
                   </p>
                 </div>
                   <div className="product-actions">

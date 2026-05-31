@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireAdminAuth, requireUserAuth } from '@/lib/adminAuth'
-import { logger, createTimer } from '@/lib/logger'
+import { logger } from '@/lib/logger'
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const timer = createTimer()
   try {
     const { id } = await params
     

@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { replaceCustomInput } = await import('@/lib/inputValidation')
-      const orderItems = order.items as any[]
+      const orderItems = order.items as { commands?: string[], quantity?: number, customInput?: string }[]
       const computedCommands: string[] = []
       
       for (const item of orderItems) {

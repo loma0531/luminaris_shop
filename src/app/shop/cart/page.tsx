@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import LoginModal from '@/components/LoginModal'
+import ConfirmModal from '@/components/ConfirmModal'
 import { SkeletonCartItem } from '@/components/Skeleton'
 import {
   CartIcon,
@@ -21,6 +22,7 @@ import { logger } from '@/lib/logger'
 import { useCart, getCartKey as getSWRCartKey } from '@/lib/swr-hooks'
 import { mutate as globalMutate } from 'swr'
 import { cartSaveStarted, cartSaveCompleted, hasCartSavesInFlight } from '@/lib/cartSaveTracker'
+import { getProductActivePrice, isProductOnSale } from '@/lib/productPricing'
 
 
 interface User {
@@ -34,6 +36,11 @@ interface Product {
   price: number
   image: string | null
   commands: string[]
+  saleActive?: boolean
+  discountType?: string | null
+  discountValue?: number | null
+  saleStart?: string | null
+  saleEnd?: string | null
 }
 
 interface CartItem {
@@ -50,6 +57,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(false)
   const [hasPendingOrder, setHasPendingOrder] = useState(false)
   const [modifyingItems, setModifyingItems] = useState<Set<string>>(new Set())
+  const [showConfirmOnlineModal, setShowConfirmOnlineModal] = useState(false)
 
   const router = useRouter()
   const { error: toastError, success: toastSuccess, warning: toastWarning } = useToast()
@@ -349,12 +357,74 @@ export default function CartPage() {
   // Calculate total for selected items only
   const selectedCart = cart.filter(item => selectedItems.has(getCartKey(item)))
   const selectedTotal = selectedCart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
+    (sum, item) => sum + getProductActivePrice(item.product) * item.quantity,
     0
   )
   const selectedCount = selectedCart.reduce((sum, item) => sum + item.quantity, 0)
 
-  const handleCheckout = async () => {
+  // === สเตตคูปองส่วนลดเพิ่มเติม ===
+  const [couponCode, setCouponCode] = useState('')
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string
+    discountAmount: number
+    finalTotal: number
+    discountType: string
+    discountValue: number
+    maxDiscount: number | null
+  } | null>(null)
+
+  // คืนค่าคูปองส่วนลดเมื่อมีการแก้ไขความเคลื่อนไหวสินค้าที่ถูกเลือก หรือจำนวนชิ้นสินค้าเปลี่ยนไป ป้องกันส่วนลดคลาดเคลื่อน
+  useEffect(() => {
+    setAppliedCoupon(null)
+  }, [selectedItems, cart])
+
+  const handleApplyCoupon = async () => {
+    if (!user) {
+      setShowLoginModal(true)
+      return
+    }
+
+    if (!couponCode.trim()) return
+
+    setCouponLoading(true)
+    try {
+      const res = await apiFetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode.trim(),
+          minecraftName: user.minecraftName,
+          items: selectedCart.map(item => ({
+            productId: item.product.id,
+            quantity: item.quantity
+          }))
+        })
+      })
+      const data = await res.json()
+
+      if (data.error) {
+        toastError(data.error)
+      } else {
+        setAppliedCoupon({
+          code: data.code,
+          discountAmount: data.discountAmount,
+          finalTotal: data.finalTotal,
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          maxDiscount: data.maxDiscount
+        })
+        toastSuccess(`ใช้รหัสคูปอง "${data.code}" สำเร็จ! ลดทันที ฿${data.discountAmount.toFixed(2)}`)
+      }
+    } catch (err) {
+      logger.error(`Coupon application error: ${err}`)
+      toastError('เกิดข้อผิดพลาดในการตรวจสอบรหัสคูปอง')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  const handleCheckout = () => {
     if (!user) {
       setShowLoginModal(true)
       return
@@ -371,6 +441,12 @@ export default function CartPage() {
       return
     }
 
+    setShowConfirmOnlineModal(true)
+  }
+
+  const proceedCheckout = async () => {
+    if (!user) return
+    setShowConfirmOnlineModal(false)
     setLoading(true)
 
     try {
@@ -385,23 +461,18 @@ export default function CartPage() {
       const orderItems = selectedCart.map((item) => ({
         productId: item.product.id,
         name: item.product.name,
-        price: item.product.price,
+        price: getProductActivePrice(item.product),
         quantity: item.quantity,
         commands: item.product.commands || [],
         customInput: item.customInput,
       }))
 
       // Force immediate save if pending logic handles it or just proceed
-      // If a pending cart save exists, api/cart?quick=true might race with checkout?
-      // Checkout creates order. Cart save updates cart. They are distinct.
-      // But we should probably flush pending cart saves first.
-      
       if (pendingCartRef.current) {
-        // Save pending cart first to ensure DB is consistent before order creation?
-        // Actually handleCheckout clears selected items from cart locally and saves remaining.
-        // So we don't need to flush the *previous* pending cart if we are about to overwrite it.
-        // We just need to make sure we save the *final* state after checkout.
+        // Handled automatically on checkout completion
       }
+
+      const finalTotal = appliedCoupon ? appliedCoupon.finalTotal : selectedTotal
 
       const orderRes = await apiFetch('/api/orders/checkout', {
         method: 'POST',
@@ -409,7 +480,8 @@ export default function CartPage() {
         body: JSON.stringify({
           minecraftName: user.minecraftName,
           items: orderItems,
-          total: selectedTotal,
+          total: finalTotal,
+          couponCode: appliedCoupon ? appliedCoupon.code : null,
           action: 'create',
           sessionId: csrfData.sessionId,
           csrfToken: csrfData.csrfToken,
@@ -532,21 +604,43 @@ export default function CartPage() {
                   <div className="cart-item-info flex-1 min-w-0 flex justify-between items-center gap-4">
                     <div>
                       <h3 className="font-semibold text-base">{item.product.name}</h3>
-                      <p className="text-muted-foreground text-sm">
-                        {item.product.price.toLocaleString()} บาท / ชิ้น
+                      <p className="text-muted-foreground text-sm flex flex-wrap items-center gap-2 mt-1">
+                        {isProductOnSale(item.product) ? (
+                          <>
+                            <span className="line-through opacity-60">
+                              {item.product.price.toLocaleString()}
+                            </span>
+                            <span className="text-emerald-400 font-medium">
+                              {getProductActivePrice(item.product).toLocaleString()}
+                            </span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase">
+                              ลดราคา
+                            </span>
+                          </>
+                        ) : (
+                          <span>{item.product.price.toLocaleString()}</span>
+                        )}
+                        <span>บาท / ชิ้น</span>
                       </p>
                       {item.customInput && (
-                        <p className="text-primary text-sm mt-1 font-mono truncate max-w-full flex items-center gap-2">
-                          <span className="shrink-0">Note:</span>
-                          <span className="truncate">
+                        <p className="text-primary text-sm mt-1.5 font-mono truncate max-w-full flex items-center gap-2">
+                          <span className="shrink-0 text-primary/70">Note:</span>
+                          <span className="truncate text-primary/95">
                             {item.customInput.length > 15 ? item.customInput.slice(0, 15) + '...' : item.customInput}
                           </span>
                         </p>
                       )}
                     </div>
                     {/* Total Price - Shows on right in desktop, positioned via CSS on mobile */}
-                    <div className="cart-item-price">
-                      {(item.product.price * item.quantity).toLocaleString()} ฿
+                    <div className="cart-item-price flex flex-col items-end">
+                      {isProductOnSale(item.product) && (
+                        <span className="text-xs line-through opacity-50 font-normal">
+                          {(item.product.price * item.quantity).toLocaleString()} ฿
+                        </span>
+                      )}
+                      <span className={isProductOnSale(item.product) ? "text-emerald-400 font-semibold text-lg" : "font-semibold text-lg"}>
+                        {(getProductActivePrice(item.product) * item.quantity).toLocaleString()} ฿
+                      </span>
                     </div>
                   </div>
 
@@ -592,9 +686,70 @@ export default function CartPage() {
                   <span className="font-medium">{selectedTotal.toLocaleString()} บาท</span>
                 </div>
 
+                {/* ช่องกรอกคูปองส่วนลด */}
+                {selectedItems.size > 0 && (
+                  <div className="mb-4 pb-4 border-b border-border space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground block">
+                      คูปองส่วนลด
+                    </label>
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg">
+                        <div className="min-w-0">
+                          <span className="font-mono font-semibold text-emerald-400 block truncate text-sm">
+                            {appliedCoupon.code}
+                          </span>
+                          <span className="text-[11px] text-emerald-400/80 block">
+                            ลดแล้ว -฿{appliedCoupon.discountAmount.toLocaleString()}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppliedCoupon(null)
+                            setCouponCode('')
+                          }}
+                          className="text-xs text-rose-400 hover:text-rose-300 transition-colors font-medium shrink-0 ml-2"
+                        >
+                          ยกเลิก
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="กรอกรหัสคูปอง"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          disabled={couponLoading}
+                          className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-primary flex-1 font-mono uppercase w-full"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponLoading || !couponCode.trim()}
+                          className="btn btn-sm btn-primary shrink-0"
+                        >
+                          {couponLoading ? 'ตรวจสอบ...' : 'ใช้งาน'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {appliedCoupon && (
+                  <div className="flex justify-between mb-4 pb-4 border-b border-border text-sm">
+                    <span className="text-muted-foreground">ส่วนลดคูปอง ({appliedCoupon.code})</span>
+                    <span className="text-emerald-400 font-medium">
+                      -฿{appliedCoupon.discountAmount.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between mb-6 text-xl font-semibold">
                   <span>ยอดสุทธิ</span>
-                  <span className="text-primary">{selectedTotal.toLocaleString()} บาท</span>
+                  <span className="text-primary">
+                    {(appliedCoupon ? appliedCoupon.finalTotal : selectedTotal).toLocaleString()} บาท
+                  </span>
                 </div>
 
                 {hasPendingOrder && (
@@ -634,6 +789,21 @@ export default function CartPage() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={handleLoginSuccess}
+      />
+
+      <ConfirmModal
+        isOpen={showConfirmOnlineModal}
+        title="คำแนะนำก่อนชำระเงิน"
+        content={
+          <>
+            โปรดตรวจสอบว่าคุณกำลังออนไลน์ในเซิร์ฟเวอร์ Minecraft<br />
+            หากคุณยังไม่ได้เข้าเกม กรุณาเข้าเกมก่อนแล้วกลับมากดยืนยัน
+          </>
+        }
+        confirmText="รับทราบและดำเนินการต่อ"
+        cancelText="ยกเลิก"
+        onConfirm={proceedCheckout}
+        onCancel={() => setShowConfirmOnlineModal(false)}
       />
     </div>
   )

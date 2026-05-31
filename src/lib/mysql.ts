@@ -1,4 +1,5 @@
 import mysql, { Pool } from 'mysql2/promise'
+import bcrypt from 'bcryptjs'
 import { logger } from '@/lib/logger'
 
 interface MySQLConfig {
@@ -68,6 +69,43 @@ export async function verifyPlayerInDatabase(username: string): Promise<{ exists
   } catch (error) {
     logger.system.error('MySQL error during player verification')
     throw error
+  }
+}
+
+/**
+ * Verify player password against AuthMe database table
+ */
+export async function verifyAuthMePassword(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const connection = await getPool().getConnection()
+    try {
+      // Query AuthMe table for the hashed password (case-insensitive username check)
+      const [rows] = await connection.execute(
+        'SELECT password FROM authme WHERE LOWER(username) = LOWER(?)',
+        [username]
+      )
+      
+      const results = rows as { password: string }[]
+      
+      if (results.length === 0) {
+        return { success: false, error: 'ไม่พบผู้เล่นในระบบเซิร์ฟเวอร์ กรุณาสมัครสมาชิกในเกมก่อน' }
+      }
+      
+      const hashedPassword = results[0].password
+      
+      // Compare passwords using bcryptjs (handles PHP $2y$ format automatically)
+      const isMatch = await bcrypt.compare(password, hashedPassword)
+      if (!isMatch) {
+        return { success: false, error: 'รหัสผ่านเซิร์ฟเวอร์ไม่ถูกต้อง' }
+      }
+      
+      return { success: true }
+    } finally {
+      connection.release()
+    }
+  } catch (error) {
+    logger.system.error(`AuthMe password verification failed: ${error}`)
+    return { success: false, error: 'เกิดข้อผิดพลาดในการตรวจสอบรหัสผ่านจากระบบเซิร์ฟเวอร์' }
   }
 }
 

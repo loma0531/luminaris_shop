@@ -34,6 +34,7 @@ export const CheckoutSchema = z.object({
   })).min(1),
   total: z.number().min(0),
   action: z.literal('create'),
+  couponCode: z.string().max(50).optional().nullable(),
   // CSRF Protection
   sessionId: z.string().length(32),
   csrfToken: z.string().length(64),

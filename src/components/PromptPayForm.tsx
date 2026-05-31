@@ -7,13 +7,13 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
 import { apiFetch } from '@/lib/apiFetch'
 import { logger } from '@/lib/logger'
 
 interface PromptPayFormProps {
   orderId: number
   paymentId: number
-  amount: number
   onSuccess: () => void
   onError: (message: string) => void
 }
@@ -21,13 +21,11 @@ interface PromptPayFormProps {
 export default function PromptPayForm({
   orderId,
   paymentId,
-  amount,
   onSuccess,
   onError,
 }: PromptPayFormProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
   const pollRef = useRef<NodeJS.Timeout | null>(null)
   const hasFetched = useRef(false)
 
@@ -81,7 +79,6 @@ export default function PromptPayForm({
 
         if (data.qrCodeUrl) {
           setQrCodeUrl(data.qrCodeUrl)
-          setClientSecret(data.clientSecret)
           if (data.clientSecret) {
             startPolling(data.clientSecret)
           }
@@ -109,9 +106,11 @@ export default function PromptPayForm({
 
       {qrCodeUrl && (
         <div className="promptpay-qr-container">
-          <img
+          <Image
             src={qrCodeUrl}
             alt="PromptPay QR"
+            width={260}
+            height={260}
             className="promptpay-qr-image"
           />
         </div>

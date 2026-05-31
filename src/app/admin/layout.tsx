@@ -18,6 +18,7 @@ import {
   ArrowLeftIcon,
   MenuIcon,
   CloseIcon,
+  TagIcon,
 } from '@/components/Icons'
 import ConfirmModal from '@/components/ConfirmModal'
 
@@ -45,6 +46,7 @@ interface AdminLayoutProps {
 const navItems = [
   { href: '/admin', label: 'จัดการสินค้า', Icon: CartIcon },
   { href: '/admin/categories', label: 'จัดการหมวดหมู่', Icon: FolderIcon },
+  { href: '/admin/coupons', label: 'จัดการคูปอง', Icon: TagIcon },
   { href: '/admin/users', label: 'จัดการผู้ใช้', Icon: UsersIcon },
   { href: '/admin/orders', label: 'ประวัติการซื้อ', Icon: PackageIcon },
   { href: '/admin/sales', label: 'สรุปยอดเติมเงิน', Icon: ChartIcon },
@@ -52,10 +54,10 @@ const navItems = [
 ]
 
 interface AdminDataContextType {
-  stats: any
-  recentOrders: any[]
-  products: any[]
-  categories: any[]
+  stats: Record<string, unknown> | null
+  recentOrders: Record<string, unknown>[]
+  products: { id: string; name: string; price: number; image?: string; commands?: string[]; [key: string]: unknown }[]
+  categories: { id: string; name: string; [key: string]: unknown }[]
   isLoading: boolean
   refreshData: (force?: boolean) => Promise<void>
 }
@@ -376,13 +378,13 @@ function AdminContent({ children }: AdminLayoutProps) {
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const [stats, setStats] = useState<any>(null)
-  const [recentOrders, setRecentOrders] = useState<any[]>([])
-  const [products, setProducts] = useState<any[]>([])
-  const [categories, setCategories] = useState<any[]>([])
+  const [stats, setStats] = useState<Record<string, unknown> | null>(null)
+  const [recentOrders, setRecentOrders] = useState<Record<string, unknown>[]>([])
+  const [products, setProducts] = useState<{ id: string; name: string; price: number; image?: string; commands?: string[]; [key: string]: unknown }[]>([])
+  const [categories, setCategories] = useState<{ id: string; name: string; [key: string]: unknown }[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const lastFetchedRef = useRef<number>(0)
-  const lastHashRef = useRef<string>('')
+
   
   const refreshData = useCallback(async (force = false) => {
     // Cache: 1 minute for admin (more frequent)
@@ -408,14 +410,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       ])
 
       // Handle Products - support both array and object format
-      let prodData: any[] = []
+      let prodData: { id: string; name: string; price: number; image?: string; commands?: string[]; [key: string]: unknown }[] = []
       if (productsRes.status !== 304) {
         const rawProdData = await productsRes.json()
         // Handle both formats: array or { products: [...] }
         prodData = Array.isArray(rawProdData) ? rawProdData : (rawProdData.products || [])
-        
-        // Filter to only active products for display
-        prodData = prodData.filter((p: any) => p.isActive !== false)
       } else {
         // 304 = no change, keep existing products
         prodData = products

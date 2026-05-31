@@ -21,12 +21,13 @@ model User {
 }
 
 model AdminUser {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  email        String   @unique
-  passwordHash String
-  tokenHash    String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  email           String   @unique
+  passwordHash    String
+  twoFactorSecret String?  // สำหรับ Google Authenticator TOTP Secret
+  tokenHash       String?  // เก็บไว้รองรับระบบเก่า
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // =========================================================================
@@ -60,6 +61,13 @@ model Product {
   isActive         Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // === ฟิลด์สำหรับระบบโปรโมชันลดราคา ===
+  saleActive       Boolean   @default(false)      // เปิดใช้งานราคาโปรโมชันหรือไม่
+  discountType     String?   // ประเภทส่วนลด: "PERCENTAGE" (%) หรือ "FIXED" (฿)
+  discountValue    Float?    // มูลค่าของส่วนลด (เช่น 20 หรือ 50)
+  saleStart        DateTime? // เวลาเริ่มต้นโปรโมชัน
+  saleEnd          DateTime? // เวลาสิ้นสุดโปรโมชัน
 
   @@index([categoryId])
   @@index([isActive])
@@ -188,4 +196,35 @@ enum QueueStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+model Coupon {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  code          String        @unique // รหัสคูปอง เช่น WELCOME10, BONUS50
+  discountType  String        // ประเภทส่วนลด: "PERCENTAGE" (%) หรือ "FIXED" (฿)
+  discountValue Float         // มูลค่าส่วนลด (เช่น 10.0 หรือ 50.0)
+  maxDiscount   Float?        // ยอดส่วนลดสูงสุด (สำหรับคูปองลดเป็น %)
+  minSpend      Float         @default(0.0) // ยอดชำระขั้นต่ำที่จะใช้งานได้
+  maxUses       Int?          // จำกัดจำนวนครั้งการใช้รวมทั้งหมด (ถ้ามี)
+  maxUsesPerUser Int          @default(1)   // จำกัดสิทธิ์การใช้งานต่อคน (เช่น 1 คนใช้ได้ 1 ครั้ง)
+  usedCount     Int           @default(0)   // จำนวนสิทธิ์ที่ถูกใช้งานไปแล้วทั้งหมด
+  isActive      Boolean       @default(true)
+  startDate     DateTime?     // เวลาเริ่มต้นใช้งานคูปอง
+  endDate       DateTime?     // เวลาหมดอายุคูปอง
+  usages        CouponUsage[] // ลิงก์ไปยังตารางประวัติการใช้งาน
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model CouponUsage {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  couponId      String   @db.ObjectId
+  coupon        Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  minecraftName String   // อิงตามชื่อ Minecraft ของผู้ใช้ที่ใช้งาน
+  orderId       String   @db.ObjectId // อ้างอิงรหัสคำสั่งซื้อที่ใช้
+  discountedAmt Float    // ยอดเงินส่วนลดที่ผู้เล่นได้รับในการใช้ครั้งนี้
+  usedAt        DateTime @default(now())
+
+  @@index([couponId])
+  @@index([minecraftName])
 }

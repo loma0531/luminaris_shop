@@ -346,7 +346,7 @@ export default function GradientGeneratorPage() {
     const rect = slider.getBoundingClientRect();
 
     const handlePointerMove = (moveEv: PointerEvent) => {
-      let relativeX = moveEv.clientX - rect.left;
+      const relativeX = moveEv.clientX - rect.left;
       let newPos = relativeX / rect.width;
       newPos = Math.max(0, Math.min(1, newPos));
       
@@ -547,7 +547,7 @@ export default function GradientGeneratorPage() {
                              type="text"
                              value={c.hex.replace('#', '')}
                              onChange={(e) => {
-                               let val = e.target.value;
+                               const val = e.target.value;
                                if (/^[0-9a-fA-F]{0,6}$/.test(val)) {
                                  updateColorHex(c.id, '#' + val);
                                }

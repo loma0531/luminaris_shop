@@ -188,12 +188,15 @@ export async function invalidateCartCache(minecraftName: string): Promise<void> 
 }
 
 // Legacy exports ที่ไม่ได้ใช้แล้วแต่เก็บไว้กันพัง
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getMultipleFromCache<T>(_pattern: string): Promise<T[]> {
   return [] // ไม่รองรับใน memory mode
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function pipelineOps(
-  _ops: ((pipeline: unknown) => void)[]
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  ..._args: unknown[]
 ): Promise<void> {
   // ไม่รองรับใน memory mode
 }

@@ -4,6 +4,7 @@ import { requireAdminAuth, generateShopToken } from '@/lib/adminAuth'
 import { validatePagination } from '@/lib/inputValidation'
 import { CACHE_HEADERS } from '@/lib/cacheHeaders'
 import { logger, createTimer } from '@/lib/logger'
+import { verifyAuthMePassword } from '@/lib/mysql'
 import { z } from 'zod'
 
 // Zod Schema for User Creation
@@ -11,7 +12,8 @@ const UserCreateSchema = z.object({
   minecraftName: z.string()
     .min(3, 'Name too short')
     .max(16, 'Name too long')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Invalid characters in Minecraft name')
+    .regex(/^[a-zA-Z0-9_]+$/, 'Invalid characters in Minecraft name'),
+  password: z.string().min(1, 'Password is required')
 })
 
 export async function GET(request: NextRequest) {
@@ -80,7 +82,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: errorMsg }, { status: 400 })
     }
 
-    const { minecraftName } = validation.data
+    const { minecraftName, password } = validation.data
+
+    // Verify password against AuthMe database
+    const authMeResult = await verifyAuthMePassword(minecraftName, password)
+    if (!authMeResult.success) {
+      logger.security.accessDenied('minecraftName_login', `Invalid credentials for: ${minecraftName}`)
+      return NextResponse.json({ error: authMeResult.error || 'รหัสผ่านเซิร์ฟเวอร์ไม่ถูกต้อง' }, { status: 401 })
+    }
 
     let user = await prisma.user.findUnique({
       where: { minecraftName },

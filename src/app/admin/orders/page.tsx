@@ -55,6 +55,10 @@ export default function AdminOrdersPage() {
     { productId: '', name: '', price: 0, quantity: 1, commands: [] }
   ])
   const [submitting, setSubmitting] = useState(false)
+  
+  // Custom Dropdown State & Ref for multiple items
+  const [activeItemDropdown, setActiveItemDropdown] = useState<number | null>(null)
+  const itemsDropdownRef = useRef<HTMLDivElement>(null)
 
   const { products } = useAdminData()
   const { success, error: toastError } = useToast()
@@ -64,6 +68,9 @@ export default function AdminOrdersPage() {
     function handleClickOutside(event: MouseEvent) {
       if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
         setIsStatusOpen(false)
+      }
+      if (itemsDropdownRef.current && !itemsDropdownRef.current.contains(event.target as Node)) {
+        setActiveItemDropdown(null)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -126,7 +133,7 @@ export default function AdminOrdersPage() {
         commands: [],
       }
     } else {
-      const product = products.find((p: any) => p.id === productId)
+      const product = products.find((p: { id: string; name: string; price: number; [key: string]: unknown }) => p.id === productId)
       if (!product) return
       newItems[index] = {
         productId: product.id,
@@ -139,7 +146,7 @@ export default function AdminOrdersPage() {
     setManualItems(newItems)
   }
 
-  const updateManualItem = (index: number, field: keyof ManualItem, value: any) => {
+  const updateManualItem = (index: number, field: keyof ManualItem, value: string | number | string[]) => {
     const newItems = [...manualItems]
     newItems[index] = { ...newItems[index], [field]: value }
     setManualItems(newItems)
@@ -427,23 +434,69 @@ export default function AdminOrdersPage() {
               {/* Items */}
               <div className="form-section">
                 <label className="form-label">สินค้า <span className="text-red">*</span></label>
-                <div className="manual-items-list">
+                <div className="manual-items-list" ref={itemsDropdownRef}>
                   {manualItems.map((item, index) => (
                     <div key={index} className="manual-item-block">
                       <div className="manual-item-row">
-                        <select
-                          className="input manual-product-select"
-                          value={item.productId}
-                          onChange={(e) => handleProductSelect(index, e.target.value)}
-                        >
-                          <option value="">เลือกสินค้า</option>
-                          {products.map((p: any) => (
-                            <option key={p.id} value={p.id}>
-                              {p.name} ({p.price}฿)
-                            </option>
-                          ))}
-                          <option value="__custom__">✏️ กำหนดเอง (Custom)</option>
-                        </select>
+                        <div className="custom-dropdown manual-product-select" style={{ minWidth: '220px' }}>
+                          <button 
+                            type="button"
+                            className={`dropdown-trigger ${activeItemDropdown === index ? 'active' : ''}`}
+                            onClick={() => setActiveItemDropdown(activeItemDropdown === index ? null : index)}
+                          >
+                            <span>
+                              {item.productId 
+                                ? (item.productId === '__custom__' ? '✏️ กำหนดเอง (Custom)' : products.find((p: { id: string; name: string }) => p.id === item.productId)?.name || 'เลือกสินค้า')
+                                : 'เลือกสินค้า'}
+                            </span>
+                            <div className="dropdown-arrow">
+                              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            </div>
+                          </button>
+                          
+                          <div className={`dropdown-menu ${activeItemDropdown === index ? 'open' : ''}`} style={{ zIndex: 100 }}>
+                            <button
+                              type="button"
+                              className={`dropdown-item ${!item.productId ? 'selected' : ''}`}
+                              onClick={() => {
+                                handleProductSelect(index, '')
+                                setActiveItemDropdown(null)
+                              }}
+                            >
+                              <span>เลือกสินค้า</span>
+                              {!item.productId && <div className="item-check"><CheckIcon size={14} /></div>}
+                            </button>
+                            
+                            {products.map((p: { id: string; name: string; price: number }) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                className={`dropdown-item ${item.productId === p.id ? 'selected' : ''}`}
+                                onClick={() => {
+                                  handleProductSelect(index, p.id)
+                                  setActiveItemDropdown(null)
+                                }}
+                              >
+                                <span>{p.name} ({p.price}฿)</span>
+                                {item.productId === p.id && <div className="item-check"><CheckIcon size={14} /></div>}
+                              </button>
+                            ))}
+
+                            <button
+                              type="button"
+                              className={`dropdown-item ${item.productId === '__custom__' ? 'selected' : ''}`}
+                              onClick={() => {
+                                handleProductSelect(index, '__custom__')
+                                setActiveItemDropdown(null)
+                              }}
+                            >
+                              <span>✏️ กำหนดเอง (Custom)</span>
+                              {item.productId === '__custom__' && <div className="item-check"><CheckIcon size={14} /></div>}
+                            </button>
+                          </div>
+                        </div>
                         <input
                           type="number"
                           className="input manual-qty-input"
@@ -547,8 +600,9 @@ export default function AdminOrdersPage() {
         .modal-backdrop {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
+          background: rgba(0, 0, 0, 0.8); /* ทึบขึ้น 80% (เพิ่ม 10%) */
+          backdrop-filter: blur(8px);      /* เบลอมากขึ้นเป็น 8px */
+          -webkit-backdrop-filter: blur(8px);
           z-index: 50;
           display: flex;
           align-items: center;
@@ -557,17 +611,25 @@ export default function AdminOrdersPage() {
           animation: fadeIn 0.2s ease-out;
         }
         .modal-content {
-          background: var(--card);
-          border: 1px solid var(--border);
+          background: linear-gradient(135deg, rgba(30, 30, 50, 0.96) 0%, rgba(20, 20, 35, 0.96) 100%); /* ทึบ 96% โทนชาร์โคลน้ำเงินเข้ม */
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(20px);      /* เบลอเนื้อหากล่อง 20px */
+          -webkit-backdrop-filter: blur(20px);
           border-radius: 1rem;
           width: 100%;
           max-width: 560px;
           max-height: 90vh;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
           animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        :global(html[data-theme="light"]) .modal-content {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(245, 245, 250, 0.96) 100%);
+          border: 1px solid rgba(9, 9, 11, 0.08);
+        }
+
         .modal-header {
           padding: 1.25rem 1.5rem;
           border-bottom: 1px solid var(--border);

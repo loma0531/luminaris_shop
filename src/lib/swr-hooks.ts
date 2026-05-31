@@ -41,6 +41,12 @@ export interface Product {
     id: string
     name: string
   }
+  // === ฟิลด์โปรโมชันเพิ่มเติม ===
+  saleActive?: boolean
+  discountType?: string | null
+  discountValue?: number | null
+  saleStart?: string | null
+  saleEnd?: string | null
 }
 
 export interface Category {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { redeemTruewalletVoucher } from '@/lib/truewallet'
+import { shopConfig } from '@/lib/config'
 import { giveItemsToPlayer } from '@/lib/rcon'
 import { isValidMinecraftName } from '@/lib/inputValidation'
 import { logger, createTimer } from '@/lib/logger'
@@ -69,6 +70,16 @@ export async function POST(request: NextRequest) {
     if (order.minecraftName !== minecraftName) {
       logger.security.suspiciousActivity(`Name mismatch - Order: ${order.minecraftName}, Request: ${minecraftName}`, minecraftName)
       return NextResponse.json({ success: false, error: 'การยืนยันตัวตนล้มเหลว' }, { status: 403 })
+    }
+
+    // ตรวจสอบยอดชำระเงินขั้นต่ำของ TrueWallet
+    const minAmount = shopConfig.orders.payments.truewallet.minAmount || 10
+    if (order.total < minAmount) {
+      logger.security.suspiciousActivity(`Truewallet payment attempted for order ${orderId} below minimum amount (${order.total} < ${minAmount})`, minecraftName)
+      return NextResponse.json({ 
+        success: false, 
+        error: `ยอดชำระเงินต่ำกว่าเกณฑ์ขั้นต่ำ ${minAmount} บาท ไม่สามารถชำระเงินผ่าน TrueMoney ได้` 
+      }, { status: 400 })
     }
 
     // ATOMIC LOCK: ป้องกัน Race Condition (CRIT-5) โดยการเปลี่ยนสถานะก่อนทำงาน
