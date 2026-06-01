@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@fortune-inc/tw-voucher": "^1.1.2",
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^7.8.0",
     "@stripe/react-stripe-js": "^6.5.0",
     "@stripe/stripe-js": "^9.7.0",
     "bcryptjs": "^3.0.3",
@@ -70,7 +70,7 @@
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",
-    "prisma": "^5.22.0",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4.3.0",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
