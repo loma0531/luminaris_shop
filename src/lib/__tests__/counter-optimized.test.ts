@@ -34,14 +34,6 @@ vi.mock('@/lib/cache/RedisCacheAdapter', () => {
   }
 })
 
-// Mock logger
-vi.mock('@/lib/logger', () => ({
-  logger: {
-    error: vi.fn(),
-    warn: vi.fn(),
-  }
-}))
-
 import prisma from '@/lib/prisma'
 import { getCache } from '@/lib/cache/index'
 import { RedisCacheAdapter } from '@/lib/cache/RedisCacheAdapter'
