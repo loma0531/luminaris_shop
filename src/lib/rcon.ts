@@ -210,21 +210,44 @@ export async function giveItemsToPlayer(playerName: string, commands: string[]):
     return { success: false, results: ['Invalid player name'] }
   }
 
+  // ด่านคัดกรองคำสั่งอันตรายชั้นล่างสุด ดึงค่าโดยตรงจาก shop.config.ts
+  const { getShopConfig } = require('./config')
+  const configData = getShopConfig()
+  const dangerousPatterns = configData.security.dangerousCommandPatterns.map((p: string) => new RegExp(p, 'i'))
+
   const results: string[] = []
   let success = true
-  const config = getRconConfig()
 
   let rcon: Rcon | null = null
+  let isFromPool = false
   try {
-    rcon = await Rcon.connect({
-      host: config.host,
-      port: config.port,
-      password: config.password,
-      timeout: 30000,
-    })
+    try {
+      // พยายามดึง Connection จาก Pool เพื่อลด Overhead ในการ Handshake/Auth
+      rcon = await getPooledConnection()
+      isFromPool = true
+    } catch (poolError) {
+      // Fallback: หาก Pool เชื่อมต่อไม่ได้ ให้สร้าง Connection ใหม่แบบดั้งเดิม
+      logger.debug(`RCON pool connection failed, falling back to per-request connection: ${poolError}`, 200)
+      const config = getRconConfig()
+      rcon = await Rcon.connect({
+        host: config.host,
+        port: config.port,
+        password: config.password,
+        timeout: 30000,
+      })
+      isFromPool = false
+    }
 
     for (const cmd of commands) {
       try {
+        // ป้องกันและสกัดกั้นคำสั่งอันตรายก่อนส่งเข้าเซิร์ฟเวอร์
+        if (dangerousPatterns.some((pattern: RegExp) => pattern.test(cmd))) {
+          logger.security.suspiciousActivity(`Blocked dangerous command in RCON Client layer: ${cmd}`, playerName)
+          results.push(`Error: Command '${cmd}' is blocked for security reasons.`)
+          success = false
+          continue
+        }
+
         // Replace {player} placeholder with actual player name
         const finalCommand = cmd.replace(/\{player\}/gi, playerName)
         
@@ -245,12 +268,18 @@ export async function giveItemsToPlayer(playerName: string, commands: string[]):
         success = false
       }
     }
+    
+    // อัปเดตเวลาการใช้งานล่าสุดของ Pool
+    if (isFromPool) {
+      lastUsed = Date.now()
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.rcon.failed(playerName, `Connection failed: ${errorMessage}`)
     return { success: false, results: [`Connection error: ${errorMessage}`] }
   } finally {
-    if (rcon) {
+    // ปิดการเชื่อมต่อเฉพาะกรณีที่เป็น Connection เดี่ยว (ไม่ได้ดึงมาจาก Pool)
+    if (rcon && !isFromPool) {
       try {
         await rcon.end()
       } catch {

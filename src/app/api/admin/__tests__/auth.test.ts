@@ -21,13 +21,20 @@ vi.mock('@/lib/prisma', () => ({
 }))
 
 // Mock Redis to bypass rate limiting
-vi.mock('@/lib/redis', () => ({
-  checkRateLimitRedis: vi.fn().mockResolvedValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60000 }),
-  getRedis: vi.fn(() => ({
-    get: vi.fn().mockResolvedValue(null),
-    setex: vi.fn(),
-  })),
-}))
+vi.mock('@/lib/redis', () => {
+  return {
+    checkRateLimitRedis: vi.fn().mockResolvedValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60000 }),
+    getRedis: vi.fn(() => ({
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn(),
+    })),
+    getCachedProducts: vi.fn().mockResolvedValue(null),
+    setCachedProducts: vi.fn(),
+    getCachedCategories: vi.fn().mockResolvedValue(null),
+    setCachedCategories: vi.fn(),
+    getCachedCart: vi.fn().mockResolvedValue(null),
+  }
+})
 
 // Mock env to avoid Zod validation issues
 vi.mock('@/lib/env', () => ({

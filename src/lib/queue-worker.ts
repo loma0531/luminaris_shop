@@ -109,30 +109,31 @@ export async function processCommandQueue(): Promise<ProcessResult> {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         
-        // Mark as failed if max retries exceeded
-        for (const cmd of commands) {
-          const newRetryCount = cmd.retryCount + 1
-          
-          if (newRetryCount >= MAX_RETRIES) {
-            await prisma.commandQueue.update({
-              where: { id: cmd.id },
-              data: { 
-                status: 'FAILED',
-                retryCount: newRetryCount,
-                lastError: errorMessage.substring(0, 500)
-              }
-            })
-            result.failed++
-          } else {
-            await prisma.commandQueue.update({
-              where: { id: cmd.id },
-              data: { 
-                status: 'PENDING',
-                retryCount: newRetryCount,
-                lastError: errorMessage.substring(0, 500)
-              }
-            })
-          }
+        // ปรับปรุงเป็น Bulk Update (updateMany) เพื่อลด N+1 queries ในกรณีเกิด error
+        const failedCmdIds = commands.filter(c => c.retryCount + 1 >= MAX_RETRIES).map(c => c.id)
+        const pendingCmdIds = commands.filter(c => c.retryCount + 1 < MAX_RETRIES).map(c => c.id)
+
+        if (failedCmdIds.length > 0) {
+          await prisma.commandQueue.updateMany({
+            where: { id: { in: failedCmdIds } },
+            data: { 
+              status: 'FAILED',
+              retryCount: { increment: 1 },
+              lastError: errorMessage.substring(0, 500)
+            }
+          })
+          result.failed += failedCmdIds.length
+        }
+
+        if (pendingCmdIds.length > 0) {
+          await prisma.commandQueue.updateMany({
+            where: { id: { in: pendingCmdIds } },
+            data: { 
+              status: 'PENDING',
+              retryCount: { increment: 1 },
+              lastError: errorMessage.substring(0, 500)
+            }
+          })
         }
         
         logger.error(`Queue worker: Error processing commands for ${playerName}: ${errorMessage}`, 500)

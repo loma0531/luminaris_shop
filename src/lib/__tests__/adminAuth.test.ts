@@ -20,7 +20,7 @@ describe('Admin Authentication Logic', () => {
     const token = await generateAdminToken()
     expect(token).toBeDefined()
     expect(typeof token).toBe('string')
-    expect(token.split('.').length).toBe(2)
+    expect(token.split('.').length).toBe(3) // JWT has 3 parts: header.payload.signature
   })
 
   it('should verify a valid admin token', async () => {
@@ -42,12 +42,12 @@ describe('Admin Authentication Logic', () => {
 
   it('should REJECT a manipulated/fake token', async () => {
     const token = await generateAdminToken()
-    const [payload] = token.split('.')
-    const fakeToken = `${payload}.fakesignature`
+    const [header, payload] = token.split('.')
+    const fakeToken = `${header}.${payload}.fakesignature`
     
     const result = await verifyAdminToken(fakeToken)
     expect(result.valid).toBe(false)
-    expect(result.error).toBe('Invalid token signature')
+    expect(result.error).toBe('Invalid token signature or payload')
   })
 
   it('should correctly handle shop tokens', async () => {

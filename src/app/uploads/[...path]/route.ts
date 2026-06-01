@@ -14,10 +14,11 @@ export async function GET(
 
   // Construct file path
   // Note: public/uploads is where files are stored
-  const filePath = path.join(process.cwd(), 'public', 'uploads', ...pathSegments)
+  // ใช้ path.resolve เพื่อ Normalize เส้นทางไฟล์ให้เป็นระเบียบและปลอดภัย ป้องกัน Directory Traversal
+  const filePath = path.resolve(process.cwd(), 'public', 'uploads', ...pathSegments)
 
   // Security: Ensure path is within public/uploads
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+  const uploadDir = path.resolve(process.cwd(), 'public', 'uploads')
   if (!filePath.startsWith(uploadDir)) {
     return new NextResponse('Forbidden', { status: 403 })
   }

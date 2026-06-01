@@ -5,17 +5,19 @@ import { describe, it, expect, vi, beforeEach, Mock } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Mock Redis - must be before other imports
-vi.mock('@/lib/redis', () => ({
-  getRedis: vi.fn(() => ({
-    get: vi.fn().mockResolvedValue(null),
-    setex: vi.fn(),
-  })),
-  getCachedProducts: vi.fn().mockResolvedValue(null),
-  setCachedProducts: vi.fn(),
-  getCachedCategories: vi.fn().mockResolvedValue(null),
-  setCachedCategories: vi.fn(),
-  getCachedCart: vi.fn().mockResolvedValue(null),
-}))
+vi.mock('@/lib/redis', () => {
+  return {
+    getRedis: vi.fn(() => ({
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn(),
+    })),
+    getCachedProducts: vi.fn().mockResolvedValue(null),
+    setCachedProducts: vi.fn(),
+    getCachedCategories: vi.fn().mockResolvedValue(null),
+    setCachedCategories: vi.fn(),
+    getCachedCart: vi.fn().mockResolvedValue(null),
+  }
+})
 
 // Mock Prisma with inline factory
 vi.mock('@/lib/prisma', () => ({

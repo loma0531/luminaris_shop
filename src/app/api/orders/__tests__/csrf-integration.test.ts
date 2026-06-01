@@ -7,11 +7,23 @@ import { CheckoutSchema } from '@/lib/schemas'
  */
 
 // Mock Redis CSRF functions
-vi.mock('@/lib/redis', () => ({
-  validateCSRFToken: vi.fn(),
-  deleteCSRFToken: vi.fn(),
-  storeCSRFToken: vi.fn(),
-}))
+vi.mock('@/lib/redis', () => {
+  return {
+    validateCSRFToken: vi.fn(),
+    deleteCSRFToken: vi.fn(),
+    storeCSRFToken: vi.fn(),
+    checkRateLimitRedis: vi.fn().mockResolvedValue({ allowed: true, remaining: 10, resetAt: Date.now() + 60000 }),
+    getRedis: vi.fn(() => ({
+      get: vi.fn().mockResolvedValue(null),
+      setex: vi.fn(),
+    })),
+    getCachedProducts: vi.fn().mockResolvedValue(null),
+    setCachedProducts: vi.fn(),
+    getCachedCategories: vi.fn().mockResolvedValue(null),
+    setCachedCategories: vi.fn(),
+    getCachedCart: vi.fn().mockResolvedValue(null),
+  }
+})
 
 describe('CSRF Protection Integration', () => {
   describe('CheckoutSchema with CSRF fields', () => {

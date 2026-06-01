@@ -222,7 +222,7 @@ export class FulfillmentService {
   }
 
   /**
-   * เก็บ commands เข้า CommandQueue สำหรับ retry ภายหลัง
+   * เก็บ commands เข้า CommandQueue สำหรับ retry ภายหลัง (ใช้ Bulk Insert - createMany เพื่อลด round-trip และความโหลดของฐานข้อมูล)
    */
   private static async queueCommands(
     commands: string[],
@@ -230,18 +230,16 @@ export class FulfillmentService {
     orderObjectId: string,
     lastError: string
   ): Promise<void> {
-    await Promise.all(
-      commands.map((cmd) =>
-        prisma.commandQueue.create({
-          data: {
-            command: cmd,
-            minecraftName,
-            orderId: orderObjectId,
-            status: 'PENDING',
-            lastError,
-          },
-        })
-      )
-    )
+    if (commands.length === 0) return
+
+    await prisma.commandQueue.createMany({
+      data: commands.map((cmd) => ({
+        command: cmd,
+        minecraftName,
+        orderId: orderObjectId,
+        status: 'PENDING',
+        lastError,
+      })),
+    })
   }
 }
