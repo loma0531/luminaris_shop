@@ -298,12 +298,14 @@ export default function AdminNewProductPage() {
 
         {/* Actions */}
         <div className="admin-actions-bar">
-          <button type="submit" className="btn btn-primary btn-lg">
-            บันทึกและสร้างสินค้า
-          </button>
-          <Link href="/admin" className="btn btn-outline">
-            ยกเลิก
-          </Link>
+          <div className="admin-actions-right">
+            <Link href="/admin" className="btn btn-outline">
+              ยกเลิก
+            </Link>
+            <button type="submit" className="btn btn-primary btn-lg">
+              บันทึกและสร้างสินค้า
+            </button>
+          </div>
         </div>
       </form>
     </div>

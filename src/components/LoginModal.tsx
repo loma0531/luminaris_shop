@@ -82,7 +82,12 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
             <GameControllerIcon size={24} />
             เข้าสู่ระบบ
           </h2>
-          <button className="btn btn-icon" onClick={onClose} disabled={loading}>
+          <button 
+            className="btn btn-icon" 
+            onClick={onClose} 
+            disabled={loading}
+            aria-label="ปิดหน้าต่างเข้าสู่ระบบ"
+          >
             <CloseIcon size={20} />
           </button>
         </div>

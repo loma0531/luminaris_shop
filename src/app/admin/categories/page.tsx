@@ -209,7 +209,11 @@ export default function AdminCategoriesPage() {
               <h2 className="modal-title">
                 {editingCategory ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่ใหม่'}
               </h2>
-              <button className="btn btn-icon" onClick={() => setShowModal(false)}>
+              <button 
+                className="btn btn-icon" 
+                onClick={() => setShowModal(false)}
+                aria-label="ปิดหน้าต่างแก้ไขหมวดหมู่"
+              >
                 <CloseIcon size={20} />
               </button>
             </div>
@@ -233,17 +237,28 @@ export default function AdminCategoriesPage() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div className="flex gap-2 justify-end mt-4">
+              <div className="flex gap-3 justify-end mt-4">
                 {editingCategory && (
                   <button
                     type="button"
-                    className="btn btn-danger"
+                    className="btn btn-danger mr-auto"
                     onClick={() => confirmDelete(editingCategory.id)}
                   >
                     <TrashIcon size={16} />
                     ลบหมวดหมู่
                   </button>
                 )}
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => {
+                    setShowModal(false)
+                    setEditingCategory(null)
+                    resetForm()
+                  }}
+                >
+                  ยกเลิก
+                </button>
                 <button type="submit" className="btn btn-primary">
                   {editingCategory ? 'บันทึก' : 'เพิ่มหมวดหมู่'}
                 </button>

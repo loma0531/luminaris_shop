@@ -426,6 +426,7 @@ export default function AdminOrdersPage() {
                 className="pagination-btn"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
+                aria-label="หน้าก่อนหน้า"
               >
                 {'<'}
               </button>
@@ -433,6 +434,7 @@ export default function AdminOrdersPage() {
                 className="pagination-btn"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
+                aria-label="หน้าถัดไป"
               >
                 {'>'}
               </button>
@@ -447,7 +449,11 @@ export default function AdminOrdersPage() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">เสกออเดอร์ (Admin)</h2>
-              <button className="btn btn-icon btn-ghost" onClick={() => setShowManualModal(false)}>
+              <button 
+                className="btn btn-icon btn-ghost" 
+                onClick={() => setShowManualModal(false)}
+                aria-label="ปิดหน้าต่างเสกออเดอร์"
+              >
                 <CloseIcon size={20} />
               </button>
             </div>
@@ -549,7 +555,12 @@ export default function AdminOrdersPage() {
                           </span>
                         )}
                         {manualItems.length > 1 && (
-                          <button type="button" className="btn btn-icon btn-danger-outline btn-sm" onClick={() => removeManualItem(index)}>
+                          <button 
+                            type="button" 
+                            className="btn btn-icon btn-danger-outline btn-sm" 
+                            onClick={() => removeManualItem(index)}
+                            aria-label={`ลบรายการสินค้าที่ ${index + 1}`}
+                          >
                             <CloseIcon size={14} />
                           </button>
                         )}

@@ -212,6 +212,7 @@ export default function AdminUsersPage() {
                 className="pagination-btn"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
+                aria-label="หน้าก่อนหน้า"
               >
                 {'<'}
               </button>
@@ -219,6 +220,7 @@ export default function AdminUsersPage() {
                 className="pagination-btn"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
+                aria-label="หน้าถัดไป"
               >
                 {'>'}
               </button>

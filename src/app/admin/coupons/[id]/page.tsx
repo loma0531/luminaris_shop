@@ -224,13 +224,19 @@ export default function AdminEditCouponPage({ params }: EditCouponPageProps) {
         </SectionCard>
 
         <div className="admin-actions-bar">
-          <button type="submit" className="btn btn-primary btn-lg">บันทึกการแก้ไขคูปอง</button>
-          <div className="admin-actions-row">
-            <button type="button" className="btn btn-danger" onClick={() => setShowConfirmDelete(true)}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <div className="admin-actions-left">
+            <button 
+              type="button" 
+              className="btn btn-danger" 
+              onClick={() => setShowConfirmDelete(true)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
               <TrashIcon size={16} /> ลบคูปองถาวร
             </button>
+          </div>
+          <div className="admin-actions-right">
             <Link href="/admin/coupons" className="btn btn-outline">ยกเลิก</Link>
+            <button type="submit" className="btn btn-primary btn-lg">บันทึกการแก้ไขคูปอง</button>
           </div>
         </div>
       </form>

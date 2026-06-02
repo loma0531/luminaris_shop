@@ -353,6 +353,9 @@ export default function ShopPage() {
           <button 
             className={`dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            aria-haspopup="listbox"
+            aria-expanded={isDropdownOpen}
+            aria-label="เลือกหมวดหมู่สินค้า"
           >
             <span>
               {selectedCategory 
@@ -366,9 +369,11 @@ export default function ShopPage() {
             </div>
           </button>
           
-          <div className={`dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
+          <div className={`dropdown-menu ${isDropdownOpen ? 'open' : ''}`} role="listbox">
             <button
               className={`dropdown-item ${!selectedCategory ? 'selected' : ''}`}
+              role="option"
+              aria-selected={!selectedCategory}
               onClick={() => {
                 setSelectedCategory('')
                 setIsDropdownOpen(false)
@@ -382,6 +387,8 @@ export default function ShopPage() {
               <button
                 key={cat.id}
                 className={`dropdown-item ${selectedCategory === cat.id ? 'selected' : ''}`}
+                role="option"
+                aria-selected={selectedCategory === cat.id}
                 onClick={() => {
                   setSelectedCategory(cat.id)
                   setIsDropdownOpen(false)

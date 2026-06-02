@@ -285,12 +285,19 @@ export default function AdminEditProductPage({ params }: EditProductPageProps) {
         </SectionCard>
 
         <div className="admin-actions-bar">
-          <button type="submit" className="btn btn-primary btn-lg">บันทึกการแก้ไขสินค้า</button>
-          <div className="admin-actions-row">
-            <button type="button" className="btn btn-danger" onClick={() => setShowConfirmDelete(true)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+          <div className="admin-actions-left">
+            <button 
+              type="button" 
+              className="btn btn-danger" 
+              onClick={() => setShowConfirmDelete(true)} 
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+            >
               <TrashIcon size={16} /> ลบสินค้าถาวร
             </button>
+          </div>
+          <div className="admin-actions-right">
             <Link href="/admin" className="btn btn-outline">ยกเลิก</Link>
+            <button type="submit" className="btn btn-primary btn-lg">บันทึกการแก้ไขสินค้า</button>
           </div>
         </div>
       </form>

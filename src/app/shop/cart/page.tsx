@@ -882,6 +882,7 @@ export default function CartPage() {
                           className="btn btn-icon btn-sm"
                           onClick={() => updateQuantity(getCartKey(item), -1)}
                           disabled={modifyingItems.has(getCartKey(item))}
+                          aria-label={`ลดจำนวน ${item.product.name}`}
                         >
                           <MinusIcon size={16} />
                         </button>
@@ -892,6 +893,7 @@ export default function CartPage() {
                           className="btn btn-icon btn-sm"
                           onClick={() => updateQuantity(getCartKey(item), 1)}
                           disabled={modifyingItems.has(getCartKey(item))}
+                          aria-label={`เพิ่มจำนวน ${item.product.name}`}
                         >
                           <PlusIcon size={16} />
                         </button>
@@ -900,6 +902,7 @@ export default function CartPage() {
                         className="btn btn-danger btn-icon btn-sm"
                         onClick={() => removeItem(getCartKey(item))}
                         disabled={modifyingItems.has(getCartKey(item))}
+                        aria-label={`ลบ ${item.product.name} ออกจากตะกร้า`}
                       >
                         <TrashIcon size={16} />
                       </button>

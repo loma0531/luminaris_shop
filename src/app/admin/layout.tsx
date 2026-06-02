@@ -235,6 +235,7 @@ function AdminContent({ children }: AdminLayoutProps) {
         <button 
           className="admin-sidebar-close"
           onClick={() => setMobileMenuOpen(false)}
+          aria-label="ปิดเมนูแผงควบคุม"
         >
           <CloseIcon size={18} />
         </button>
@@ -265,6 +266,7 @@ function AdminContent({ children }: AdminLayoutProps) {
             <button 
               className="btn admin-menu-btn"
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="เปิดเมนูแผงควบคุม"
             >
               <MenuIcon size={20} />
             </button>
@@ -274,6 +276,7 @@ function AdminContent({ children }: AdminLayoutProps) {
             <button 
               className="btn btn-sm" 
               onClick={() => setShowLogoutConfirm(true)}
+              aria-label="ออกจากระบบ"
             >
               <LogoutIcon size={16} />
               <span className="admin-logout-text">ออกจากระบบ</span>

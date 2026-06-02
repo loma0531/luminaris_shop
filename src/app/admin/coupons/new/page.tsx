@@ -195,8 +195,10 @@ export default function AdminNewCouponPage() {
 
         {/* Actions */}
         <div className="admin-actions-bar">
-          <button type="submit" className="btn btn-primary btn-lg">สร้างคูปองส่วนลดใหม่</button>
-          <Link href="/admin/coupons" className="btn btn-outline">ยกเลิก</Link>
+          <div className="admin-actions-right">
+            <Link href="/admin/coupons" className="btn btn-outline">ยกเลิก</Link>
+            <button type="submit" className="btn btn-primary btn-lg">สร้างคูปองส่วนลดใหม่</button>
+          </div>
         </div>
       </form>
     </div>

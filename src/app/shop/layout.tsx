@@ -208,6 +208,8 @@ function ShopSidebar({
             <button 
               className="sidebar-section-header"
               onClick={() => setShopExpanded(!shopExpanded)}
+              aria-expanded={shopExpanded}
+              aria-controls="sidebar-shop-content"
             >
               <div className="sidebar-section-title">
                 <CartIcon size={14} />
@@ -216,7 +218,7 @@ function ShopSidebar({
               <ChevronIcon expanded={shopExpanded} />
             </button>
             {shopExpanded && (
-              <div className="sidebar-section-content">
+              <div id="sidebar-shop-content" className="sidebar-section-content">
                 {shopItems.map((item) => (
                   <PrefetchLink
                     key={item.href}
@@ -236,6 +238,8 @@ function ShopSidebar({
             <button 
               className="sidebar-section-header"
               onClick={() => setOrdersExpanded(!ordersExpanded)}
+              aria-expanded={ordersExpanded}
+              aria-controls="sidebar-orders-content"
             >
               <div className="sidebar-section-title">
                 <PackageIcon size={14} />
@@ -244,7 +248,7 @@ function ShopSidebar({
               <ChevronIcon expanded={ordersExpanded} />
             </button>
             {ordersExpanded && (
-              <div className="sidebar-section-content">
+              <div id="sidebar-orders-content" className="sidebar-section-content">
                 {orderItems.map((item) => (
                   <PrefetchLink
                     key={item.href}
@@ -264,6 +268,8 @@ function ShopSidebar({
             <button 
               className="sidebar-section-header"
               onClick={() => setAccountExpanded(!accountExpanded)}
+              aria-expanded={accountExpanded}
+              aria-controls="sidebar-account-content"
             >
               <div className="sidebar-section-title">
                 <UserIcon size={14} />
@@ -272,7 +278,7 @@ function ShopSidebar({
               <ChevronIcon expanded={accountExpanded} />
             </button>
             {accountExpanded && (
-              <div className="sidebar-section-content">
+              <div id="sidebar-account-content" className="sidebar-section-content">
                 {accountItems.map((item) => (
                   <PrefetchLink
                     key={item.href}
@@ -292,6 +298,8 @@ function ShopSidebar({
             <button 
               className="sidebar-section-header"
               onClick={() => setInfoExpanded(!infoExpanded)}
+              aria-expanded={infoExpanded}
+              aria-controls="sidebar-info-content"
             >
               <div className="sidebar-section-title">
                 <InfoIcon size={14} />
@@ -300,7 +308,7 @@ function ShopSidebar({
               <ChevronIcon expanded={infoExpanded} />
             </button>
             {infoExpanded && (
-              <div className="sidebar-section-content">
+              <div id="sidebar-info-content" className="sidebar-section-content">
                 {infoItems.map((item) => (
                   <PrefetchLink
                     key={item.href}
@@ -501,6 +509,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
             <button 
               className="btn shop-menu-btn"
               onClick={() => setMobileMenuOpen(true)}
+              aria-label="เปิดเมนูนำทาง"
             >
               <MenuIcon size={20} />
             </button>
@@ -521,6 +530,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
               className="btn btn-sm btn-icon"
               onClick={toggleTheme}
               title={theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}
+              aria-label={theme === 'dark' ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'}
             >
               {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
             </button>
@@ -528,11 +538,11 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
               <div className="flex items-center gap-3">
                 <Link href="/shop/profile" className="shop-header-profile">
                   <Image
-                    src={`https://mc-heads.net/avatar/${getSkinName(user.minecraftName)}/24`}
-                    alt="Head"
-                    width={24}
-                    height={24}
-                    className="rounded"
+                     src={`https://mc-heads.net/avatar/${getSkinName(user.minecraftName)}/24`}
+                     alt="Head"
+                     width={24}
+                     height={24}
+                     className="rounded"
                   />
                   <span>{user.minecraftName}</span>
                 </Link>
@@ -540,6 +550,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
                   className="btn btn-sm"
                   onClick={() => setShowLogoutConfirm(true)}
                   title="ออกจากระบบ"
+                  aria-label="ออกจากระบบ"
                 >
                   <LogoutIcon size={16} />
                 </button>
