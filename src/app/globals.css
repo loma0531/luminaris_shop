@@ -40,24 +40,26 @@
   --sidebar-profile-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.05) 100%);
   --sidebar-profile-border: rgba(255, 255, 255, 0.12);
   /* Navbar — exact same frosted glass as sidebar */
-  --navbar-bg: linear-gradient(180deg, rgba(18, 18, 34, 0.5) 0%, rgba(18, 18, 34, 0.3) 100%);
-  --navbar-scrolled-bg: rgba(18, 18, 34, 0.92);
+  --navbar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.04) 100%);
+  --navbar-scrolled-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.04) 100%);
   --navbar-border: rgba(255, 255, 255, 0.10);
   --navbar-btn-bg: rgba(255, 255, 255, 0.08);
   --navbar-btn-border: rgba(255, 255, 255, 0.14);
   --navbar-btn-hover: rgba(255, 255, 255, 0.16);
+  --navbar-filter: blur(16px) brightness(0.92);
+  --navbar-scrolled-filter: blur(16px) brightness(0.85);
 }
 
 :root[data-theme="light"] {
-  --background: #f4f5f9;
+  --background: #eff0f4;
   --foreground: #09090b;
-  --card: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.3) 100%);
-  --card-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.45) 100%);
-  --border: rgba(9, 9, 11, 0.06);
-  --border-hover: rgba(9, 9, 11, 0.14);
+  --card: linear-gradient(135deg, rgba(255, 255, 255, 0.90) 0%, rgba(255, 255, 255, 0.80) 100%);
+  --card-hover: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+  --border: rgba(9, 9, 11, 0.12);
+  --border-hover: rgba(9, 9, 11, 0.24);
   --primary: #7c3aed;
   --primary-foreground: #ffffff;
-  --secondary: rgba(9, 9, 11, 0.04);
+  --secondary: rgba(9, 9, 11, 0.07);
   --secondary-foreground: #09090b;
   --muted: rgba(9, 9, 11, 0.03);
   --muted-foreground: #6b7280;
@@ -71,26 +73,28 @@
   --shadow-opacity: 0.04;
   --glass-inset: 0.85;
   --glass-sheen: 0.3;
-  --blob-1: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, rgba(167, 139, 250, 0.10) 45%, transparent 70%);
-  --blob-2: radial-gradient(circle, rgba(219, 39, 119, 0.18) 0%, rgba(236, 72, 153, 0.08) 45%, transparent 70%);
-  --blob-3: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, rgba(99, 102, 241, 0.06) 45%, transparent 70%);
+  --blob-1: radial-gradient(circle, rgba(124, 58, 237, 0.07) 0%, rgba(124, 58, 237, 0.02) 45%, transparent 70%);
+  --blob-2: radial-gradient(circle, rgba(219, 39, 119, 0.06) 0%, rgba(219, 39, 119, 0.01) 45%, transparent 70%);
+  --blob-3: radial-gradient(circle, rgba(56, 189, 248, 0.06) 0%, rgba(56, 189, 248, 0.01) 45%, transparent 70%);
   --primary-gradient: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
   --primary-gradient-hover: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
   --glow-color: rgba(124, 58, 237, 0.18);
   --glow-color-hover: rgba(219, 39, 119, 0.35);
-  --sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.72) 100%);
+  --sidebar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.85) 100%);
   --sidebar-border: rgba(124, 58, 237, 0.10);
   --sidebar-nav-hover: rgba(124, 58, 237, 0.06);
   --sidebar-nav-hover-border: rgba(124, 58, 237, 0.12);
   --sidebar-profile-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.60) 0%, rgba(255, 255, 255, 0.35) 100%);
   --sidebar-profile-border: rgba(124, 58, 237, 0.08);
   /* Navbar glass */
-  --navbar-bg: rgba(244, 245, 249, 0.60);
-  --navbar-scrolled-bg: rgba(248, 248, 252, 0.94);
+  --navbar-bg: rgba(244, 245, 249, 0.65);
+  --navbar-scrolled-bg: rgba(244, 245, 249, 0.65);
   --navbar-border: rgba(124, 58, 237, 0.10);
   --navbar-btn-bg: rgba(255, 255, 255, 0.65);
   --navbar-btn-border: rgba(124, 58, 237, 0.12);
   --navbar-btn-hover: rgba(255, 255, 255, 0.85);
+  --navbar-filter: blur(16px) brightness(0.95);
+  --navbar-scrolled-filter: blur(16px) brightness(0.90);
 }
 
 * {
@@ -353,6 +357,32 @@ a:focus-visible {
   background: var(--card-hover);
   border-color: var(--border-hover);
   transform: translateY(-1.5px);
+}
+
+/* Light Theme overrides for buttons to increase contrast & readability */
+html[data-theme="light"] .btn-outline {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(9, 9, 11, 0.20);
+  color: rgba(9, 9, 11, 0.85);
+}
+
+html[data-theme="light"] .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(124, 58, 237, 0.4);
+  color: var(--primary);
+  box-shadow: 0 4px 12px rgba(9, 9, 11, 0.05);
+}
+
+html[data-theme="light"] .btn-secondary {
+  background: rgba(9, 9, 11, 0.07);
+  border: 1px solid rgba(9, 9, 11, 0.12);
+  color: var(--foreground);
+}
+
+html[data-theme="light"] .btn-secondary:hover {
+  background: rgba(9, 9, 11, 0.12);
+  border-color: rgba(9, 9, 11, 0.20);
+  box-shadow: 0 4px 12px rgba(9, 9, 11, 0.04);
 }
 
 .btn-sm {
@@ -2097,22 +2127,22 @@ html[data-theme="light"] .login-modal {
   height: 56px;
   background: var(--navbar-bg);
   border-bottom: 1px solid var(--navbar-border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: var(--navbar-filter);
+  -webkit-backdrop-filter: var(--navbar-filter);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
   z-index: 100;
   box-shadow: 0 1px 20px rgba(0,0,0, calc(var(--shadow-opacity) * 0.6));
-  transition: background-color 0.3s ease, background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, box-shadow 0.3s ease;
+  transition: background-color 0.3s ease, background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* Scrolled state — increase blur and use scrolled background color to blur content behind */
 .shop-top-header.scrolled {
   background: var(--navbar-scrolled-bg);
-  backdrop-filter: blur(48px);
-  -webkit-backdrop-filter: blur(48px);
+  backdrop-filter: var(--navbar-scrolled-filter);
+  -webkit-backdrop-filter: var(--navbar-scrolled-filter);
   box-shadow: 0 4px 32px rgba(0,0,0, calc(var(--shadow-opacity) * 1.4));
 }
 

@@ -589,7 +589,6 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
         confirmText="ออกจากระบบ"
         cancelText="ยกเลิก"
         onConfirm={() => {
-          setShowLogoutConfirm(false)
           handleLogout()
         }}
         onCancel={() => setShowLogoutConfirm(false)}

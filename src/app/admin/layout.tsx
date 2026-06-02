@@ -187,6 +187,14 @@ function AdminContent({ children }: AdminLayoutProps) {
   const { refreshData } = useAdminData()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [navScrolled, setNavScrolled] = useState(false)
+
+  // Scroll listener — add .scrolled to admin navbar when page is scrolled
+  useEffect(() => {
+    const handleScroll = () => setNavScrolled(window.scrollY > 8)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -261,7 +269,7 @@ function AdminContent({ children }: AdminLayoutProps) {
 
       <main className="admin-content">
         {/* Top Navbar - Matching Shop Style */}
-        <header className="admin-top-header">
+        <header className={`admin-top-header${navScrolled ? ' scrolled' : ''}`}>
           <div className="admin-top-header-left">
             <button 
               className="btn admin-menu-btn"
@@ -301,12 +309,19 @@ function AdminContent({ children }: AdminLayoutProps) {
           align-items: center;
           justify-content: space-between;
           padding: 0 1rem;
-          background: var(--sidebar-bg);
-          border-bottom: 1px solid var(--sidebar-border);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: var(--navbar-bg);
+          border-bottom: 1px solid var(--navbar-border);
+          backdrop-filter: var(--navbar-filter);
+          -webkit-backdrop-filter: var(--navbar-filter);
           box-shadow: 0 1px 20px rgba(0, 0, 0, calc(var(--shadow-opacity) * 0.4));
           z-index: 30;
+          transition: background-color 0.3s ease, background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .admin-top-header.scrolled {
+          background: var(--navbar-scrolled-bg);
+          backdrop-filter: var(--navbar-scrolled-filter);
+          -webkit-backdrop-filter: var(--navbar-scrolled-filter);
         }
         
         .admin-top-header-left {
@@ -372,7 +387,6 @@ function AdminContent({ children }: AdminLayoutProps) {
         confirmText="ออกจากระบบ"
         cancelText="ยกเลิก"
         onConfirm={() => {
-          setShowLogoutConfirm(false)
           logout()
         }}
         onCancel={() => setShowLogoutConfirm(false)}
