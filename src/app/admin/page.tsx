@@ -69,7 +69,7 @@ export default function AdminProductsPage() {
 
   return (
     <div>
-      <div className="admin-header-actions">
+      <div className="admin-header-actions animate-fade-in-down">
         <h1 className="admin-title">รายการสินค้าทั้งหมด</h1>
       <Link href="/admin/products/new" className="btn btn-primary">
           <PlusIcon size={16} />
@@ -77,7 +77,7 @@ export default function AdminProductsPage() {
       </Link>
       </div>
 
-      <div className="search-box-wrapper">
+      <div className="search-box-wrapper animate-fade-in-left delay-100">
         <div className="search-box">
           <span className="search-icon"><SearchIcon size={16} /></span>
           <input
@@ -95,49 +95,58 @@ export default function AdminProductsPage() {
           <div className="spinner" />
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state animate-scale-in">
           <PackageIcon size={48} className="mb-4 opacity-50" />
           <p>ไม่มีรายการสินค้าอื่น</p>
         </div>
       ) : (
         <div className="product-grid">
-          {filteredProducts.map((product) => (
-            <div key={product.id} className={`product-card ${product.isActive ? '' : 'inactive'}`}>
-              <div className="product-image">
-                {product.image ? (
-                  <Image src={product.image} alt={product.name} fill className="object-cover" />
-                ) : (
-                  <PackageIcon size={40} />
-                )}
-              </div>
-              <div className="product-info">
-                <div className="product-header">
-                    <h3 className="product-name">{product.name}</h3>
-                    <span className="product-price-badge">฿{product.price}</span>
+          {filteredProducts.map((product, index) => {
+            const delayClass = 
+              index === 0 ? 'delay-50' : 
+              index === 1 ? 'delay-100' : 
+              index === 2 ? 'delay-150' : 
+              index === 3 ? 'delay-200' : 
+              index === 4 ? 'delay-250' : 'delay-300'
+            
+            return (
+              <div key={product.id} className={`product-card animate-scale-in ${delayClass} ${product.isActive ? '' : 'inactive'}`}>
+                <div className="product-image">
+                  {product.image ? (
+                    <Image src={product.image} alt={product.name} fill className="object-cover" />
+                  ) : (
+                    <PackageIcon size={40} />
+                  )}
                 </div>
-                <p className="product-meta">
-                  ขายแล้ว {product.soldCount} ชิ้น • {product.category?.name || 'ไม่มีหมวดหมู่'}
-                </p>
-              </div>
-              <div className="product-actions">
-                <Link href={`/admin/products/${product.id}`} className="btn btn-outline btn-sm" style={{ flex: '1' }}>
-                  <EditIcon size={16} />
-                  แก้ไข
-                </Link>
-                <div className="switch-container">
-                  <span className="switch-label">{product.isActive ? 'เปิดขาย' : 'ปิดขาย'}</span>
-                  <button 
-                    type="button"
-                    className={`switch-toggle ${product.isActive ? 'active' : ''}`}
-                    onClick={() => handleToggleActive(product)}
-                    aria-label={product.isActive ? 'ปิดการขาย' : 'เปิดการขาย'}
-                  >
-                    <span className="switch-handle" />
-                  </button>
+                <div className="product-info">
+                  <div className="product-header">
+                      <h3 className="product-name">{product.name}</h3>
+                      <span className="product-price-badge">฿{product.price}</span>
+                  </div>
+                  <p className="product-meta">
+                    ขายแล้ว {product.soldCount} ชิ้น • {product.category?.name || 'ไม่มีหมวดหมู่'}
+                  </p>
+                </div>
+                <div className="product-actions">
+                  <Link href={`/admin/products/${product.id}`} className="btn btn-outline btn-sm" style={{ flex: '1' }}>
+                    <EditIcon size={16} />
+                    แก้ไข
+                  </Link>
+                  <div className="switch-container">
+                    <span className="switch-label">{product.isActive ? 'เปิดขาย' : 'ปิดขาย'}</span>
+                    <button 
+                      type="button"
+                      className={`switch-toggle ${product.isActive ? 'active' : ''}`}
+                      onClick={() => handleToggleActive(product)}
+                      aria-label={product.isActive ? 'ปิดการขาย' : 'เปิดการขาย'}
+                    >
+                      <span className="switch-handle" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
        

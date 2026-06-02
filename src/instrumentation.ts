@@ -1,6 +1,5 @@
 // Extend global namespace for RCON worker interval
 declare global {
-  // eslint-disable-next-line no-var
   var __rconWorkerInterval: NodeJS.Timeout | undefined
 }
 

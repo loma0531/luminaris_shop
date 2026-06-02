@@ -17,7 +17,7 @@ import {
 import { apiFetch } from '@/lib/apiFetch'
 import { useToast } from '@/context/ToastContext'
 import { useShop } from '../layout'
-import { canAddToCart } from '@/lib/cartLimits'
+import { CART_LIMITS, canAddToCart } from '@/lib/cartLimits'
 import { logger } from '@/lib/logger'
 import { useCart, getCartKey as getSWRCartKey } from '@/lib/swr-hooks'
 import { mutate as globalMutate } from 'swr'
@@ -36,6 +36,11 @@ interface Product {
   price: number
   image: string | null
   commands: string[]
+  description?: string | null
+  category?: {
+    id: string
+    name: string
+  }
   saleActive?: boolean
   discountType?: string | null
   discountValue?: number | null
@@ -58,10 +63,20 @@ export default function CartPage() {
   const [hasPendingOrder, setHasPendingOrder] = useState(false)
   const [modifyingItems, setModifyingItems] = useState<Set<string>>(new Set())
   const [showConfirmOnlineModal, setShowConfirmOnlineModal] = useState(false)
+  const [recommendedList, setRecommendedList] = useState<Product[]>([])
 
   const router = useRouter()
   const { error: toastError, success: toastSuccess, warning: toastWarning } = useToast()
-  const { setCartCount, updatePendingCount, startCartSave, endCartSave, isCartSaving } = useShop()
+  const { 
+    setCartCount, 
+    updatePendingCount, 
+    startCartSave, 
+    endCartSave, 
+    isCartSaving,
+    products,
+    isLoadingData,
+    triggerCartAnimation
+  } = useShop()
   
   // Debounce timer for cart sync to prevent race conditions
   const syncTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -110,6 +125,67 @@ export default function CartPage() {
     }
     checkPendingOrder()
   }, [])
+
+  // สุ่มสินค้าแนะนำ (ของจัดโปรขึ้นก่อน ตามด้วย ราคาแพง 2 ชิ้น และราคาถูก 2 ชิ้น)
+  useEffect(() => {
+    if (isLoadingData || !products || products.length === 0) return
+
+    const eligible = products.filter(
+      (p) => p.isActive !== false && p.requiresInput !== true && p.requireInput !== true
+    )
+
+    if (eligible.length === 0) {
+      setRecommendedList([])
+      return
+    }
+
+    // กรองกลุ่มโปรโมชัน (On Sale)
+    const salePool = eligible.filter((p) => isProductOnSale(p))
+    // กรองกลุ่มราคาปกติ (Normal)
+    const normalPool = eligible.filter((p) => !isProductOnSale(p))
+
+    // เรียงลำดับราคาปกติเพื่อแบ่งเป็นถูก-แพง
+    const sortedNormal = [...normalPool].sort((a, b) => a.price - b.price)
+    
+    // แบ่งครึ่งเพื่อแยกกลุ่มราคาถูกกับราคาแพง
+    const midIndex = Math.floor(sortedNormal.length / 2)
+    const cheapPool = sortedNormal.slice(0, midIndex)
+    const expensivePool = sortedNormal.slice(midIndex)
+
+    // ฟังก์ชันสุ่ม
+    const getRandomItems = (arr: Product[], count: number): Product[] => {
+      const shuffled = [...arr].sort(() => 0.5 - Math.random())
+      return shuffled.slice(0, count)
+    }
+
+    let selected: Product[] = []
+
+    // 1. ดึงของลดราคาก่อน (สูงสุด 4 ชิ้น)
+    const selectedSale = getRandomItems(salePool, 4)
+    selected = [...selectedSale]
+
+    // 2. ถ้ายังไม่ครบ 4 ชิ้น ค่อยดึงราคาแพงกับราคาถูกมาเสริม
+    const remainingSlots = 4 - selected.length
+    if (remainingSlots > 0) {
+      // ต้องการสุ่มจากกลุ่มแพง และ ถูก อย่างละเท่าๆ กันตามสัดส่วน
+      const expensiveCount = Math.ceil(remainingSlots / 2)
+      const cheapCount = remainingSlots - expensiveCount
+
+      const selectedExpensive = getRandomItems(expensivePool, expensiveCount)
+      const selectedCheap = getRandomItems(cheapPool, cheapCount)
+
+      selected = [...selected, ...selectedExpensive, ...selectedCheap]
+    }
+
+    // จัดเรียงผลลัพธ์สุดท้ายให้ ของลดราคา ขึ้นก่อนเสมอ
+    const finalSorted = [...selected].sort((a, b) => {
+      const aSale = isProductOnSale(a) ? 1 : 0
+      const bSale = isProductOnSale(b) ? 1 : 0
+      return bSale - aSale
+    })
+
+    setRecommendedList(finalSorted.slice(0, 4))
+  }, [products, isLoadingData])
 
   // SWR: ดึงข้อมูล cart อัตโนมัติ
   const { data: cartData, isLoading: cartLoading } = useCart(user?.minecraftName || null)
@@ -354,6 +430,61 @@ export default function CartPage() {
     })
   }
 
+  const addToCart = useCallback((product: Product) => {
+    // If not logged in, show login modal
+    if (!user) {
+      setShowLoginModal(true)
+      return
+    }
+
+    // Use current cart state
+    let currentCart = [...cart]
+    
+    const existing = currentCart.find((item) => item.product.id === product.id)
+    const currentItemQuantity = existing?.quantity || 0
+    
+    // Check limits before adding
+    const limitCheck = canAddToCart(currentCart, currentItemQuantity, 1)
+    if (!limitCheck.allowed) {
+      toastWarning(limitCheck.reason || 'เกินขีดจำกัด')
+      return
+    }
+    
+    if (existing) {
+      currentCart = currentCart.map((item) =>
+        item.product.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
+    } else {
+      // Check max item types
+      if (currentCart.length >= CART_LIMITS.MAX_ITEM_TYPES) {
+        toastWarning(`เกินขีดจำกัด ${CART_LIMITS.MAX_ITEM_TYPES} ประเภทสินค้า`)
+        return
+      }
+      currentCart = [...currentCart, { product, quantity: 1, customInput: null }]
+    }
+    
+    // Optimistic update - update UI immediately
+    setCart(currentCart)
+    
+    // Update cart count in header immediately (from local state)
+    const newCount = currentCart.reduce((sum, item) => sum + item.quantity, 0)
+    setCartCount(newCount)
+    
+    // Trigger cart badge animation on mobile
+    if (triggerCartAnimation) {
+      triggerCartAnimation()
+    }
+    
+    // Show success toast
+    toastSuccess(`เพิ่ม "${product.name}" ลงตะกร้าแล้ว`)
+    
+    // Debounced save to backend
+    debouncedSaveCart(currentCart, user.minecraftName)
+    
+  }, [user, cart, setShowLoginModal, toastWarning, toastSuccess, debouncedSaveCart, triggerCartAnimation, setCartCount])
+
   // Calculate total for selected items only
   const selectedCart = cart.filter(item => selectedItems.has(getCartKey(item)))
   const selectedTotal = selectedCart.reduce(
@@ -524,7 +655,7 @@ export default function CartPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2 animate-fade-in-down">
         <CartIcon size={24} />
         ตะกร้าสินค้า
       </h1>
@@ -546,17 +677,110 @@ export default function CartPage() {
             </div>
           </div>
         ) : cart.length === 0 ? (
-          <div className="empty-state">
-            <CartIcon size={48} className="mb-4 opacity-50" />
-            <p>ตะกร้าว่างเปล่า</p>
-            <Link href="/shop" className="btn mt-4">
-              ไปดูสินค้า
-            </Link>
+          <div className="space-y-12 animate-fade-in">
+            <div className="empty-state animate-scale-in">
+              <div className="text-white animate-float-ambient mb-4 flex items-center justify-center">
+                <CartIcon size={48} />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">ตะกร้าสินค้าของคุณยังว่างเปล่า</h2>
+              <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
+                เลือกดูสินค้าสุดพิเศษและสิทธิประโยชน์มากมายในร้านค้าเพื่อเพิ่มลงตะกร้าของคุณได้ทันที
+              </p>
+              <Link href="/shop" className="btn">
+                ไปเลือกซื้อสินค้า
+              </Link>
+            </div>
+
+            {/* ส่วนแสดงสินค้าแนะนำ */}
+            {!isLoadingData && recommendedList && recommendedList.length > 0 && (
+              <div className="animate-fade-in delay-200 flex flex-col items-center justify-center w-full">
+                <div className="flex flex-col items-center justify-center mb-8 text-center">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-1.5 w-1.5 bg-primary rounded-full"></div>
+                    <h2 className="text-xl font-bold text-foreground">สินค้าแนะนำสำหรับคุณ</h2>
+                    <div className="h-1.5 w-1.5 bg-primary rounded-full"></div>
+                  </div>
+                  <p className="text-muted-foreground text-xs max-w-md">
+                    เลือกรับสิทธิประโยชน์และสินค้าจัดรายการโปรโมชันยอดนิยมที่เราคัดสรรมาให้คุณเป็นพิเศษ
+                  </p>
+                </div>
+                
+                <div className="flex justify-center w-full">
+                  <div className="product-grid custom-recommend-grid justify-center w-full max-w-6xl">
+                    {recommendedList.map((product, idx) => {
+                      const activePrice = getProductActivePrice(product)
+                      const onSale = isProductOnSale(product)
+                      
+                      const delayClass = 
+                        idx === 0 ? 'delay-50' : 
+                        idx === 1 ? 'delay-100' : 
+                        idx === 2 ? 'delay-150' : 'delay-200'
+                      
+                      return (
+                        <div 
+                          key={product.id}
+                          className={`product-card animate-scale-in ${delayClass}`}
+                        >
+                          <div className="product-image">
+                            {product.image ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <PackageIcon size={32} />
+                            )}
+                            <span className="category-badge">{product.category?.name}</span>
+                            {onSale && (
+                              <div className="sale-ribbon">
+                                {product.discountType === 'PERCENTAGE' ? `-${product.discountValue}%` : `-${product.discountValue}฿`}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="product-info">
+                            <h3 className="product-name">{product.name}</h3>
+                            {product.description && (
+                              <p className="product-description">
+                                {product.description}
+                              </p>
+                            )}
+                            <p className="product-price">
+                              {onSale ? (
+                                <>
+                                  <span className="original-price">฿{product.price.toLocaleString()}</span>
+                                  <span className="sale-price"> ฿{activePrice.toLocaleString()} บาท</span>
+                                </>
+                              ) : (
+                                `${product.price.toLocaleString()} บาท`
+                              )}
+                            </p>
+                          </div>
+
+                          <div className="product-actions">
+                            <button
+                              className={`btn btn-primary ${isCartSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              onClick={() => !isCartSaving && addToCart(product)}
+                              disabled={isCartSaving}
+                            >
+                              <CartIcon size={16} />
+                              เพิ่มลงตะกร้า
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-4 animate-fade-in-left delay-100">
               {/* Select All / None */}
               <div className="flex items-center gap-4 mb-4 px-4 py-3 bg-muted rounded-lg">
                 <button className="btn btn-sm" onClick={selectAll}>
@@ -571,113 +795,121 @@ export default function CartPage() {
                 </span>
               </div>
 
-              {cart.map((item) => (
-                <div
-                  key={getCartKey(item)}
-                  className={`card cart-item-card transition-all duration-200 ${selectedItems.has(getCartKey(item)) ? 'opacity-100 border-2 border-primary' : 'opacity-60 border-2 border-transparent'}`}
-                >
-                  {/* Checkbox */}
-                  <label className="flex items-center cursor-pointer p-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedItems.has(getCartKey(item))}
-                      onChange={() => toggleSelectItem(getCartKey(item))}
-                      className="w-5 h-5 cursor-pointer accent-primary"
-                    />
-                  </label>
-
-                  {/* Product Image */}
-                  <div className="cart-item-image w-20 h-20 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden">
-                    {item.product.image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        className="w-full h-full object-cover"
+              {cart.map((item, index) => {
+                const delayClass = 
+                  index === 0 ? 'delay-50' : 
+                  index === 1 ? 'delay-100' : 
+                  index === 2 ? 'delay-150' : 
+                  index === 3 ? 'delay-200' : 'delay-250'
+                
+                return (
+                  <div
+                    key={getCartKey(item)}
+                    className={`card cart-item-card animate-fade-in-left ${delayClass} transition-all duration-200 ${selectedItems.has(getCartKey(item)) ? 'opacity-100 border-2 border-primary' : 'opacity-60 border-2 border-transparent'}`}
+                  >
+                    {/* Checkbox */}
+                    <label className="flex items-center cursor-pointer p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.has(getCartKey(item))}
+                        onChange={() => toggleSelectItem(getCartKey(item))}
+                        className="w-5 h-5 cursor-pointer accent-primary"
                       />
-                    ) : (
-                      <PackageIcon size={32} />
-                    )}
-                  </div>
+                    </label>
 
-                  {/* Product Info + Price (Desktop) */}
-                  <div className="cart-item-info flex-1 min-w-0 flex justify-between items-center gap-4">
-                    <div>
-                      <h3 className="font-semibold text-base">{item.product.name}</h3>
-                      <p className="text-muted-foreground text-sm flex flex-wrap items-center gap-2 mt-1">
-                        {isProductOnSale(item.product) ? (
-                          <>
-                            <span className="line-through opacity-60">
-                              {item.product.price.toLocaleString()}
-                            </span>
-                            <span className="text-emerald-400 font-medium">
-                              {getProductActivePrice(item.product).toLocaleString()}
-                            </span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase">
-                              ลดราคา
-                            </span>
-                          </>
-                        ) : (
-                          <span>{item.product.price.toLocaleString()}</span>
-                        )}
-                        <span>บาท / ชิ้น</span>
-                      </p>
-                      {item.customInput && (
-                        <p className="text-primary text-sm mt-1.5 font-mono truncate max-w-full flex items-center gap-2">
-                          <span className="shrink-0 text-primary/70">Note:</span>
-                          <span className="truncate text-primary/95">
-                            {item.customInput.length > 15 ? item.customInput.slice(0, 15) + '...' : item.customInput}
-                          </span>
+                    {/* Product Image */}
+                    <div className="cart-item-image w-20 h-20 bg-muted rounded-md flex items-center justify-center shrink-0 overflow-hidden">
+                      {item.product.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.product.image}
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <PackageIcon size={32} />
+                      )}
+                    </div>
+
+                    {/* Product Info + Price (Desktop) */}
+                    <div className="cart-item-info flex-1 min-w-0 flex justify-between items-center gap-4">
+                      <div>
+                        <h3 className="font-semibold text-base">{item.product.name}</h3>
+                        <p className="text-muted-foreground text-sm flex flex-wrap items-center gap-2 mt-1">
+                          {isProductOnSale(item.product) ? (
+                            <>
+                              <span className="line-through opacity-60">
+                                {item.product.price.toLocaleString()}
+                              </span>
+                              <span className="text-emerald-400 font-medium">
+                                {getProductActivePrice(item.product).toLocaleString()}
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase">
+                                ลดราคา
+                              </span>
+                            </>
+                          ) : (
+                            <span>{item.product.price.toLocaleString()}</span>
+                          )}
+                          <span>บาท / ชิ้น</span>
                         </p>
-                      )}
-                    </div>
-                    {/* Total Price - Shows on right in desktop, positioned via CSS on mobile */}
-                    <div className="cart-item-price flex flex-col items-end">
-                      {isProductOnSale(item.product) && (
-                        <span className="text-xs line-through opacity-50 font-normal">
-                          {(item.product.price * item.quantity).toLocaleString()} ฿
+                        {item.customInput && (
+                          <p className="text-primary text-sm mt-1.5 font-mono truncate max-w-full flex items-center gap-2">
+                            <span className="shrink-0 text-primary/70">Note:</span>
+                            <span className="truncate text-primary/95">
+                              {item.customInput.length > 15 ? item.customInput.slice(0, 15) + '...' : item.customInput}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                      {/* Total Price - Shows on right in desktop, positioned via CSS on mobile */}
+                      <div className="cart-item-price flex flex-col items-end">
+                        {isProductOnSale(item.product) && (
+                          <span className="text-xs line-through opacity-50 font-normal">
+                            {(item.product.price * item.quantity).toLocaleString()} ฿
+                          </span>
+                        )}
+                        <span className={isProductOnSale(item.product) ? "text-emerald-400 font-semibold text-lg" : "font-semibold text-lg"}>
+                          {(getProductActivePrice(item.product) * item.quantity).toLocaleString()} ฿
                         </span>
-                      )}
-                      <span className={isProductOnSale(item.product) ? "text-emerald-400 font-semibold text-lg" : "font-semibold text-lg"}>
-                        {(getProductActivePrice(item.product) * item.quantity).toLocaleString()} ฿
-                      </span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Quantity Controls + Delete */}
-                  <div className="cart-item-controls">
-                    <div className="cart-qty-controls">
+                    {/* Quantity Controls + Delete */}
+                    <div className="cart-item-controls">
+                      <div className="cart-qty-controls">
+                        <button
+                          className="btn btn-icon btn-sm"
+                          onClick={() => updateQuantity(getCartKey(item), -1)}
+                          disabled={modifyingItems.has(getCartKey(item))}
+                        >
+                          <MinusIcon size={16} />
+                        </button>
+                        <span className="min-w-[32px] text-center font-medium">
+                          {item.quantity}
+                        </span>
+                        <button
+                          className="btn btn-icon btn-sm"
+                          onClick={() => updateQuantity(getCartKey(item), 1)}
+                          disabled={modifyingItems.has(getCartKey(item))}
+                        >
+                          <PlusIcon size={16} />
+                        </button>
+                      </div>
                       <button
-                        className="btn btn-icon btn-sm"
-                        onClick={() => updateQuantity(getCartKey(item), -1)}
+                        className="btn btn-danger btn-icon btn-sm"
+                        onClick={() => removeItem(getCartKey(item))}
                         disabled={modifyingItems.has(getCartKey(item))}
                       >
-                        <MinusIcon size={16} />
-                      </button>
-                      <span className="min-w-[32px] text-center font-medium">
-                        {item.quantity}
-                      </span>
-                      <button
-                        className="btn btn-icon btn-sm"
-                        onClick={() => updateQuantity(getCartKey(item), 1)}
-                        disabled={modifyingItems.has(getCartKey(item))}
-                      >
-                        <PlusIcon size={16} />
+                        <TrashIcon size={16} />
                       </button>
                     </div>
-                    <button
-                      className="btn btn-danger btn-icon btn-sm"
-                      onClick={() => removeItem(getCartKey(item))}
-                      disabled={modifyingItems.has(getCartKey(item))}
-                    >
-                      <TrashIcon size={16} />
-                    </button>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
-            <div className="h-fit">
+            <div className="h-fit animate-fade-in-right delay-200">
               <div className="card sticky top-4">
                 <h2 className="text-xl font-semibold mb-6">สรุปคำสั่งซื้อ</h2>
                 
@@ -805,6 +1037,14 @@ export default function CartPage() {
         onConfirm={proceedCheckout}
         onCancel={() => setShowConfirmOnlineModal(false)}
       />
+
+      <style jsx>{`
+        @media (min-width: 1024px) {
+          :global(.custom-recommend-grid) {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

@@ -232,7 +232,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6 flex-wrap items-center">
+      <div className="orders-filters">
         {/* Search */}
         <div className="search-box flex-1 min-w-[200px]">
           <span className="search-icon"><SearchIcon size={16} /></span>
@@ -324,51 +324,89 @@ export default function AdminOrdersPage() {
         </div>
       ) : (
         <>
-          <div className="table-container">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Order ID</th>
-                  <th>ชื่อผู้เล่น</th>
-                  <th>สินค้า</th>
-                  <th>ราคารวม</th>
-                  <th>สถานะ</th>
-                  <th>เวลา</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.length === 0 ? (
+          {/* Desktop: Table View */}
+          <div className="orders-table-desktop">
+            <div className="table-container">
+              <table className="table">
+                <thead>
                   <tr>
-                    <td colSpan={6} className="text-center p-8">
-                      ไม่พบรายการ
-                    </td>
+                    <th>Order ID</th>
+                    <th>ชื่อผู้เล่น</th>
+                    <th>สินค้า</th>
+                    <th>ราคารวม</th>
+                    <th>สถานะ</th>
+                    <th>เวลา</th>
                   </tr>
-                ) : (
-                  filteredOrders.map((order: Order) => (
-                    <tr key={order.id}>
-                      <td className="font-mono font-semibold">
-                        #{order.orderId}
-                      </td>
-                      <td>{order.minecraftName}</td>
-                      <td>
-                        <div className="flex flex-col gap-1 max-w-[300px]">
-                          {order.items.map((item: OrderItem, idx: number) => (
-                            <div key={idx} className="text-sm px-2 py-1 bg-muted rounded">
-                              {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="font-semibold">{order.total.toLocaleString()} ฿</td>
-                      <td>{getStatusBadge(order.status)}</td>
-                      <td className="text-sm text-muted-foreground">
-                        {new Date(order.createdAt).toLocaleString('th-TH')}
+                </thead>
+                <tbody>
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center p-8">
+                        ไม่พบรายการ
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : (
+                    filteredOrders.map((order: Order) => (
+                      <tr key={order.id}>
+                        <td className="font-mono font-semibold">
+                          #{order.orderId}
+                        </td>
+                        <td>{order.minecraftName}</td>
+                        <td>
+                          <div className="flex flex-col gap-1 max-w-[300px]">
+                            {order.items.map((item: OrderItem, idx: number) => (
+                              <div key={idx} className="text-sm px-2 py-1 bg-muted rounded">
+                                {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="font-semibold">{order.total.toLocaleString()} ฿</td>
+                        <td>{getStatusBadge(order.status)}</td>
+                        <td className="text-sm text-muted-foreground">
+                          {new Date(order.createdAt).toLocaleString('th-TH')}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile: Card View */}
+          <div className="orders-cards-mobile">
+            {filteredOrders.length === 0 ? (
+              <div className="empty-state">
+                <p>ไม่พบรายการ</p>
+              </div>
+            ) : (
+              filteredOrders.map((order: Order) => (
+                <div key={order.id} className="order-card-mobile">
+                  <div className="order-card-header">
+                    <div>
+                      <div className="order-card-id">#{order.orderId}</div>
+                      <div className="order-card-player">{order.minecraftName}</div>
+                    </div>
+                    {getStatusBadge(order.status)}
+                  </div>
+                  <div className="order-card-items">
+                    {order.items.map((item: OrderItem, idx: number) => (
+                      <div key={idx} className="order-card-item">
+                        <span className="order-card-item-name">{item.name}</span>
+                        <span className="order-card-item-qty">x{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="order-card-footer">
+                    <div className="order-card-total">{order.total.toLocaleString()} ฿</div>
+                    <div className="order-card-date">
+                      {new Date(order.createdAt).toLocaleString('th-TH')}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {totalPages > 1 && (

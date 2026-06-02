@@ -71,18 +71,18 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="card max-w-[400px] w-full">
+      <div className="card max-w-[400px] w-full animate-scale-in">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 text-2xl font-semibold mb-2">
+          <div className="flex items-center justify-center gap-2 text-2xl font-semibold mb-2 animate-fade-in-down delay-100">
             Luminaris Shop
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground animate-fade-in-down delay-150">
             เข้าสู่ระบบด้วยชื่อผู้เล่น Minecraft
           </p>
         </div>
 
         <form onSubmit={handleLogin}>
-          <div className="form-group">
+          <div className="form-group animate-fade-in-up delay-200">
             <label className="form-label">ชื่อผู้เล่น Minecraft</label>
             <input
               type="text"
@@ -95,7 +95,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="form-group mt-4">
+          <div className="form-group mt-4 animate-fade-in-up delay-250">
             <label className="form-label">รหัสผ่านเซิร์ฟเวอร์ Minecraft</label>
             <input
               type="password"
@@ -109,33 +109,35 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="error-box">
+            <div className="error-box animate-scale-in-bounce">
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            className="btn btn-primary w-full"
-            disabled={loading || !playerName.trim() || !password.trim()}
-          >
-            {loading ? (
-              <>
-                <div className="spinner w-4 h-4" />
-                กำลังตรวจสอบ...
-              </>
-            ) : (
-              'เข้าสู่ระบบ'
-            )}
-          </button>
+          <div className="mt-6 animate-fade-in-up delay-300">
+            <button
+              type="submit"
+              className="btn btn-primary w-full"
+              disabled={loading || !playerName.trim() || !password.trim()}
+            >
+              {loading ? (
+                <>
+                  <div className="spinner w-4 h-4" />
+                  กำลังตรวจสอบ...
+                </>
+              ) : (
+                'เข้าสู่ระบบ'
+              )}
+            </button>
+          </div>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-border flex items-center justify-center gap-2 text-sm text-muted-foreground">
+        <div className="mt-6 pt-4 border-t border-border flex items-center justify-center gap-2 text-sm text-muted-foreground animate-fade-in delay-400">
           <QuestionIcon size={16} />
           ต้องเป็นผู้เล่นที่เคยเข้าเซิร์ฟเวอร์เท่านั้น
         </div>
 
-        <div className="mt-4 text-center">
+        <div className="mt-4 text-center animate-fade-in delay-500">
           <Link href="/shop" className="btn btn-outline w-full">
             ดูสินค้าก่อนโดยไม่ต้องเข้าสู่ระบบ
           </Link>

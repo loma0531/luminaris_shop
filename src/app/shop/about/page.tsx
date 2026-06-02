@@ -10,14 +10,14 @@ export default function AboutPage() {
         {/* <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-red-900/10 rounded-full blur-3xl pointer-events-none" /> */}
 
         <div className="relative z-10">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2 tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2 tracking-tight animate-fade-in-down">
             ข้อตกลงการใช้งาน
           </h1>
-          <div className="h-1 w-20 bg-red-600 rounded-full mb-10" />
+          <div className="h-1 w-20 bg-red-600 rounded-full mb-10 animate-fade-in-down delay-50" />
 
           <div className="space-y-10 text-foreground">
             {/* Section 1 */}
-            <section className="space-y-4 group">
+            <section className="space-y-4 group animate-fade-in-up delay-100">
               <h2 className="text-xl font-semibold flex items-center gap-3 text-foreground group-hover:text-red-500 transition-colors duration-300">
                 <span className="w-1 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
                 การสนับสนุนเซิร์ฟเวอร์
@@ -32,7 +32,7 @@ export default function AboutPage() {
             </section>
 
             {/* Section 2 */}
-            <section className="space-y-4 group">
+            <section className="space-y-4 group animate-fade-in-up delay-200">
               <h2 className="text-xl font-semibold flex items-center gap-3 text-foreground group-hover:text-red-500 transition-colors duration-300">
                 <span className="w-1 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
                 นโยบายเกี่ยวกับไอเทม
@@ -58,7 +58,7 @@ export default function AboutPage() {
             </section>
 
             {/* Section 3 */}
-            <section className="space-y-4 group">
+            <section className="space-y-4 group animate-fade-in-up delay-300">
               <h2 className="text-xl font-semibold flex items-center gap-3 text-foreground group-hover:text-red-500 transition-colors duration-300">
                 <span className="w-1 h-8 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
                 การให้บริการ
@@ -77,7 +77,7 @@ export default function AboutPage() {
             </section>
           </div>
 
-          <div className="mt-16 pt-8 border-t border-border text-center">
+          <div className="mt-16 pt-8 border-t border-border text-center animate-fade-in delay-500">
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear() > 2025 ? `2025 - ${new Date().getFullYear()}` : '2025'} Luminaris Shop. All rights reserved.
             </p>

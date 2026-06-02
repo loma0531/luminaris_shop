@@ -134,13 +134,13 @@ export default function SalesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2 animate-fade-in-down">
         <WalletIcon size={24} />
         สรุปยอดเติมเงิน
       </h1>
 
       {/* Period Selector */}
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap animate-fade-in-left delay-100">
         {(['daily', 'weekly', 'monthly'] as Period[]).map((p) => (
           <button
             key={p}
@@ -154,14 +154,14 @@ export default function SalesPage() {
       </div>
 
       {/* Period Description */}
-      <div className="text-sm text-muted-foreground mb-4 flex items-center gap-2">
+      <div className="text-sm text-muted-foreground mb-4 flex items-center gap-2 animate-fade-in-left delay-150">
         {periodConfig[period].icon}
         {periodConfig[period].description}
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-6">
-        <div className="card p-5">
+        <div className="card p-5 animate-scale-in delay-200">
           <div className="text-sm text-muted-foreground mb-2">
             ยอดเติมเงินรวม
           </div>
@@ -173,7 +173,7 @@ export default function SalesPage() {
             </div>
           )}
         </div>
-        <div className="card p-5">
+        <div className="card p-5 animate-scale-in delay-250">
           <div className="text-sm text-muted-foreground mb-2">
             จำนวนการเติมเงิน
           </div>
@@ -188,7 +188,7 @@ export default function SalesPage() {
       </div>
 
       {/* Chart */}
-      <div className="card p-6">
+      <div className="card p-6 animate-scale-in delay-300">
         <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
           <ChartIcon size={20} />
           กราฟยอดเติมเงิน{periodConfig[period].label}
@@ -203,7 +203,7 @@ export default function SalesPage() {
 
       {/* Data Table */}
       {!loading && data && data.data.length > 0 && (
-        <div className="card p-6 mt-6">
+        <div className="card p-6 mt-6 animate-fade-in-up delay-400">
           <h2 className="text-base font-semibold mb-4">
             รายละเอียด
           </h2>

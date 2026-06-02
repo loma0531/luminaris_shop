@@ -94,19 +94,19 @@ function AdminLoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="card max-w-[400px] w-full">
+      <div className="card max-w-[400px] w-full animate-scale-in">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 text-2xl font-semibold mb-2">
+          <div className="flex items-center justify-center gap-2 text-2xl font-semibold mb-2 animate-fade-in-down delay-100">
             <LockIcon size={28} />
             ระบบจัดการหลังบ้าน
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground animate-fade-in-down delay-150">
             กรุณาใส่ข้อมูลเพื่อเข้าสู่ระบบ
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
+          <div className="form-group animate-fade-in-up delay-200">
             <label className="form-label">อีเมล</label>
             <input
               type="email"
@@ -120,7 +120,7 @@ function AdminLoginForm() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group animate-fade-in-up delay-250">
             <label className="form-label">รหัสผ่าน</label>
             <input
               type="password"
@@ -133,7 +133,7 @@ function AdminLoginForm() {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group animate-fade-in-up delay-300">
             <label className="form-label">Token</label>
             <input
               type="password"
@@ -147,28 +147,30 @@ function AdminLoginForm() {
           </div>
 
           {error && (
-            <div className="error-box">
+            <div className="error-box animate-scale-in-bounce">
               {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            className="btn btn-primary w-full"
-            disabled={loading || !email.trim() || !password.trim() || !token.trim()}
-          >
-            {loading ? (
-              <>
-                <div className="spinner w-4 h-4" />
-                กำลังตรวจสอบ...
-              </>
-            ) : (
-              'เข้าสู่ระบบ'
-            )}
-          </button>
+          <div className="mt-6 animate-fade-in-up delay-350">
+            <button
+              type="submit"
+              className="btn btn-primary w-full"
+              disabled={loading || !email.trim() || !password.trim() || !token.trim()}
+            >
+              {loading ? (
+                <>
+                  <div className="spinner w-4 h-4" />
+                  กำลังตรวจสอบ...
+                </>
+              ) : (
+                'เข้าสู่ระบบ'
+              )}
+            </button>
+          </div>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-border text-center">
+        <div className="mt-6 pt-4 border-t border-border text-center animate-fade-in delay-500">
           <Link href="/" className="btn text-sm">
             <ArrowLeftIcon size={16} />
             กลับหน้าหลัก
@@ -228,7 +230,7 @@ function AdminContent({ children }: AdminLayoutProps) {
       />
       
       {/* Sidebar */}
-      <aside className={`admin-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
+      <aside className={`admin-sidebar animate-fade-in-left ${mobileMenuOpen ? 'open' : ''}`}>
         {/* Mobile Close Button */}
         <button 
           className="admin-sidebar-close"

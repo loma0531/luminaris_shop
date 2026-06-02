@@ -260,8 +260,13 @@ export default function GradientGeneratorPage() {
   const [javaFont, setJavaFont] = useState<string>('');
   const [bedrockFont, setBedrockFont] = useState<string>('');
 
+  const [isJavaDropdownOpen, setIsJavaDropdownOpen] = useState(false);
+  const [isBedrockDropdownOpen, setIsBedrockDropdownOpen] = useState(false);
+
   const sliderRef = useRef<HTMLDivElement>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const javaDropdownRef = useRef<HTMLDivElement>(null);
+  const bedrockDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/fonts-manifest.json')
@@ -280,6 +285,12 @@ export default function GradientGeneratorPage() {
     const handleClickOutside = (e: MouseEvent) => {
       if (colorPickerRef.current && !colorPickerRef.current.contains(e.target as Node)) {
         setOpenColorPickerId(null);
+      }
+      if (javaDropdownRef.current && !javaDropdownRef.current.contains(e.target as Node)) {
+        setIsJavaDropdownOpen(false);
+      }
+      if (bedrockDropdownRef.current && !bedrockDropdownRef.current.contains(e.target as Node)) {
+        setIsBedrockDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -390,11 +401,11 @@ export default function GradientGeneratorPage() {
       <div className="max-w-[1392px] mx-auto px-4 md:px-8 space-y-6">
         
         {/* ==== HEADER & INPUT SECTION ==== */}
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in-down">
           <h1 className="text-2xl md:text-3xl font-bold tracking-wide">
             ตัวสร้างข้อความไล่ระดับสี
           </h1>
-
+ 
           <div className="relative">
              {/* Subtitle & Format Buttons in same perceived line */}
              <div className="flex justify-between items-end mb-3">
@@ -418,7 +429,7 @@ export default function GradientGeneratorPage() {
                   ))}
                 </div>
              </div>
-
+ 
              {/* Main Input Box */}
              <div className="flex bg-card border border-border rounded-md h-[50px] relative">
                <div className="flex items-center px-6 h-full shrink-0">
@@ -439,7 +450,7 @@ export default function GradientGeneratorPage() {
                  </div>
                </div>
              </div>
-
+ 
              {/* Gradient Bar directly underneath */}
              <div className="mt-4 px-0 relative">
                <div
@@ -468,13 +479,13 @@ export default function GradientGeneratorPage() {
              </div>
           </div>
         </div>
-
-
+ 
+ 
         {/* ==== 2-COLUMN MAIN CONTENT SECTION ==== */}
         <div className="grid grid-cols-1 lg:grid-cols-[427px_1fr] gap-6">
           
           {/* LEFT: Colors Panel */}
-          <div className="space-y-4">
+          <div className="space-y-4 animate-fade-in-left delay-100">
             <h2 className="text-2xl md:text-3xl font-bold tracking-wide mb-4">เลือกสี</h2>
             
             <div className="space-y-4">
@@ -495,7 +506,7 @@ export default function GradientGeneratorPage() {
                    Random
                  </button>
                </div>
-
+ 
                {/* Colors List */}
                <div className="space-y-4 pt-4 max-w-[334px]" ref={colorPickerRef}>
                  {colors.map((c, i) => (
@@ -512,7 +523,7 @@ export default function GradientGeneratorPage() {
                          {/* Toggle arrow direction based on position */}
                          <span className={i === 0 && colors.length > 1 ? "rotate-180" : ""}>V</span>
                        </button>
-
+ 
                        {/* Color Hex Block */}
                        <button
                          onClick={() => setOpenColorPickerId(openColorPickerId === c.id ? null : c.id)}
@@ -521,7 +532,7 @@ export default function GradientGeneratorPage() {
                        >
                          {c.hex.replace('#', '# ')}
                        </button>
-
+ 
                        {/* Minus Delete Button */}
                        <button
                          onClick={() => deleteColor(c.id)}
@@ -533,7 +544,7 @@ export default function GradientGeneratorPage() {
                          −
                        </button>
                      </div>
-
+ 
                     {/* Color Picker Popup */}
                      {openColorPickerId === c.id && (
                        <div className="absolute z-50 left-12 bottom-full mb-2 p-3 bg-card border border-border rounded-md shadow-2xl w-[220px]">
@@ -563,10 +574,10 @@ export default function GradientGeneratorPage() {
                </div>
             </div>
           </div>
-
-
+ 
+ 
           {/* RIGHT: Output & Previews Panel */}
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in-right delay-200">
             
             {/* Output Segment */}
             <div className="space-y-4">
@@ -610,22 +621,53 @@ export default function GradientGeneratorPage() {
                 {/* Custom Font Selector for Java Preview */}
                  <div className="flex items-center gap-3 bg-muted pr-1 pl-4 py-1 rounded-md border border-border">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ฟอนต์</span>
-                    <div className="relative border-l border-border pl-2">
-                      <select 
-                        title="Java Font" 
-                        value={javaFont} 
-                        onChange={e => setJavaFont(e.target.value)}
-                        className="appearance-none bg-card hover:bg-card-hover border border-border text-sm text-foreground font-medium px-4 py-1.5 pr-8 rounded cursor-pointer outline-none w-[140px] transition-colors focus:border-foreground"
-                      >
-                        {fonts?.families.map(f => (
-                          <option key={f} value={f} className="bg-card text-foreground py-1" style={{ fontFamily: f }}>{f}</option>
-                        ))}
-                        <option value="inherit" className="bg-card text-muted-foreground">System Default</option>
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                    <div className="relative border-l border-border pl-2" ref={javaDropdownRef}>
+                      <div className="custom-dropdown min-w-[150px]">
+                        <button 
+                          type="button"
+                          className={`dropdown-trigger ${isJavaDropdownOpen ? 'active' : ''}`}
+                          onClick={() => setIsJavaDropdownOpen(!isJavaDropdownOpen)}
+                          style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', minHeight: '34px' }}
+                        >
+                          <span style={{ fontFamily: javaFont === 'inherit' ? 'inherit' : javaFont }}>
+                            {javaFont === 'inherit' ? 'System Default' : javaFont}
+                          </span>
+                          <div className="dropdown-arrow">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                        </button>
+                        
+                        <div className={`dropdown-menu ${isJavaDropdownOpen ? 'open' : ''}`} style={{ width: '180px', right: 0, left: 'auto' }}>
+                          <button
+                            type="button"
+                            className={`dropdown-item ${javaFont === 'inherit' ? 'selected' : ''}`}
+                            onClick={() => {
+                              setJavaFont('inherit');
+                              setIsJavaDropdownOpen(false);
+                            }}
+                          >
+                            <span>System Default</span>
+                            <div className="item-check">✓</div>
+                          </button>
+                          
+                          {fonts?.families.map((f) => (
+                            <button
+                              key={f}
+                              type="button"
+                              className={`dropdown-item ${javaFont === f ? 'selected' : ''}`}
+                              onClick={() => {
+                                setJavaFont(f);
+                                setIsJavaDropdownOpen(false);
+                              }}
+                              style={{ fontFamily: f }}
+                            >
+                              <span>{f}</span>
+                              <div className="item-check">✓</div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -636,7 +678,7 @@ export default function GradientGeneratorPage() {
                  </span>
               </div>
             </div>
-
+ 
             {/* Bedrock Edition Preview Segment */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -646,22 +688,53 @@ export default function GradientGeneratorPage() {
                 {/* Custom Font Selector for Bedrock Preview */}
                  <div className="flex items-center gap-3 bg-muted pr-1 pl-4 py-1 rounded-md border border-border">
                     <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">ฟอนต์</span>
-                    <div className="relative border-l border-border pl-2">
-                      <select 
-                        title="Bedrock Font" 
-                        value={bedrockFont} 
-                        onChange={e => setBedrockFont(e.target.value)}
-                        className="appearance-none bg-card hover:bg-card-hover border border-border text-sm text-foreground font-medium px-4 py-1.5 pr-8 rounded cursor-pointer outline-none w-[140px] transition-colors focus:border-foreground"
-                      >
-                        {fonts?.families.map(f => (
-                          <option key={f} value={f} className="bg-card text-foreground py-1" style={{ fontFamily: f }}>{f}</option>
-                        ))}
-                        <option value="inherit" className="bg-card text-muted-foreground">System Default</option>
-                      </select>
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground">
-                        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
+                    <div className="relative border-l border-border pl-2" ref={bedrockDropdownRef}>
+                      <div className="custom-dropdown min-w-[150px]">
+                        <button 
+                          type="button"
+                          className={`dropdown-trigger ${isBedrockDropdownOpen ? 'active' : ''}`}
+                          onClick={() => setIsBedrockDropdownOpen(!isBedrockDropdownOpen)}
+                          style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', minHeight: '34px' }}
+                        >
+                          <span style={{ fontFamily: bedrockFont === 'inherit' ? 'inherit' : bedrockFont }}>
+                            {bedrockFont === 'inherit' ? 'System Default' : bedrockFont}
+                          </span>
+                          <div className="dropdown-arrow">
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          </div>
+                        </button>
+                        
+                        <div className={`dropdown-menu ${isBedrockDropdownOpen ? 'open' : ''}`} style={{ width: '180px', right: 0, left: 'auto' }}>
+                          <button
+                            type="button"
+                            className={`dropdown-item ${bedrockFont === 'inherit' ? 'selected' : ''}`}
+                            onClick={() => {
+                              setBedrockFont('inherit');
+                              setIsBedrockDropdownOpen(false);
+                            }}
+                          >
+                            <span>System Default</span>
+                            <div className="item-check">✓</div>
+                          </button>
+                          
+                          {fonts?.families.map((f) => (
+                            <button
+                              key={f}
+                              type="button"
+                              className={`dropdown-item ${bedrockFont === f ? 'selected' : ''}`}
+                              onClick={() => {
+                                setBedrockFont(f);
+                                setIsBedrockDropdownOpen(false);
+                              }}
+                              style={{ fontFamily: f }}
+                            >
+                              <span>{f}</span>
+                              <div className="item-check">✓</div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>

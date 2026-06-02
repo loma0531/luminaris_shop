@@ -243,7 +243,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       {/* Page Header - Simple without box */}
-      <div className="profile-header-title">
+      <div className="profile-header-title animate-fade-in-down">
         <UserIcon size={22} />
         <h1>โปรไฟล์ผู้เล่น</h1>
       </div>
@@ -251,7 +251,7 @@ export default function ProfilePage() {
       {/* Main Content */}
       <div className="profile-main-grid">
         {/* Left - 3D Model */}
-        <div className="profile-3d-section">
+        <div className="profile-3d-section animate-scale-in">
           <div className="model-card">
             <div className="model-header">
               <SparklesIcon size={18} />
@@ -267,7 +267,7 @@ export default function ProfilePage() {
         {/* Right - Info Cards */}
         <div className="profile-info-section">
           {/* Profile Card */}
-          <div className="info-card profile-card-main">
+          <div className="info-card profile-card-main animate-scale-in-bounce delay-100">
             <div className="profile-identity">
               <div className="avatar-wrapper">
                 <Image
@@ -302,7 +302,7 @@ export default function ProfilePage() {
           </div>
 
           {/* UUID Card */}
-          <div className="info-card">
+          <div className="info-card animate-fade-in-right delay-200">
             <div className="info-card-header">
               <div className="info-label">
                 <LockIcon size={16} />
@@ -326,7 +326,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Activity Card */}
-          <div className="info-card activity-card">
+          <div className="info-card activity-card animate-fade-in-right delay-300">
             <div className="activity-header">
               <ClockIcon size={18} />
               <span>ข้อมูลการเล่น</span>

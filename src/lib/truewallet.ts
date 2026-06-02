@@ -72,7 +72,6 @@ export async function redeemTruewalletVoucher(
 
   try {
     // ใช้ require แทน dynamic import เพื่อหลีกเลี่ยงปัญหา Turbopack
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Melodyshop_Voucher } = require('melody191-fetcher');
     
     // ใช้ melody191-fetcher สำหรับ redeem

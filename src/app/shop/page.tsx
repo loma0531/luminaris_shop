@@ -337,13 +337,13 @@ export default function ShopPage() {
         }
       `}</style>
       
-      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+      <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2 animate-fade-in-down">
         <PackageIcon size={24} />
         สินค้าทั้งหมด
       </h1>
 
       {/* Custom Category Filter Dropdown */}
-      <div className="category-filter-wrapper">
+      <div className="category-filter-wrapper animate-fade-in-left delay-100">
         <div className="filter-label">
           <TagIcon size={18} />
           <span>หมวดหมู่:</span>
@@ -403,7 +403,7 @@ export default function ShopPage() {
           ))}
         </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state animate-scale-in">
           <PackageIcon size={48} className="mb-4 opacity-50" />
           <p>ยังไม่มีสินค้าในหมวดหมู่นี้</p>
         </div>
@@ -413,8 +413,17 @@ export default function ShopPage() {
             const onSale = isProductOnSale(product)
             const activePrice = getProductActivePrice(product)
             
+            // Calculate staggered delays for the first few items
+            const delayClass = 
+              index === 0 ? 'delay-50' : 
+              index === 1 ? 'delay-100' : 
+              index === 2 ? 'delay-150' : 
+              index === 3 ? 'delay-200' : 
+              index === 4 ? 'delay-250' : 
+              index === 5 ? 'delay-300' : 'delay-350'
+            
             return (
-              <div key={product.id} className="product-card">
+              <div key={product.id} className={`product-card animate-scale-in ${delayClass}`}>
                 <div className="product-image">
                   <ProductImage src={product.image} alt={product.name} priority={index < 4} />
                   <span className="category-badge">{product.category?.name}</span>
@@ -461,11 +470,11 @@ export default function ShopPage() {
       {/* Custom Input Modal */}
       {showInputModal && pendingProduct && (
         <div 
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4"
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 animate-fade-in"
           onClick={() => !isCartSaving && setShowInputModal(false)}
         >
           <div 
-            className="card max-w-[500px] w-full p-6"
+            className="card max-w-[500px] w-full p-6 animate-scale-in-bounce"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="mb-4 text-xl font-semibold">
