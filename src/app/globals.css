@@ -380,7 +380,7 @@ a:focus-visible {
   width: 100%;
   padding: 0.75rem 1rem;
   font-size: 0.9375rem;
-  background: var(--card);
+  background: rgba(20, 20, 35, 0.85);
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--foreground);
@@ -390,6 +390,10 @@ a:focus-visible {
   transition: all 0.25s ease;
 }
 
+html[data-theme="light"] .input {
+  background: rgba(255, 255, 255, 0.9);
+}
+
 .input::placeholder {
   color: var(--muted-foreground);
 }
@@ -397,7 +401,11 @@ a:focus-visible {
 .input:focus {
   border-color: var(--foreground);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
-  background: var(--card-hover);
+  background: rgba(20, 20, 35, 0.95);
+}
+
+html[data-theme="light"] .input:focus {
+  background: rgba(255, 255, 255, 0.98);
 }
 
 /* Custom Select Dropdown Styling */

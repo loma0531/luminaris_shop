@@ -481,7 +481,7 @@ export default function ShopPage() {
           onClick={() => !isCartSaving && setShowInputModal(false)}
         >
           <div 
-            className="card max-w-[500px] w-full p-6 animate-scale-in-bounce"
+            className="modal max-w-[500px] w-full p-6 animate-scale-in-bounce"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="mb-4 text-xl font-semibold">
