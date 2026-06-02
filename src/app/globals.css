@@ -40,7 +40,7 @@
   --sidebar-profile-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.05) 100%);
   --sidebar-profile-border: rgba(255, 255, 255, 0.12);
   /* Navbar — exact same frosted glass as sidebar */
-  --navbar-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.04) 100%);
+  --navbar-bg: linear-gradient(180deg, rgba(18, 18, 34, 0.5) 0%, rgba(18, 18, 34, 0.3) 100%);
   --navbar-scrolled-bg: rgba(18, 18, 34, 0.92);
   --navbar-border: rgba(255, 255, 255, 0.10);
   --navbar-btn-bg: rgba(255, 255, 255, 0.08);
@@ -2105,11 +2105,12 @@ html[data-theme="light"] .login-modal {
   padding: 0 1rem;
   z-index: 100;
   box-shadow: 0 1px 20px rgba(0,0,0, calc(var(--shadow-opacity) * 0.6));
-  transition: backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, box-shadow 0.3s ease;
+  transition: background-color 0.3s ease, background 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Scrolled state — increase blur, do NOT change background color */
+/* Scrolled state — increase blur and use scrolled background color to blur content behind */
 .shop-top-header.scrolled {
+  background: var(--navbar-scrolled-bg);
   backdrop-filter: blur(48px);
   -webkit-backdrop-filter: blur(48px);
   box-shadow: 0 4px 32px rgba(0,0,0, calc(var(--shadow-opacity) * 1.4));
