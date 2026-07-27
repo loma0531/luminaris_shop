@@ -516,9 +516,15 @@ export const logger = {
 
 // Helper to get client IP from request
 export function getClientIP(headers: Headers): string {
+  // ถ้าอยู่หลัง Cloudflare → ใช้ cf-connecting-ip (เชื่อถือได้มากที่สุด)
+  const cfConnecting = headers.get('cf-connecting-ip')
+  if (cfConnecting) return cfConnecting.trim()
+
   const forwarded = headers.get('x-forwarded-for')
   if (forwarded) {
-    return forwarded.split(',')[0].trim()
+    // H2 Fix: ใช้ rightmost IP (สุดท้าย) แทน leftmost เพื่อป้องกัน IP spoofing
+    const parts = forwarded.split(',')
+    return parts[parts.length - 1].trim()
   }
   
   const realIP = headers.get('x-real-ip')

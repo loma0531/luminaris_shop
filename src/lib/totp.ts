@@ -62,6 +62,8 @@ export function generateTOTP(secretBase32: string, timeStep = 30, digits = 6, ti
 
 /**
  * Verifies a TOTP code
+ * หมายเหตุ: ฟังก์ชันนี้ไม่มี Replay Protection — ใช้สำหรับ test หรือ internal ที่เรียกต่อเนื่อง
+ * สำหรับ production ให้ใช้ verifyTOTPWithReplayProtection แทน
  */
 export function verifyTOTP(token: string, secretBase32: string, window = 1): boolean {
   // Clear any spaces
@@ -83,6 +85,58 @@ export function verifyTOTP(token: string, secretBase32: string, window = 1): boo
   }
 
   return false
+}
+
+/**
+ * Verify TOTP พร้อม Replay Protection ผ่าน Redis
+ * บันทึก token ที่ใช้แล้วลง Redis (TTL 90 วินาที) เพื่อป้องกันการนำกลับมาใช้ซ้ำ
+ * 
+ * @param token - 6-digit TOTP code
+ * @param secretBase32 - Base32 secret
+ * @param sessionKey - Unique key สำหรับแยก session เช่น email หรือ userId
+ * @returns { valid: boolean, error?: string }
+ */
+export async function verifyTOTPWithReplayProtection(
+  token: string,
+  secretBase32: string,
+  sessionKey: string
+): Promise<{ valid: boolean; error?: string }> {
+  // Clear any spaces
+  const cleanToken = token.replace(/\s+/g, '')
+  if (cleanToken.length !== 6 || isNaN(Number(cleanToken))) {
+    return { valid: false, error: 'รูปแบบรหัส TOTP ไม่ถูกต้อง' }
+  }
+
+  // ตรวจสอบ TOTP window ก่อน
+  if (!verifyTOTP(cleanToken, secretBase32)) {
+    return { valid: false, error: 'รหัส TOTP ไม่ถูกต้องหรือหมดอายุ' }
+  }
+
+  // Replay Protection ด้วย Redis
+  // TTL = 90 วินาที (3x time step) ครอบคลุม window ±1 ของโค้ดนี้
+  const REPLAY_TTL_SECONDS = 90
+  const replayKey = `totp:used:${sessionKey}:${cleanToken}`
+
+  try {
+    const { getCache } = await import('@/lib/cache/index')
+    const cache = getCache()
+
+    // ตรวจสอบว่า token นี้เคยถูกใช้ไปแล้วหรือยัง
+    const alreadyUsed = await cache.get<string>(replayKey)
+    if (alreadyUsed) {
+      return { valid: false, error: 'รหัส TOTP นี้ถูกใช้งานไปแล้ว กรุณารอ token ใหม่' }
+    }
+
+    // Mark token ว่าถูกใช้แล้ว (atomic SET)
+    await cache.set(replayKey, '1', REPLAY_TTL_SECONDS)
+
+    return { valid: true }
+  } catch (error) {
+    // Fail-open: ถ้า Redis ไม่พร้อม ยังอนุญาตแต่ log ไว้
+    // ในระบบ production ควรเปลี่ยนเป็น fail-secure ถ้าต้องการ strict
+    console.warn(`[TOTP] Replay protection cache error (fail-open): ${error}`)
+    return { valid: true }
+  }
 }
 
 /**

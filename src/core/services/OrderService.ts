@@ -174,9 +174,10 @@ export class OrderService {
       }
     }
 
-    // อัปเดตสถานะ Payment + Order + User atomically
-    await prisma.$transaction([
-      prisma.payment.update({
+    // C4 Fix: ใช้ Interactive Transaction (async callback form) แทน static array
+    // เพื่อให้ atomic จริงใน MongoDB multi-document operations
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { paymentId },
         data: {
           status: 'VERIFIED',
@@ -184,20 +185,20 @@ export class OrderService {
           stripePaymentIntentId: paymentRef || null,
           verifiedAt: new Date(),
         },
-      }),
-      prisma.order.update({
+      })
+      await tx.order.update({
         where: { orderId },
         data: { status: 'COMPLETED' },
-      }),
-      prisma.user.upsert({
+      })
+      await tx.user.upsert({
         where: { minecraftName: order.minecraftName },
         update: { totalSpent: { increment: order.total } },
         create: {
           minecraftName: order.minecraftName,
           totalSpent: order.total,
         },
-      }),
-    ])
+      })
+    })
 
     logger.payment.statusChanged(paymentId, 'PENDING', 'VERIFIED')
     logger.order.statusChanged(
@@ -265,16 +266,17 @@ export class OrderService {
     const order = await prisma.order.findUnique({ where: { orderId } })
     if (!order) throw new Error(`Order #${orderId} not found`)
 
-    await prisma.$transaction([
-      prisma.order.update({
+    // C4 Fix: ใช้ Interactive Transaction form
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
         where: { orderId },
         data: { status: 'CANCELLED' },
-      }),
-      prisma.payment.updateMany({
+      })
+      await tx.payment.updateMany({
         where: { id: order.paymentId || undefined },
         data: { status: 'REJECTED' },
-      }),
-    ])
+      })
+    })
 
     logger.order.statusChanged(
       orderId,

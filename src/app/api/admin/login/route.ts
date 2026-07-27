@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { generateAdminToken } from '@/lib/adminAuth'
-import { verifyTOTP } from '@/lib/totp'
+import { verifyTOTPWithReplayProtection } from '@/lib/totp'
 import { logger, createTimer, getClientIP } from '@/lib/logger'
 import { RATE_LIMIT } from '@/lib/rateLimitConfig'
 
@@ -72,8 +72,14 @@ export async function POST(request: NextRequest) {
     
     let isTokenValid = false
     if (adminUser.twoFactorSecret) {
-      // Verify using Google Authenticator TOTP 2FA
-      isTokenValid = verifyTOTP(token, adminUser.twoFactorSecret)
+      // C2 Fix: ใช้ verifyTOTPWithReplayProtection เพื่อป้องกัน Replay Attack
+      // sessionKey ใช้ email เพื่อแยก token space ของแต่ละ admin
+      const totpResult = await verifyTOTPWithReplayProtection(token, adminUser.twoFactorSecret, adminUser.email)
+      isTokenValid = totpResult.valid
+      if (!totpResult.valid && totpResult.error?.includes('ถูกใช้งานไปแล้ว')) {
+        // Log replay attempt แยกจาก wrong password
+        logger.security.suspiciousActivity(`TOTP replay attempt for admin: ${adminUser.email}`, ip)
+      }
     } else if (adminUser.tokenHash) {
       // Fallback to legacy static token
       isTokenValid = await bcrypt.compare(token, adminUser.tokenHash)

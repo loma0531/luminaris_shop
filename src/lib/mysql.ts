@@ -36,6 +36,13 @@ function getPool(): Pool {
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
     })
+
+    // M2 Fix: เพิ่ม Pool Error Handler เพื่อไม่ให้ error หายไปโดยไม่มี log
+    // (unhandled pool error อาจทำให้ process crash ใน Node.js)
+    // mysql2/promise Pool ไม่ expose EventEmitter โดยตรงใน types → cast ผ่าน unknown
+    ;(pool as unknown as NodeJS.EventEmitter).on('error', (err: Error) => {
+      logger.system.error(`MySQL pool error: ${err.message}`)
+    })
   }
   return pool
 }
@@ -144,12 +151,22 @@ export async function getPlayerProfile(username: string): Promise<PlayerProfile 
   try {
     const connection = await getPool().getConnection()
     try {
-      // Query CMI_users for DisplayName, Balance, player_uuid, login times, play time
-      const [userRows] = await connection.execute(
-        `SELECT DisplayName, Balance, player_uuid, LastLoginTime, LastlogoffTime, TotalPlayTime 
-         FROM CMI_users WHERE LOWER(username) = LOWER(?)`,
-        [username]
-      )
+      // M1 Fix: Run ทั้ง 2 queries แบบ parallel ด้วย Promise.all
+      // เนื่องจากทั้งสองไม่ขึ้นกัน สามารถ execute พร้อมกันได้
+      const [[userRows], [jobRows]] = await Promise.all([
+        connection.execute(
+          `SELECT DisplayName, Balance, player_uuid, LastLoginTime, LastlogoffTime, TotalPlayTime 
+           FROM CMI_users WHERE LOWER(username) = LOWER(?)`,
+          [username]
+        ) as Promise<[{ DisplayName: string | null; Balance: number; player_uuid: string | null; LastLoginTime: number | null; LastlogoffTime: number | null; TotalPlayTime: number | null }[], unknown]>,
+        connection.execute(
+          `SELECT j.job 
+           FROM jobs_users u 
+           JOIN jobs_jobs j ON u.id = j.id 
+           WHERE LOWER(u.username) = LOWER(?)`,
+          [username]
+        ) as Promise<[{ job: string }[], unknown]>,
+      ])
       
       const userResults = userRows as { 
         DisplayName: string | null
@@ -165,16 +182,6 @@ export async function getPlayerProfile(username: string): Promise<PlayerProfile 
       }
       
       const userData = userResults[0]
-      
-      // Query jobs - join jobs_users and jobs_jobs
-      const [jobRows] = await connection.execute(
-        `SELECT j.job 
-         FROM jobs_users u 
-         JOIN jobs_jobs j ON u.id = j.id 
-         WHERE LOWER(u.username) = LOWER(?)`,
-        [username]
-      )
-      
       const jobResults = jobRows as { job: string }[]
       const jobs = jobResults.map(row => row.job)
       

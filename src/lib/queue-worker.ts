@@ -18,6 +18,7 @@ interface ProcessResult {
 
 /**
  * Process pending commands in the queue
+ * M3: ใช้ Redis distributed lock เพื่อป้องกัน double-processing เมื่อรัน cron หลาย instance
  */
 export async function processCommandQueue(): Promise<ProcessResult> {
   const result: ProcessResult = {
@@ -25,6 +26,33 @@ export async function processCommandQueue(): Promise<ProcessResult> {
     succeeded: 0,
     failed: 0,
     skipped: 0
+  }
+
+  // M3 Fix: Distributed Lock ผ่าน Redis
+  // ป้องกันกรณีที่ cron หลาย instance รันพร้อมกันและ process ซ้ำ
+  const LOCK_KEY = 'lock:queue-worker'
+  const LOCK_TTL_SECONDS = 60 // lock หมดอายุ 60 วินาที (กัน deadlock)
+  let lockAcquired = false
+
+  try {
+    const { getCache } = await import('@/lib/cache/index')
+    const { RedisCacheAdapter } = await import('@/lib/cache/RedisCacheAdapter')
+    const cache = getCache()
+
+    if (cache instanceof RedisCacheAdapter && await cache.isHealthy()) {
+      const client = cache.getRawClient()
+      // SET NX EX — atomic: ตั้งค่าถ้ายังไม่มี key นี้ พร้อม TTL
+      const acquired = await client.set(LOCK_KEY, '1', 'EX', LOCK_TTL_SECONDS, 'NX')
+      if (!acquired) {
+        // Instance อื่นกำลัง process อยู่ → skip
+        logger.debug('Queue worker: Lock not acquired, another instance is running', 200)
+        return result
+      }
+      lockAcquired = true
+    }
+    // ถ้าไม่มี Redis → fail-open (ยอมให้ process ต่อ แต่อาจ double-process ได้)
+  } catch (lockErr) {
+    logger.warn(`Queue worker: Could not acquire distributed lock (fail-open): ${lockErr}`, 200)
   }
 
   try {
@@ -147,6 +175,21 @@ export async function processCommandQueue(): Promise<ProcessResult> {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.error(`Queue worker: Fatal error: ${errorMessage}`, 500)
     throw error
+  } finally {
+    // M3: Release lock เมื่อ process เสร็จ (ไม่ว่าจะ success หรือ error)
+    // ทำให้ instance ถัดไปสามารถ acquire lock ได้ทันที แทนที่จะรอ TTL หมด
+    if (lockAcquired) {
+      try {
+        const { getCache } = await import('@/lib/cache/index')
+        const { RedisCacheAdapter } = await import('@/lib/cache/RedisCacheAdapter')
+        const cache = getCache()
+        if (cache instanceof RedisCacheAdapter) {
+          await cache.getRawClient().del('lock:queue-worker')
+        }
+      } catch {
+        // ignore — lock จะหมดอายุเองตาม TTL
+      }
+    }
   }
 }
 

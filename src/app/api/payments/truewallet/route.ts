@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { redeemTruewalletVoucher } from '@/lib/truewallet'
 import { shopConfig } from '@/lib/config'
-import { giveItemsToPlayer } from '@/lib/rcon'
 import { isValidMinecraftName } from '@/lib/inputValidation'
 import { logger, createTimer } from '@/lib/logger'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { OrderItem } from '@/lib/types'
-import { sendTruewalletLog } from '@/lib/webhook'
-import { replaceCustomInput } from '@/lib/inputValidation'
+import { sendTruewalletLog, sendSecurityAlert } from '@/lib/webhook'
+// H1 Fix: ใช้ FulfillmentService แทนการ copy โค้ด RCON ซ้ำ
+import { FulfillmentService } from '@/core/services/FulfillmentService'
+import type { OrderItemForDelivery } from '@/core/services/FulfillmentService'
 
 /**
  * POST /api/payments/truewallet
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // ATOMIC LOCK: ป้องกัน Race Condition (CRIT-5) โดยการเปลี่ยนสถานะก่อนทำงาน
+    // ATOMIC LOCK: ป้องกัน Race Condition โดยการเปลี่ยนสถานะก่อนทำงาน
     const lockedPayment = await prisma.payment.updateMany({
       where: { paymentId, status: 'PENDING' },
       data: { status: 'VERIFIED', paymentMethod: 'truewallet_processing' }
@@ -139,17 +140,25 @@ export async function POST(request: NextRequest) {
         data: { status: 'PENDING', paymentMethod: null }
       });
 
+      // M7 Fix: ส่ง Security Alert ไปยัง Discord เมื่อยอดเงินไม่ตรง
+      sendSecurityAlert('AMOUNT_MISMATCH', {
+        orderId,
+        minecraftName,
+        message: `ยอดเงินในซองไม่เพียงพอ — ต้องการ ${order.total}฿ แต่ได้รับ ${voucherAmount}฿`,
+        transRef: redeemResult.code,
+      }).catch(() => {}) // fire-and-forget
+
       return NextResponse.json({ 
         success: false, 
         error: `จำนวนเงินในซองไม่เพียงพอ (ต้องการ ${order.total} บาท, ได้รับ ${voucherAmount} บาท)` 
       }, { status: 400 })
     }
 
-    // Update payment and order status
+    // Update payment and order status (C4-related: ใช้ interactive transaction)
     const transRef = `TW-${redeemResult.code || Date.now()}`
     
-    await prisma.$transaction([
-      prisma.payment.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { paymentId },
         data: { 
           status: 'VERIFIED', 
@@ -157,16 +166,18 @@ export async function POST(request: NextRequest) {
           stripePaymentIntentId: transRef, 
           verifiedAt: new Date() 
         },
-      }),
-      prisma.order.update({ 
+      })
+      await tx.order.update({ 
         where: { orderId }, 
         data: { status: 'COMPLETED' } 
-      }),
-      prisma.user.update({
-        where: { minecraftName },
-        data: { totalSpent: { increment: order.total } }
       })
-    ])
+      // C3 Fix: เปลี่ยนจาก update → upsert เผื่อ user ยังไม่มีใน DB
+      await tx.user.upsert({
+        where: { minecraftName },
+        update: { totalSpent: { increment: order.total } },
+        create: { minecraftName, totalSpent: order.total },
+      })
+    })
 
     logger.payment.slipVerified(paymentId, minecraftName, voucherAmount)
     logger.order.statusChanged(orderId, 'AWAITING_PAYMENT', 'COMPLETED', minecraftName)
@@ -184,7 +195,7 @@ export async function POST(request: NextRequest) {
       status: 'SUCCESS',
     })
 
-    // Update sold counts
+    // Update sold counts (non-critical)
     try {
       await prisma.$transaction(
         order.items.map((item: { productId: string; quantity: number }) => 
@@ -198,81 +209,13 @@ export async function POST(request: NextRequest) {
       logger.warn('Failed to update some product sold counts', 500)
     }
 
-    // Execute RCON commands
-    const orderItems = order.items as OrderItem[]
-    const itemsWithCommands = orderItems.filter((item) => item.commands && item.commands.length > 0)
-    
-    const allCommandsToExecute: string[] = []
-
-    for (const item of itemsWithCommands) {
-      for (let i = 0; i < item.quantity; i++) {
-        for (const cmd of item.commands) {
-          const processedCmd = item.customInput 
-            ? replaceCustomInput(cmd, item.customInput)
-            : cmd
-          allCommandsToExecute.push(processedCmd)
-        }
-      }
-    }
-
-    let deliverySuccess = true
-    
-    if (allCommandsToExecute.length > 0) {
-      try {
-        const result = await giveItemsToPlayer(order.minecraftName, allCommandsToExecute)
-        
-        if (result.success) {
-          await prisma.order.update({
-            where: { orderId },
-            data: { isDelivered: true }
-          })
-        } else {
-          deliverySuccess = false
-          // Queue for retry
-          await Promise.all(allCommandsToExecute.map((cmd: string) => 
-            prisma.commandQueue.create({
-              data: {
-                command: cmd,
-                minecraftName: order.minecraftName,
-                orderId: order.id,
-                status: 'PENDING',
-                lastError: result.results.join('; ').substring(0, 500)
-              }
-            })
-          ))
-          
-          await prisma.order.update({
-            where: { orderId },
-            data: { deliveryAttempts: { increment: 1 } }
-          })
-        }
-      } catch (e) {
-        deliverySuccess = false
-        const err = e instanceof Error ? e.message : String(e)
-        
-        await Promise.all(allCommandsToExecute.map((cmd: string) => 
-          prisma.commandQueue.create({
-            data: {
-              command: cmd,
-              minecraftName: order.minecraftName,
-              orderId: order.id,
-              status: 'PENDING',
-              lastError: err.substring(0, 500)
-            }
-          })
-        ))
-        
-        await prisma.order.update({
-          where: { orderId },
-          data: { deliveryAttempts: { increment: 1 } }
-        })
-      }
-    } else {
-      await prisma.order.update({
-        where: { orderId },
-        data: { isDelivered: true }
-      })
-    }
+    // H1 Fix: ใช้ FulfillmentService แทนการเขียน RCON logic ซ้ำ
+    const fulfillment = await FulfillmentService.fulfillOrder(
+      orderId,
+      order.id,
+      order.minecraftName,
+      order.items as OrderItemForDelivery[]
+    )
 
     return NextResponse.json({
       success: true,
@@ -282,10 +225,8 @@ export async function POST(request: NextRequest) {
       ownerFullName: redeemResult.ownerFullName,
       status: 'COMPLETED',
       delivery: {
-        status: deliverySuccess ? 'SUCCESS' : 'QUEUED',
-        message: deliverySuccess 
-          ? 'ส่งไอเทมเรียบร้อยแล้ว' 
-          : 'ไอเทมจะถูกส่งเมื่อคุณออนไลน์'
+        status: fulfillment.status === 'SUCCESS' ? 'SUCCESS' : 'QUEUED',
+        message: fulfillment.message,
       }
     })
   } catch (error) {

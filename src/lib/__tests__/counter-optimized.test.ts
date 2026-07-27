@@ -91,7 +91,7 @@ describe('Optimized Sequence Generator (getNextSequence)', () => {
     expect(prisma.counter.findUnique).toHaveBeenCalledWith({
       where: { name: 'order_id' }
     })
-    expect(mockRedisClient.set).toHaveBeenCalledWith('sequence:order_id', '500')
+    expect(mockRedisClient.set).toHaveBeenCalledWith('sequence:order_id', '500', 'NX')
     expect(mockRedisClient.incr).toHaveBeenCalledWith('sequence:order_id')
   })
 

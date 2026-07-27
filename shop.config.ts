@@ -23,11 +23,13 @@ export const shopConfig = {
   // ------------------------------------------
   security: {
     // ความยาวสูงสุดของข้อความ Custom Input ที่ผู้เล่นกรอกได้
-    maxCustomInputLength: 1000,
+    // M5 Fix: ลดลงจาก 1000 เป็น 64 ตัวอักษร (เพียงพอสำหรับ โค้ดสี, ชื่อ, หรือ custom input ทั่วไป)
+    maxCustomInputLength: 64,
     
     // คำสั่งที่ห้ามรันผ่านระบบร้านค้าเด็ดขาด (ใช้ Regular Expression)
     // จะป้องกันไม่ให้ผู้เล่นใช้ช่องโหว่รันคำสั่งเหล่านี้ได้
     dangerousCommandPatterns: [
+      // Server management
       '^op\\s+',
       '^deop\\s+',
       '^stop$',
@@ -36,7 +38,15 @@ export const shopConfig = {
       '^whitelist\\s+',
       '^kick\\s+',
       '^gamemode\\s+',
-      '^tp\\s+'
+      '^tp\\s+',
+      // M4 Fix: เพิ่ม patterns ที่ขาดไป
+      '^execute\\s+',           // รันคำสั่งแทนผู้เล่นสามารถทำอะไรก็ได้
+      '^fill\\s+',              // เปลี่ยนบล็อกจำนวนมากในเเปปทำให้ lag
+      '^summon\\s+',            // สร้างมอบหรือ entity จำนวนมาก
+      '^worldborder\\s+',       // เปลี่ยน world border
+      '^say\\s+',               // ส่งข้อความในนาม server (อาจใช้สำหรับ social engineering)
+      '^tellraw\\s+',           // ส่ง JSON message ที่ดูเหมือน system message
+      '^title\\s+',             // แสดงข้อความอันตรายบนหน้าจอผู้เล่น
     ]
   },
 

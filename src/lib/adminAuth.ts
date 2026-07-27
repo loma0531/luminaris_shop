@@ -130,6 +130,7 @@ export function extractTokenFromRequest(request: NextRequest): string | null {
 
 /**
  * Middleware helper to verify admin authentication
+ * ใช้ verifyAdminTokenAsync เพื่อตรวจสอบ Redis token revocation ด้วย (Fail-Secure)
  * Returns null if authenticated, or an error response if not
  */
 export async function requireAdminAuth(request: NextRequest): Promise<NextResponse | null> {
@@ -142,7 +143,8 @@ export async function requireAdminAuth(request: NextRequest): Promise<NextRespon
     )
   }
 
-  const verification = await verifyAdminToken(token)
+  // C1 Fix: ใช้ Async version ที่ตรวจ Redis revocation ด้วย (ไม่ใช่แค่ signature)
+  const verification = await verifyAdminTokenAsync(token)
   
   if (!verification.valid) {
     return NextResponse.json(

@@ -16,22 +16,19 @@ export async function getNextSequence(counterName: string): Promise<number> {
         const client = cache.getRawClient()
         const redisKey = `sequence:${counterName}`
 
-        // ตรวจสอบว่าคีย์นี้มีใน Redis หรือยัง (Lazy initialization)
-        const exists = await client.exists(redisKey)
-        if (!exists) {
-          const mongoCounter = await prisma.counter.findUnique({
-            where: { name: counterName }
-          })
-          const startVal = mongoCounter ? mongoCounter.seq : 0
-          // ตั้งค่าเริ่มต้นใน Redis (เช่น 0 หากเพิ่งเริ่ม)
-          await client.set(redisKey, startVal.toString())
-        }
+        // H5 Fix: ใช้ SET NX (atomic set-if-not-exists) แทนลำดับ exists → set
+        // เพื่อป้องกัน TOCTOU race condition เมื่อมีหลาย requests พร้อมกัน
+        const mongoCounter = await prisma.counter.findUnique({
+          where: { name: counterName }
+        })
+        const startVal = mongoCounter ? mongoCounter.seq : 0
+        // SET key value NX — ตั้งค่าเฉพาะเมื่อยังไม่มี key นี้ใน Redis (atomic)
+        await client.set(redisKey, startVal.toString(), 'NX')
 
         // เพิ่มค่าแบบ Atomic และรับค่าถัดไป
         const nextVal = await client.incr(redisKey)
 
-        // ทำการซิงค์ค่ากลับไปยัง MongoDB Counter แบบ Asynchronous (Fire-and-Forget) เป็น Backup
-        // วิธีนี้จะลดโหลดและไม่ดึงเวลาการรันงานหลัก (Response Time)
+        // Sync กลับ MongoDB แบบ Async (Fire-and-Forget) เป็น Backup
         prisma.counter.upsert({
           where: { name: counterName },
           update: { seq: nextVal },

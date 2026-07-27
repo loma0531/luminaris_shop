@@ -98,12 +98,19 @@ function checkRateLimitInMemory(ip: string, pathname: string): { allowed: boolea
 }
 
 function getClientIP(request: NextRequest): string {
-  // If behind Cloudflare or trusted proxy, use that header safely. 
+  // ถ้าอยู่หลัง Cloudflare → ใช้ cf-connecting-ip (เชื่อถือได้มากที่สุด)
   const cfConnecting = request.headers.get('cf-connecting-ip')
   if (cfConnecting) return cfConnecting.trim()
+
   const forwarded = request.headers.get('x-forwarded-for')
-  // Warning: x-forwarded-for can be spoofed, take the right-most (closest proxy) or just take the first if trusted
-  if (forwarded) return forwarded.split(',')[0].trim()
+  if (forwarded) {
+    // H2 Fix: ใช้ rightmost IP (สุดท้าย) แทน leftmost
+    // Rightmost คือ IP ที่ proxy ที่เราเชื่อถือได้เพิ่มเข้ามา
+    // Leftmost อาจถูก client ปลอมแปลงได้ผ่าน X-Forwarded-For header
+    const parts = forwarded.split(',')
+    return parts[parts.length - 1].trim()
+  }
+
   const realIP = request.headers.get('x-real-ip')
   if (realIP) return realIP.trim()
   return 'unknown'

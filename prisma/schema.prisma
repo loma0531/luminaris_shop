@@ -189,6 +189,12 @@ model CommandQueue {
   lastError     String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  // H4 Fix: เพิ่ม indexes สำหรับ Queue Worker queries
+  @@index([status, retryCount])      // สำหรับ findMany WHERE status=PENDING AND retryCount<5
+  @@index([orderId, status])         // สำหรับ retry lookup ตาม order
+  @@index([minecraftName, status])   // สำหรับ delivery check ตาม player
+  @@index([createdAt(sort: Asc)])    // สำหรับ FIFO ordering
 }
 
 enum QueueStatus {
