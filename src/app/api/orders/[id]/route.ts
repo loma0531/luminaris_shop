@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { requireAdminAuth, requireUserAuth } from '@/lib/adminAuth'
 import { logger } from '@/lib/logger'
+import { OrderService } from '@/core/services/OrderService'
 
 export async function DELETE(
   request: NextRequest,
@@ -15,6 +16,7 @@ export async function DELETE(
       where: { id },
       select: { 
         id: true, 
+        orderId: true,
         status: true, 
         paymentId: true,
         minecraftName: true
@@ -47,29 +49,8 @@ export async function DELETE(
        return NextResponse.json({ error: 'Cannot cancel processed order' }, { status: 400 })
     }
 
-    // Update order status to CANCELLED instead of deleting
-    // This preserves the order in DB for history/tracking purposes
-    await prisma.order.update({
-      where: { id },
-      data: { 
-        status: 'CANCELLED',
-      },
-    })
-
-    // If order had a payment, update payment status to REJECTED if still pending
-    if (order.paymentId) {
-      const payment = await prisma.payment.findUnique({ 
-        where: { id: order.paymentId },
-        select: { status: true }
-      })
-      
-      if (payment && payment.status === 'PENDING') {
-        await prisma.payment.update({ 
-          where: { id: order.paymentId },
-          data: { status: 'REJECTED' }
-        })
-      }
-    }
+    // เรียกใช้ OrderService เพื่อยกเลิกออเดอร์ (และยกเลิกธุรกรรมบน Stripe)
+    await OrderService.cancelOrder(order.orderId)
 
     return NextResponse.json({ success: true })
   } catch {

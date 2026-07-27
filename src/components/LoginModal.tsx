@@ -14,10 +14,18 @@ interface LoginModalProps {
 
 export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalProps) {
   const [playerName, setPlayerName] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   if (!isOpen) return null
+
+  const handleClose = () => {
+    setPlayerName('')
+    setPassword('')
+    setError('')
+    onClose()
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,17 +54,17 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
         return
       }
 
-      // Create or get user
+      // Create or get user with password
       const userRes = await apiFetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minecraftName: playerName }),
+        body: JSON.stringify({ minecraftName: playerName, password }),
       })
       
       const user = await userRes.json()
       
       if (user.error) {
-        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
+        setError(user.error || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง')
         setLoading(false)
         return
       }
@@ -64,7 +72,9 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
       // Store user in localStorage (including shopToken if present)
       localStorage.setItem('user', JSON.stringify(user))
       
-      // Call success callback
+      // Call success callback and clear state
+      setPlayerName('')
+      setPassword('')
       onSuccess(user)
     } catch (err) {
       logger.error(`Login error: ${err}`)
@@ -75,7 +85,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
   }
 
   return (
-    <div className="login-modal-overlay" onClick={onClose}>
+    <div className="login-modal-overlay" onClick={handleClose}>
       <div className="login-modal" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -84,7 +94,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
           </h2>
           <button 
             className="btn btn-icon" 
-            onClick={onClose} 
+            onClick={handleClose} 
             disabled={loading}
             aria-label="ปิดหน้าต่างเข้าสู่ระบบ"
           >
@@ -93,7 +103,7 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
         </div>
 
         <p className="text-muted-foreground mb-6 text-sm">
-          กรุณาใส่ชื่อ Minecraft ของคุณเพื่อดำเนินการต่อ
+          กรุณากรอกชื่อผู้เล่นและรหัสผ่านเพื่อดำเนินการต่อ
         </p>
 
         <form onSubmit={handleLogin}>
@@ -111,16 +121,29 @@ export default function LoginModal({ isOpen, onClose, onSuccess }: LoginModalPro
             />
           </div>
 
+          <div className="form-group mt-4">
+            <label className="form-label">รหัสผ่านเซิร์ฟเวอร์ Minecraft</label>
+            <input
+              type="password"
+              className="input"
+              placeholder="รหัสผ่านเดียวกับที่ใช้ในเซิร์ฟเวอร์ (/login)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
           {error && (
-            <div className="error-box">
+            <div className="error-box mt-4">
               {error}
             </div>
           )}
 
           <button
             type="submit"
-            className="btn btn-primary w-full"
-            disabled={loading || !playerName.trim()}
+            className="btn btn-primary w-full mt-6"
+            disabled={loading || !playerName.trim() || !password.trim()}
           >
             {loading ? (
               <>

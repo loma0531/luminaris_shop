@@ -263,8 +263,28 @@ export class OrderService {
    * ยกเลิก Order
    */
   static async cancelOrder(orderId: number): Promise<void> {
-    const order = await prisma.order.findUnique({ where: { orderId } })
+    const order = await prisma.order.findUnique({ 
+      where: { orderId },
+      include: { payment: true }
+    })
     if (!order) throw new Error(`Order #${orderId} not found`)
+
+    // หากมีการจ่ายผ่าน Stripe และมี PaymentIntent ให้สั่งยกเลิกบน Stripe
+    if (order.payment?.paymentMethod === 'stripe' && order.payment.stripePaymentIntentId) {
+      try {
+        const { getStripe } = await import('@/lib/stripe')
+        const stripe = getStripe()
+        await stripe.paymentIntents.cancel(order.payment.stripePaymentIntentId)
+        logger.info(
+          `Stripe PaymentIntent ${order.payment.stripePaymentIntentId} cancelled successfully for order #${orderId}`,
+          200
+        )
+      } catch (stripeError) {
+        // Log ข้อผิดพลาด แต่ไม่อนุญาตให้ขัดขวางกระบวนการยกเลิกในฐานข้อมูลหลัก
+        const errMsg = stripeError instanceof Error ? stripeError.message : String(stripeError)
+        logger.error(`Failed to cancel Stripe PaymentIntent ${order.payment.stripePaymentIntentId}: ${errMsg}`)
+      }
+    }
 
     // C4 Fix: ใช้ Interactive Transaction form
     await prisma.$transaction(async (tx) => {

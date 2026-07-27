@@ -82,8 +82,26 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe()
     let paymentIntentId = payment.stripePaymentIntentId
+    let existingPI = null
 
-    // ถ้ายังไม่มี PaymentIntent → สร้างใหม่
+    // ถ้ามี PaymentIntent ค้างในฐานข้อมูลแล้ว ให้พยายามดึงข้อมูลมาตรวจสอบ
+    if (paymentIntentId) {
+      try {
+        const pi = await stripe.paymentIntents.retrieve(paymentIntentId)
+        // หากธุรกรรมอยู่ในสถานะที่ใช้งานต่อได้ ให้ใช้ตัวเดิม
+        if (pi.status !== 'canceled' && pi.status !== 'succeeded') {
+          existingPI = pi
+        } else {
+          // หากถูกยกเลิกหรือสำเร็จไปแล้ว ให้เคลียร์ ID เพื่อสร้างใหม่
+          paymentIntentId = null
+        }
+      } catch {
+        // หากดึงข้อมูลล้มเหลว (เช่น ไม่มีคีย์นี้ใน Stripe) ให้สร้างใหม่
+        paymentIntentId = null
+      }
+    }
+
+    // ถ้าไม่มี PaymentIntent หรืออันเดิมใช้ไม่ได้ → สร้างใหม่เพียงครั้งเดียว
     if (!paymentIntentId) {
       const pi = await stripe.paymentIntents.create({
         amount: Math.round(order.total * 100),
@@ -106,13 +124,12 @@ export async function POST(request: NextRequest) {
       })
 
       paymentIntentId = pi.id
+      existingPI = pi
     }
-
-    // ดึง PaymentIntent ปัจจุบัน
-    const existingPI = await stripe.paymentIntents.retrieve(paymentIntentId)
 
     // ถ้ามี QR อยู่แล้ว (requires_action) → return QR เลย
     if (
+      existingPI &&
       existingPI.status === 'requires_action' &&
       existingPI.next_action?.type === 'promptpay_display_qr_code'
     ) {
@@ -136,8 +153,9 @@ export async function POST(request: NextRequest) {
 
     // ถ้ายังไม่ confirm → confirm ด้วย PromptPay
     if (
-      existingPI.status === 'requires_payment_method' ||
-      existingPI.status === 'requires_confirmation'
+      existingPI &&
+      (existingPI.status === 'requires_payment_method' ||
+       existingPI.status === 'requires_confirmation')
     ) {
       // อัพเดต payment_method_types ให้รองรับ promptpay
       await stripe.paymentIntents.update(paymentIntentId, {

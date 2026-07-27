@@ -142,16 +142,18 @@ export default function PromptPayForm({
           align-items: center;
           justify-content: center;
           padding: 1.5rem;
-          background: #0a0a0a;
+          background: #ffffff;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          max-width: 308px;
+          width: 100%;
+          margin: 0 auto;
         }
 
         .promptpay-qr-image {
           width: 100%;
           max-width: 260px;
           height: auto;
-          filter: invert(1);
         }
 
         @keyframes promptpay-spin {

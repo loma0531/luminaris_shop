@@ -23,6 +23,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const coupons = await prisma.coupon.findMany({
+      include: {
+        usages: {
+          orderBy: { usedAt: 'desc' }
+        }
+      },
       orderBy: { createdAt: 'desc' }
     })
     return NextResponse.json(coupons)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { QuestionIcon } from '@/components/Icons'
@@ -13,6 +13,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+
+  // Auto-redirect to shop on mount
+  useEffect(() => {
+    router.replace('/shop')
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()

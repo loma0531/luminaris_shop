@@ -112,10 +112,10 @@ export default function AdminOrdersPage() {
       case 'CANCELLED':
         return <span className="badge badge-error inline-flex items-center gap-1"><CloseIcon size={12} /> ยกเลิก</span>
       case 'AWAITING_PAYMENT':
-        return <span className="badge badge-warning inline-flex items-center gap-1"><CreditCardIcon size={12} /> รอชำระ</span>
+        return <span className="badge badge-warning animate-pulse-subtle inline-flex items-center gap-1"><CreditCardIcon size={12} /> รอชำระ</span>
       case 'PENDING':
       default:
-        return <span className="badge badge-warning inline-flex items-center gap-1"><ClockIcon size={12} /> รอดำเนินการ</span>
+        return <span className="badge badge-warning animate-pulse-subtle inline-flex items-center gap-1"><ClockIcon size={12} /> รอดำเนินการ</span>
     }
   }
 
@@ -341,21 +341,25 @@ export default function AdminOrdersPage() {
                 <tbody>
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center p-8">
+                      <td colSpan={6} className="text-center p-8 animate-fade-in">
                         ไม่พบรายการ
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order: Order) => (
-                      <tr key={order.id}>
+                    filteredOrders.map((order: Order, idx: number) => (
+                      <tr 
+                        key={order.id}
+                        className="animate-fade-in-up"
+                        style={{ animationDelay: `${idx * 20}ms`, animationFillMode: 'both' }}
+                      >
                         <td className="font-mono font-semibold">
                           #{order.orderId}
                         </td>
                         <td>{order.minecraftName}</td>
                         <td>
                           <div className="flex flex-col gap-1 max-w-[300px]">
-                            {order.items.map((item: OrderItem, idx: number) => (
-                              <div key={idx} className="text-sm px-2 py-1 bg-muted rounded">
+                            {order.items.map((item: OrderItem, itemIdx: number) => (
+                              <div key={itemIdx} className="text-sm px-2 py-1 bg-muted rounded">
                                 {item.name} <span className="text-muted-foreground">x{item.quantity}</span>
                               </div>
                             ))}
@@ -381,8 +385,12 @@ export default function AdminOrdersPage() {
                 <p>ไม่พบรายการ</p>
               </div>
             ) : (
-              filteredOrders.map((order: Order) => (
-                <div key={order.id} className="order-card-mobile">
+              filteredOrders.map((order: Order, idx: number) => (
+                <div 
+                  key={order.id} 
+                  className="order-card-mobile animate-fade-in-up"
+                  style={{ animationDelay: `${idx * 20}ms`, animationFillMode: 'both' }}
+                >
                   <div className="order-card-header">
                     <div>
                       <div className="order-card-id">#{order.orderId}</div>
@@ -391,8 +399,8 @@ export default function AdminOrdersPage() {
                     {getStatusBadge(order.status)}
                   </div>
                   <div className="order-card-items">
-                    {order.items.map((item: OrderItem, idx: number) => (
-                      <div key={idx} className="order-card-item">
+                    {order.items.map((item: OrderItem, itemIdx: number) => (
+                      <div key={itemIdx} className="order-card-item">
                         <span className="order-card-item-name">{item.name}</span>
                         <span className="order-card-item-qty">x{item.quantity}</span>
                       </div>
