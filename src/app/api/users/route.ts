@@ -25,6 +25,13 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const { page, limit, skip } = validatePagination(searchParams.get('page'), searchParams.get('limit'), 50)
     const search = searchParams.get('search') || ''
+    const sortBy = searchParams.get('sortBy') || 'createdAt'
+    const sortOrder = searchParams.get('sortOrder') || 'desc'
+
+    // Whitelist allowed sorting fields and orders to ensure safety
+    const allowedSortFields = ['minecraftName', 'totalSpent', 'coins', 'createdAt', 'lastLogin']
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt'
+    const sortDir = sortOrder === 'asc' ? 'asc' : 'desc'
 
     const whereClause: any = {}
     if (search) {
@@ -39,7 +46,7 @@ export async function GET(request: NextRequest) {
         where: whereClause,
         skip, take: limit,
         select: { id: true, minecraftName: true, lastLogin: true, totalSpent: true, coins: true, createdAt: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [sortField]: sortDir },
       }),
       prisma.user.count({
         where: whereClause

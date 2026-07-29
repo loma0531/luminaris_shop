@@ -44,6 +44,10 @@ export default function AdminUsersPage() {
   const [userOrders, setUserOrders] = useState<Map<string, Order[]>>(new Map())
   const [loadingOrders, setLoadingOrders] = useState<string | null>(null)
 
+  // Sorting States
+  const [sortBy, setSortBy] = useState('createdAt')
+  const [sortOrder, setSortOrder] = useState('desc')
+
   // Coin States
   const [selectedUserForCoins, setSelectedUserForCoins] = useState<string | null>(null)
   const [currentCoinsValue, setCurrentCoinsValue] = useState(0)
@@ -55,7 +59,7 @@ export default function AdminUsersPage() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const res = await adminGet(`/api/users?page=${page}&limit=10&search=${encodeURIComponent(search)}`)
+      const res = await adminGet(`/api/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&sortBy=${sortBy}&sortOrder=${sortOrder}`)
       const data = await res.json()
       setUsers(data.users || [])
       setTotalPages(data.totalPages || 1)
@@ -65,12 +69,12 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [page, search, sortBy, sortOrder])
 
-  // Reset page to 1 on search queries
+  // Reset page to 1 on search queries and sorting changes
   useEffect(() => {
     setPage(1)
-  }, [search])
+  }, [search, sortBy, sortOrder])
 
   useEffect(() => {
     fetchUsers()
@@ -149,15 +153,39 @@ export default function AdminUsersPage() {
     <div>
       <h1 className="admin-title mb-6">จัดการผู้ใช้</h1>
 
-      <div className="search-box mb-6">
-        <span className="search-icon"><SearchIcon size={16} /></span>
-        <input
-          type="text"
-          className="input"
-          placeholder="ค้นหาผู้ใช้"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="search-box flex-1 mb-0">
+          <span className="search-icon"><SearchIcon size={16} /></span>
+          <input
+            type="text"
+            className="input"
+            placeholder="ค้นหาผู้ใช้"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-2 sm:min-w-[280px]">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">เรียงตาม:</span>
+          <select
+            className="input py-2 text-sm"
+            value={`${sortBy}_${sortOrder}`}
+            onChange={(e) => {
+              const [field, order] = e.target.value.split('_')
+              setSortBy(field)
+              setSortOrder(order)
+            }}
+          >
+            <option value="createdAt_desc">ลงทะเบียนล่าสุด</option>
+            <option value="createdAt_asc">ลงทะเบียนเก่าสุด</option>
+            <option value="minecraftName_asc">ชื่อผู้เล่น (A - Z)</option>
+            <option value="minecraftName_desc">ชื่อผู้เล่น (Z - A)</option>
+            <option value="totalSpent_desc">ยอดซื้อสะสม (มากที่สุด)</option>
+            <option value="totalSpent_asc">ยอดซื้อสะสม (น้อยที่สุด)</option>
+            <option value="coins_desc">ยอด Coin สะสม (มากที่สุด)</option>
+            <option value="coins_asc">ยอด Coin สะสม (น้อยที่สุด)</option>
+            <option value="lastLogin_desc">เข้าสู่ระบบล่าสุด</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
