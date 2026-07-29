@@ -81,7 +81,7 @@ export default function CustomTimePicker({
           align-items: center;
           justify-content: space-between;
           width: 100%;
-          background: #27272a;
+          background: #0d0c0f;
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 8px;
           padding: 0.45rem 0.6rem;
@@ -106,7 +106,7 @@ export default function CustomTimePicker({
         }
         .time-picker-trigger:hover:not(.disabled) {
           border-color: var(--primary);
-          background: #2e2e33;
+          background: #141316;
         }
         :global(html[data-theme="light"]) .time-picker-trigger:hover:not(.disabled) {
           background: #e4e4e7;
@@ -137,7 +137,7 @@ export default function CustomTimePicker({
           right: 0;
           max-height: 200px;
           overflow-y: auto;
-          background: #18181b; /* ทึบแสง สีเข้ม (Dark mode) */
+          background: #060607; /* ทึบแสง สีเข้ม (Dark mode) */
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 8px;
           z-index: 9999; /* มั่นใจว่าอยู่ด้านหน้าสุด */
@@ -183,7 +183,7 @@ export default function CustomTimePicker({
           white-space: nowrap;
         }
         :global(html[data-theme="light"]) .time-picker-option {
-          color: #27272a; /* ตัวหนังสือสีเข้มใน Light mode */
+          color: #0d0c0f; /* ตัวหนังสือสีเข้มใน Light mode */
         }
         .time-picker-option:hover {
           background: rgba(34, 197, 94, 0.1);

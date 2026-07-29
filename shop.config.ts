@@ -97,7 +97,7 @@ export const shopConfig = {
     checkout:   { windowMs: 60000, maxRequests: 20 },
     rconVerify: { windowMs: 60000, maxRequests: 5 },  // 5 ครั้ง/นาที
     rcon:       { windowMs: 60000, maxRequests: 10 },
-    users:      { windowMs: 300000, maxRequests: 10 },
+    users:      { windowMs: 60000, maxRequests: 120 },
     default:    { windowMs: 60000, maxRequests: 100 }
   },
 

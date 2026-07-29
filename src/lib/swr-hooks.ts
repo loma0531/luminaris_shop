@@ -69,11 +69,32 @@ export interface CartItem {
   customInput?: string | null
 }
 
+export interface CoinConfig {
+  coinRate: number
+  promoDouble: boolean
+  promoBonusThreshold: number
+  promoBonusAmount: number
+}
+
+export interface CoinPromotionData {
+  id: string
+  name: string
+  description?: string | null
+  promoType: string
+  value: number
+  minSpend: number
+  startDate?: string | null
+  endDate?: string | null
+}
+
 export interface ShopInitData {
   products: Product[]
   categories: Category[]
   cart?: CartItem[]
   pendingOrders?: number
+  coins?: number
+  coinConfig?: CoinConfig
+  activePromotions?: CoinPromotionData[]
   hash?: string
   timestamp?: number
 }
@@ -92,6 +113,7 @@ export interface Order {
   total: number
   status: string
   createdAt: string
+  isTopUp?: boolean
   payment?: {
     id: string
     paymentId: number

@@ -229,7 +229,7 @@ export default function StripePaymentForm({
       theme: 'night',
       variables: {
         colorPrimary: '#ffffff',
-        colorBackground: '#111111',
+        colorBackground: '#060607',
         colorText: '#ffffff',
         colorDanger: '#ef4444',
         fontFamily: 'Inter, system-ui, sans-serif',

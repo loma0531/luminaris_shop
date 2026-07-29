@@ -81,16 +81,31 @@ export default function CustomDateTimePicker({
     const endVal = endDate ? new Date(endDate.split('T')[0] + 'T00:00:00') : null
     const currentD = new Date(d.getFullYear(), d.getMonth(), d.getDate())
 
-    if (startVal && currentD.getTime() === new Date(startVal.getFullYear(), startVal.getMonth(), startVal.getDate()).getTime()) {
+    const isStart = startVal && currentD.getTime() === new Date(startVal.getFullYear(), startVal.getMonth(), startVal.getDate()).getTime()
+    const isEnd = endVal && currentD.getTime() === new Date(endVal.getFullYear(), endVal.getMonth(), endVal.getDate()).getTime()
+
+    if (isStart && isEnd) {
+      return 'date-start date-end'
+    }
+    if (isStart) {
       return 'date-start'
     }
-    if (endVal && currentD.getTime() === new Date(endVal.getFullYear(), endVal.getMonth(), endVal.getDate()).getTime()) {
+    if (isEnd) {
       return 'date-end'
     }
     if (startVal && endVal && currentD > startVal && currentD < endVal) {
       return 'date-range'
     }
     return ''
+  }
+
+  const isTodayDate = (dayNum: number) => {
+    const today = new Date()
+    return (
+      today.getDate() === dayNum &&
+      today.getMonth() === calendarMonth &&
+      today.getFullYear() === calendarYear
+    )
   }
 
   const handlePrevMonth = () => {
@@ -203,12 +218,14 @@ export default function CustomDateTimePicker({
 
               {Array.from({ length: getDaysInMonth(calendarYear, calendarMonth) }, (_, i) => i + 1).map((dayNum) => {
                 const stateClass = isSelectedDate(dayNum)
+                const todayClass = isTodayDate(dayNum) ? 'is-today' : ''
                 return (
                   <button
                     key={`day-${dayNum}`}
                     type="button"
                     onClick={() => handleCalendarDayClick(dayNum)}
-                    className={`calendar-day-btn ${stateClass}`}
+                    className={`calendar-day-btn ${stateClass} ${todayClass}`}
+                    title={isTodayDate(dayNum) ? 'วันนี้' : undefined}
                   >
                     {dayNum}
                   </button>
@@ -329,8 +346,13 @@ export default function CustomDateTimePicker({
         }
         .time-selectors-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
           gap: 0.75rem;
+        }
+        @media (min-width: 1200px) {
+          .time-selectors-grid {
+            grid-template-columns: 1fr 1fr;
+          }
         }
         .time-row {
           display: flex;
@@ -356,11 +378,12 @@ export default function CustomDateTimePicker({
 
         /* Premium Date Range Calendar Styles */
         .calendar-container {
-          background: rgba(0, 0, 0, 0.15);
+          background: rgba(0, 0, 0, 0.25);
+          backdrop-filter: blur(16px);
           border: 1px solid var(--border);
           border-radius: 12px;
           padding: 1rem;
-          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
           width: 100%;
         }
         .calendar-header {
@@ -368,6 +391,10 @@ export default function CustomDateTimePicker({
           justify-content: space-between;
           align-items: center;
           margin-bottom: 0.75rem;
+        }
+        .calendar-header span {
+          font-size: 0.85rem;
+          font-weight: 600;
         }
         .calendar-grid {
           display: grid;
@@ -389,34 +416,56 @@ export default function CustomDateTimePicker({
           font-size: 0.8rem;
           border-radius: 8px;
           background: transparent;
-          border: none;
+          border: 1px solid transparent;
           color: var(--foreground);
           cursor: pointer;
+          position: relative;
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .calendar-day-btn:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.25);
           transform: translateY(-1px);
         }
+        .calendar-day-btn.is-today {
+          border: 1.5px solid #10b981 !important;
+          font-weight: 700;
+          color: #34d399 !important;
+        }
+        .calendar-day-btn.is-today::after {
+          content: '';
+          position: absolute;
+          bottom: 3px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 4px;
+          height: 4px;
+          background: #10b981;
+          border-radius: 50%;
+          box-shadow: 0 0 6px #10b981;
+        }
         .calendar-day-btn.date-start {
-          background: var(--primary) !important;
-          color: #ffffff !important;
-          font-weight: bold;
-          box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+          background: #ffffff !important;
+          color: #050507 !important;
+          font-weight: 800;
+          box-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
           border-radius: 8px 0 0 8px;
         }
         .calendar-day-btn.date-end {
           background: #10b981 !important;
           color: #ffffff !important;
-          font-weight: bold;
-          box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+          font-weight: 800;
+          box-shadow: 0 0 16px rgba(16, 185, 129, 0.6);
           border-radius: 0 8px 8px 0;
         }
+        .calendar-day-btn.date-start.date-end {
+          border-radius: 8px !important;
+        }
         .calendar-day-btn.date-range {
-          background: rgba(34, 197, 94, 0.15) !important;
-          color: var(--primary) !important;
+          background: rgba(16, 185, 129, 0.25) !important;
+          color: #a7f3d0 !important;
           border-radius: 0;
-          font-weight: 500;
+          font-weight: 600;
         }
       `}</style>
     </div>

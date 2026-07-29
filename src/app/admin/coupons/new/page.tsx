@@ -102,6 +102,7 @@ export default function AdminNewCouponPage() {
   const discountOptions = [
     { value: 'PERCENTAGE', label: 'เปอร์เซ็นต์ (%)' },
     { value: 'FIXED', label: 'ลดเป็นบาท (฿)' },
+    { value: 'COIN', label: 'แจก Coin (Coin)' },
   ]
 
   return (
@@ -112,7 +113,7 @@ export default function AdminNewCouponPage() {
       <form onSubmit={handleSubmit}>
         {/* Section 1: ข้อมูลคูปอง */}
         <SectionCard title="ข้อมูลคูปอง" icon={<TagIcon size={15} />}>
-          <FormField label="รหัสคูปอง (ตัวพิมพ์ใหญ่)" required hint="รหัสสำหรับผู้เล่นกรอกตอนเช็คเอาท์ ตั้งคำนำหน้าได้ใน shop.config.ts">
+          <FormField label="รหัสคูปอง (ตัวพิมพ์ใหญ่)" required hint="รหัสสำหรับผู้เล่นกรอกตอนเช็คเอาท์ หรือแลกรับ Coin ในหน้า /shop/coins">
             <div className="input-with-action">
               <input
                 type="text"
@@ -130,13 +131,22 @@ export default function AdminNewCouponPage() {
           </FormField>
 
           <div className="form-row" style={{ marginTop: '1rem' }}>
-            <FormField label="ประเภทส่วนลด" required>
+            <FormField label="ประเภทคูปอง / ส่วนลด" required>
               <AdminDropdown value={formData.discountType} options={discountOptions}
                 onChange={(val) => setFormData({ ...formData, discountType: val })} />
             </FormField>
-            <FormField label={formData.discountType === 'PERCENTAGE' ? 'ส่วนลดกี่เปอร์เซ็นต์ (%)' : 'ลดราคากี่บาท (฿)'} required>
+            <FormField 
+              label={
+                formData.discountType === 'PERCENTAGE' 
+                  ? 'ส่วนลดกี่เปอร์เซ็นต์ (%)' 
+                  : formData.discountType === 'COIN'
+                    ? 'จำนวน Coin ที่จะได้รับ' 
+                    : 'ลดราคากี่บาท (฿)'
+              } 
+              required
+            >
               <input type="number" className="input" style={{ fontWeight: 600 }}
-                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20' : 'เช่น 100'}
+                placeholder={formData.discountType === 'PERCENTAGE' ? 'เช่น 20' : formData.discountType === 'COIN' ? 'เช่น 50' : 'เช่น 100'}
                 value={formData.discountValue}
                 onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
                 required min="1" max={formData.discountType === 'PERCENTAGE' ? '100' : undefined} />
@@ -151,11 +161,12 @@ export default function AdminNewCouponPage() {
                 onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
                 disabled={formData.discountType !== 'PERCENTAGE'} min="1" />
             </FormField>
-            <FormField label="ยอดซื้อขั้นต่ำ (บาท)" required>
+            <FormField label="ยอดซื้อขั้นต่ำ (บาท)" required hint={formData.discountType === 'COIN' ? 'สำหรับคูปอง Coin ใส่ 0' : undefined}>
               <input type="number" className="input" style={{ fontWeight: 600 }}
                 placeholder="0 = ไม่มีขั้นต่ำ"
                 value={formData.minSpend}
                 onChange={(e) => setFormData({ ...formData, minSpend: e.target.value })}
+                disabled={formData.discountType === 'COIN'}
                 min="0" required />
             </FormField>
           </div>

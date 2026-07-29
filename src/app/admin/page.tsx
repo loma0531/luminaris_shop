@@ -13,6 +13,7 @@ import { adminPost, adminPut } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
 
 import { useToast } from '@/context/ToastContext'
+import { SkeletonAdminProductGrid } from '@/components/Skeleton'
 import { useAdminData } from './layout'
 
 interface Product {
@@ -91,9 +92,7 @@ export default function AdminProductsPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonAdminProductGrid />
       ) : filteredProducts.length === 0 ? (
         <div className="empty-state animate-scale-in">
           <PackageIcon size={48} className="mb-4 opacity-50" />
@@ -179,8 +178,8 @@ export default function AdminProductsPage() {
 
         /* Modal Content */
         .modal-content {
-            background: linear-gradient(135deg, rgba(30, 30, 50, 0.96) 0%, rgba(20, 20, 35, 0.96) 100%); /* ทึบ 96% โทนชาร์โคลน้ำเงินเข้ม */
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: #0d0c0f;
+            border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(20px);      /* เบลอเนื้อหากล่อง 20px */
             -webkit-backdrop-filter: blur(20px);
             border-radius: 1rem;

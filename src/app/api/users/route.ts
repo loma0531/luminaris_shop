@@ -24,14 +24,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const { page, limit, skip } = validatePagination(searchParams.get('page'), searchParams.get('limit'), 50)
+    const search = searchParams.get('search') || ''
+
+    const whereClause: any = {}
+    if (search) {
+      whereClause.minecraftName = {
+        contains: search,
+        mode: 'insensitive'
+      }
+    }
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
+        where: whereClause,
         skip, take: limit,
-        select: { id: true, minecraftName: true, lastLogin: true, totalSpent: true, createdAt: true },
+        select: { id: true, minecraftName: true, lastLogin: true, totalSpent: true, coins: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
       }),
-      prisma.user.count(),
+      prisma.user.count({
+        where: whereClause
+      }),
     ])
 
     // Get minecraftNames for the current page of users
@@ -91,27 +103,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authMeResult.error || 'รหัสผ่านเซิร์ฟเวอร์ไม่ถูกต้อง' }, { status: 401 })
     }
 
+    // Use officialName from AuthMe (handles Case Normalization)
+    const officialMinecraftName = authMeResult.officialName || minecraftName
+
     let user = await prisma.user.findUnique({
-      where: { minecraftName },
-      select: { id: true, minecraftName: true, createdAt: true },
+      where: { minecraftName: officialMinecraftName },
+      select: { id: true, minecraftName: true, coins: true, createdAt: true },
     })
 
     if (!user) {
       user = await prisma.user.create({
-        data: { minecraftName },
-        select: { id: true, minecraftName: true, createdAt: true },
+        data: { minecraftName: officialMinecraftName },
+        select: { id: true, minecraftName: true, coins: true, createdAt: true },
       })
-      logger.auth.userCreated(minecraftName, timer())
+      logger.auth.userCreated(officialMinecraftName, timer())
     } else {
       await prisma.user.update({
-        where: { minecraftName },
+        where: { minecraftName: officialMinecraftName },
         data: { lastLogin: new Date() }
       })
-      logger.auth.userLogin(minecraftName, timer())
+      logger.auth.userLogin(officialMinecraftName, timer())
     }
 
     // Generate shop session token
-    const shopToken = await generateShopToken(minecraftName)
+    const shopToken = await generateShopToken(officialMinecraftName)
 
     return NextResponse.json({ ...user, shopToken })
   } catch {

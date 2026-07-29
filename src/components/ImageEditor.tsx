@@ -494,7 +494,7 @@ export default function ImageEditor({
           background: var(--card);
         }
         .image-editor-preview {
-          background: #1a1a1a;
+          background: #0d0c0f;
           display: flex;
           justify-content: center;
           align-items: center;

@@ -82,17 +82,17 @@ export async function verifyPlayerInDatabase(username: string): Promise<{ exists
 /**
  * Verify player password against AuthMe database table
  */
-export async function verifyAuthMePassword(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+export async function verifyAuthMePassword(username: string, password: string): Promise<{ success: boolean; officialName?: string; error?: string }> {
   try {
     const connection = await getPool().getConnection()
     try {
       // Query AuthMe table for the hashed password (case-insensitive username check)
       const [rows] = await connection.execute(
-        'SELECT password FROM authme WHERE LOWER(username) = LOWER(?)',
+        'SELECT username, password FROM authme WHERE LOWER(username) = LOWER(?)',
         [username]
       )
       
-      const results = rows as { password: string }[]
+      const results = rows as { username: string; password: string }[]
       
       if (results.length === 0) {
         return { success: false, error: 'ไม่พบผู้เล่นในระบบเซิร์ฟเวอร์ กรุณาสมัครสมาชิกในเกมก่อน' }
@@ -106,7 +106,7 @@ export async function verifyAuthMePassword(username: string, password: string): 
         return { success: false, error: 'รหัสผ่านเซิร์ฟเวอร์ไม่ถูกต้อง' }
       }
       
-      return { success: true }
+      return { success: true, officialName: results[0].username }
     } finally {
       connection.release()
     }

@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import LoginModal from '@/components/LoginModal'
 import ConfirmModal from '@/components/ConfirmModal'
-import { SkeletonCartItem } from '@/components/Skeleton'
+import { SkeletonCartPage } from '@/components/Skeleton'
 import {
   CartIcon,
   PackageIcon,
@@ -52,6 +53,31 @@ interface CartItem {
   product: Product
   quantity: number
   customInput?: string | null
+}
+
+// Product Image with error handling and fallback
+function ProductImage({ src, alt, priority = false }: { src: string | null; alt: string; priority?: boolean }) {
+  const [error, setError] = useState(false)
+  
+  if (!src || error) {
+    return (
+      <div className="product-image-placeholder">
+        <PackageIcon size={32} />
+      </div>
+    )
+  }
+  
+  return (
+    <Image 
+      src={src} 
+      alt={alt} 
+      fill 
+      className="object-cover"
+      sizes="(max-w-768px) 100vw, 300px"
+      priority={priority}
+      onError={() => setError(true)}
+    />
+  )
 }
 
 export default function CartPage() {
@@ -661,21 +687,7 @@ export default function CartPage() {
       </h1>
 
         {initialLoading ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
-              <SkeletonCartItem />
-              <SkeletonCartItem />
-              <SkeletonCartItem />
-            </div>
-            <div>
-              <div className="card p-6">
-                <div className="skeleton w-1/2 h-6 mb-6" />
-                <div className="skeleton w-full h-4 mb-4" />
-                <div className="skeleton w-full h-4 mb-6" />
-                <div className="skeleton w-full h-12" />
-              </div>
-            </div>
-          </div>
+          <SkeletonCartPage />
         ) : cart.length === 0 ? (
           <div className="space-y-12 animate-fade-in">
             <div className="empty-state animate-scale-in">
@@ -722,16 +734,7 @@ export default function CartPage() {
                           className={`product-card animate-scale-in ${delayClass}`}
                         >
                           <div className="product-image">
-                            {product.image ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <PackageIcon size={32} />
-                            )}
+                            <ProductImage src={product.image} alt={product.name} />
                             <span className="category-badge">{product.category?.name}</span>
                             {onSale && (
                               <div className="sale-ribbon">
@@ -1041,9 +1044,38 @@ export default function CartPage() {
         onCancel={() => setShowConfirmOnlineModal(false)}
       />
 
-      <style jsx>{`
+      <style jsx global>{`
+        /* Sale Ribbon & Price Styles (สำหรับ recommended products ใน cart) */
+        .sale-ribbon {
+          position: absolute;
+          top: 12px;
+          left: 12px;
+          background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+          color: #ffffff;
+          font-size: 0.75rem;
+          font-weight: 700;
+          padding: 0.25rem 0.6rem;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+          z-index: 10;
+          letter-spacing: 0.5px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .original-price {
+          color: var(--muted-foreground);
+          text-decoration: line-through;
+          font-size: 0.85rem;
+          margin-right: 0.35rem;
+          opacity: 0.75;
+        }
+        .sale-price {
+          color: #f87171;
+          font-weight: 700;
+        }
+
         @media (min-width: 1024px) {
-          :global(.custom-recommend-grid) {
+          .custom-recommend-grid {
             grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
           }
         }

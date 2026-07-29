@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminAuth } from '@/lib/adminAuth'
-import { invalidateProductCache, invalidateCategoryCache } from '@/lib/redis'
+import { invalidateProductCache, invalidateCategoryCache, invalidateStatsCache } from '@/lib/redis'
 import { logger } from '@/lib/logger'
 
 /**
@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
     await Promise.all([
       invalidateProductCache(),
       invalidateCategoryCache(),
+      invalidateStatsCache(),
     ])
     
     logger.debug('All caches cleared by admin')

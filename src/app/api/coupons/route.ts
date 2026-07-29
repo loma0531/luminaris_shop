@@ -6,7 +6,7 @@ import * as z from 'zod'
 
 const CouponCreateSchema = z.object({
   code: z.string().min(1, 'ต้องระบุรหัสคูปอง').max(50),
-  discountType: z.enum(['PERCENTAGE', 'FIXED']),
+  discountType: z.enum(['PERCENTAGE', 'FIXED', 'COIN']),
   discountValue: z.number().positive('มูลค่าส่วนลดต้องมากกว่า 0'),
   maxDiscount: z.number().nullable().optional(),
   minSpend: z.number().nonnegative().optional().default(0),

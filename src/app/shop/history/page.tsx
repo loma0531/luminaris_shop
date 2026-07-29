@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -13,6 +13,7 @@ import {
   CreditCardIcon,
   ClockIcon,
 } from '@/components/Icons'
+import { SkeletonHistoryPage } from '@/components/Skeleton'
 import { useOrderHistory } from '@/lib/swr-hooks'
 
 
@@ -28,8 +29,13 @@ export default function HistoryPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [isStatusOpen, setIsStatusOpen] = useState(false)
+  const [page, setPage] = useState(1)
   const statusDropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, statusFilter])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user')
@@ -71,6 +77,11 @@ export default function HistoryPage() {
 
     return matchesSearch && matchesStatus
   })
+
+  const limit = 10
+  const total = filteredOrders.length
+  const totalPages = Math.ceil(total / limit)
+  const paginatedOrders = filteredOrders.slice((page - 1) * limit, page * limit)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -164,9 +175,7 @@ export default function HistoryPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonHistoryPage />
       ) : orders.length === 0 ? (
         <div className="empty-state animate-scale-in">
           <PackageIcon size={48} className="opacity-50 mb-4" />
@@ -192,14 +201,14 @@ export default function HistoryPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.length === 0 ? (
+                  {paginatedOrders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="text-center p-8">
                         ไม่พบรายการที่ตรงกับการค้นหา
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((order) => (
+                    paginatedOrders.map((order) => (
                       <tr key={order.id}>
                         <td className="font-mono font-semibold">
                           #{order.orderId}
@@ -228,12 +237,12 @@ export default function HistoryPage() {
 
           {/* Mobile: Card View */}
           <div className="orders-cards-mobile animate-fade-in-up">
-            {filteredOrders.length === 0 ? (
+            {paginatedOrders.length === 0 ? (
               <div className="empty-state">
                 <p>ไม่พบรายการที่ตรงกับการค้นหา</p>
               </div>
             ) : (
-              filteredOrders.map((order) => (
+              paginatedOrders.map((order) => (
                 <div key={order.id} className="order-card-mobile">
                   <div className="order-card-header">
                     <div className="order-card-id">#{order.orderId}</div>
@@ -257,6 +266,53 @@ export default function HistoryPage() {
               ))
             )}
           </div>
+
+          {totalPages > 1 && (
+          <div className="flex items-center justify-between w-full bg-card p-4 border border-border rounded-xl mt-6">
+              <span className="text-xs text-muted-foreground">
+                แสดง {total === 0 ? 0 : (page - 1) * 10 + 1} - {Math.min(page * 10, total)} จาก {total} รายการ
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  className="px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:bg-muted text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                >
+                  ย้อนกลับ
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .map((p, idx, arr) => {
+                    const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
+                    return (
+                      <React.Fragment key={p}>
+                        {showEllipsis && <span className="text-muted-foreground text-xs px-1">...</span>}
+                        <button
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
+                            page === p 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'text-muted-foreground hover:bg-muted'
+                          }`}
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    )
+                  })
+                }
+
+                <button
+                  className="px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-muted text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                >
+                  ถัดไป
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

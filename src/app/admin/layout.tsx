@@ -19,6 +19,7 @@ import {
   MenuIcon,
   CloseIcon,
   TagIcon,
+  WalletIcon,
 } from '@/components/Icons'
 import ConfirmModal from '@/components/ConfirmModal'
 
@@ -50,6 +51,7 @@ const navItems = [
   { href: '/admin/users', label: 'จัดการผู้ใช้', Icon: UsersIcon },
   { href: '/admin/orders', label: 'ประวัติการซื้อ', Icon: PackageIcon },
   { href: '/admin/sales', label: 'สรุปยอดเติมเงิน', Icon: ChartIcon },
+  { href: '/admin/coins', label: 'ตั้งค่าระบบ Coin', Icon: WalletIcon },
   { href: '/admin/rcon', label: 'RCON Console', Icon: TerminalIcon },
 ]
 
@@ -134,11 +136,11 @@ function AdminLoginForm() {
           </div>
 
           <div className="form-group animate-fade-in-up delay-300">
-            <label className="form-label">Token</label>
+            <label className="form-label">2FA Code</label>
             <input
               type="password"
               className="input"
-              placeholder="กรอก Token"
+              placeholder="กรุณากรอก 2FA Code"
               value={token}
               onChange={(e) => setToken(e.target.value)}
               required

@@ -34,7 +34,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ไม่พบรหัสคูปองนี้' }, { status: 404 })
     }
 
-    // 2. ตรวจสอบว่าคูปองเปิดใช้งานอยู่หรือไม่
+    // 2. ตรวจสอบว่าคูปองเป็นคูปองแลก Coin หรือไม่
+    if (coupon.discountType === 'COIN') {
+      return NextResponse.json({ error: 'คูปองนี้ใช้สำหรับแลก Coin เท่านั้น (สามารถนำไปแลกได้ที่หน้า เติม Coin)' }, { status: 400 })
+    }
+
+    // 3. ตรวจสอบว่าคูปองเปิดใช้งานอยู่หรือไม่
     if (!coupon.isActive) {
       return NextResponse.json({ error: 'คูปองนี้ถูกปิดใช้งานแล้ว' }, { status: 400 })
     }

@@ -38,6 +38,15 @@ vi.mock('@/lib/prisma', () => ({
     },
     order: {
       count: vi.fn(),
+    },
+    settings: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
+    user: {
+      findUnique: vi.fn().mockResolvedValue(null),
+    },
+    coinPromotion: {
+      findMany: vi.fn().mockResolvedValue([]),
     }
   }
 }))

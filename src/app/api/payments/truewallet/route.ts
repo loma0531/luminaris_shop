@@ -7,6 +7,7 @@ import { logger, createTimer } from '@/lib/logger'
 import { requireUserAuth } from '@/lib/adminAuth'
 import { OrderItem } from '@/lib/types'
 import { sendTruewalletLog, sendSecurityAlert } from '@/lib/webhook'
+import { verifyPlayerInDatabase } from '@/lib/mysql'
 // H1 Fix: ใช้ FulfillmentService แทนการ copy โค้ด RCON ซ้ำ
 import { FulfillmentService } from '@/core/services/FulfillmentService'
 import type { OrderItemForDelivery } from '@/core/services/FulfillmentService'
@@ -21,6 +22,12 @@ export async function POST(request: NextRequest) {
   try {
     const json = await request.json()
     const { voucherUrl, orderId, paymentId, minecraftName } = json
+
+    // ค้นหาชื่อจริงที่สะกดถูกต้องจาก MySQL (เพื่อทำ Case Normalization)
+    const playerCheck = await verifyPlayerInDatabase(minecraftName)
+    const officialMinecraftName = playerCheck.exists && playerCheck.playerData 
+      ? playerCheck.playerData.username 
+      : minecraftName
 
     // Validate inputs
     if (!voucherUrl || typeof voucherUrl !== 'string') {
@@ -171,22 +178,46 @@ export async function POST(request: NextRequest) {
         where: { orderId }, 
         data: { status: 'COMPLETED' } 
       })
-      // C3 Fix: เปลี่ยนจาก update → upsert เผื่อ user ยังไม่มีใน DB
-      await tx.user.upsert({
-        where: { minecraftName },
-        update: { totalSpent: { increment: order.total } },
-        create: { minecraftName, totalSpent: order.total },
-      })
+      
+      if (order.isTopUp) {
+        await tx.user.upsert({
+          where: { minecraftName: officialMinecraftName },
+          update: {
+            totalSpent: { increment: order.total },
+            coins: { increment: payment.coinsEarned || 0.0 }
+          },
+          create: {
+            minecraftName: officialMinecraftName,
+            totalSpent: order.total,
+            coins: payment.coinsEarned || 0.0
+          },
+        })
+        
+        await tx.coinTransaction.create({
+          data: {
+            minecraftName: officialMinecraftName,
+            amount: payment.coinsEarned || 0.0,
+            type: 'TOPUP',
+            description: `เติมเงินสะสมเหรียญด้วย TrueWallet (ซองของขวัญ) ออเดอร์ #${orderId} จำนวน ${voucherAmount} บาท รับ ${payment.coinsEarned || 0.0} Coin`,
+          }
+        })
+      } else {
+        await tx.user.upsert({
+          where: { minecraftName: officialMinecraftName },
+          update: { totalSpent: { increment: order.total } },
+          create: { minecraftName: officialMinecraftName, totalSpent: order.total },
+        })
+      }
     })
 
-    logger.payment.slipVerified(paymentId, minecraftName, voucherAmount)
-    logger.order.statusChanged(orderId, 'AWAITING_PAYMENT', 'COMPLETED', minecraftName)
-    logger.order.completed(orderId, minecraftName, order.total, timer())
+    logger.payment.slipVerified(paymentId, officialMinecraftName, voucherAmount)
+    logger.order.statusChanged(orderId, 'AWAITING_PAYMENT', 'COMPLETED', officialMinecraftName)
+    logger.order.completed(orderId, officialMinecraftName, order.total, timer())
 
     // Send Truewallet-specific Discord notification
     await sendTruewalletLog({
       orderId,
-      minecraftName,
+      minecraftName: officialMinecraftName,
       amount: order.total,
       voucherUrl,
       voucherCode: redeemResult.code,
@@ -197,23 +228,40 @@ export async function POST(request: NextRequest) {
 
     // Update sold counts (non-critical)
     try {
-      await prisma.$transaction(
-        order.items.map((item: { productId: string; quantity: number }) => 
-          prisma.product.update({
-            where: { id: item.productId },
-            data: { soldCount: { increment: item.quantity } },
-          })
+      if (!order.isTopUp) {
+        await prisma.$transaction(
+          order.items.map((item: { productId: string; quantity: number }) => 
+            prisma.product.update({
+              where: { id: item.productId },
+              data: { soldCount: { increment: item.quantity } },
+            })
+          )
         )
-      )
+      }
     } catch {
       logger.warn('Failed to update some product sold counts', 500)
+    }
+
+    if (order.isTopUp) {
+      return NextResponse.json({
+        success: true,
+        orderId: order.orderId,
+        paymentId: payment.paymentId,
+        amount: voucherAmount,
+        ownerFullName: redeemResult.ownerFullName,
+        status: 'COMPLETED',
+        delivery: {
+          status: 'SUCCESS',
+          message: 'เติมเงินสำเร็จและเหรียญถูกอัปเดตแล้ว',
+        }
+      })
     }
 
     // H1 Fix: ใช้ FulfillmentService แทนการเขียน RCON logic ซ้ำ
     const fulfillment = await FulfillmentService.fulfillOrder(
       orderId,
       order.id,
-      order.minecraftName,
+      officialMinecraftName,
       order.items as OrderItemForDelivery[]
     )
 

@@ -111,6 +111,7 @@ export async function POST(request: NextRequest) {
           orderId: String(orderId),
           paymentId: String(paymentId),
           minecraftName: order.minecraftName,
+          isTopUp: String(order.isTopUp),
         },
         description: `Luminaris Shop - Order #${orderId}`,
       })

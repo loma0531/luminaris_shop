@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { SearchIcon, CheckIcon, CloseIcon, CreditCardIcon, ClockIcon, PlusIcon } from '@/components/Icons'
 import { adminGet, adminPost } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/context/ToastContext'
+import { SkeletonAdminTable } from '@/components/Skeleton'
 import { useAdminData } from '../layout'
 
 interface OrderItem {
@@ -42,6 +43,7 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
   
   // Custom dropdown state
   const [isStatusOpen, setIsStatusOpen] = useState(false)
@@ -87,6 +89,7 @@ export default function AdminOrdersPage() {
       if (data.orders) {
         setOrders(data.orders)
         setTotalPages(data.totalPages || 1)
+        setTotal(data.total || 0)
       }
     } catch (error) {
       logger.error(`Failed to fetch orders: ${error}`)
@@ -319,9 +322,7 @@ export default function AdminOrdersPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonAdminTable cols={[12, 18, 30, 15, 13, 12]} />
       ) : (
         <>
           {/* Desktop: Table View */}
@@ -418,34 +419,49 @@ export default function AdminOrdersPage() {
           </div>
 
           {totalPages > 1 && (
-            <div className="pagination">
-              <span>หน้า</span>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((p) => (
+            <div className="flex items-center justify-between w-full bg-slate-950 p-4 border border-slate-800 rounded-xl mt-6">
+              <span className="text-xs text-slate-400">
+                แสดง {total === 0 ? 0 : (page - 1) * 50 + 1} - {Math.min(page * 50, total)} จาก {total} รายการ
+              </span>
+              <div className="flex items-center gap-2">
                 <button
-                  key={p}
-                  className={`pagination-btn ${page === p ? 'active' : ''}`}
-                  onClick={() => setPage(p)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-400 hover:bg-slate-800 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage(Math.max(1, page - 1))}
+                  disabled={page === 1}
                 >
-                  {p}
+                  ย้อนกลับ
                 </button>
-              ))}
-              {totalPages > 5 && <span>...{totalPages}</span>}
-              <button
-                className="pagination-btn"
-                onClick={() => setPage(Math.max(1, page - 1))}
-                disabled={page === 1}
-                aria-label="หน้าก่อนหน้า"
-              >
-                {'<'}
-              </button>
-              <button
-                className="pagination-btn"
-                onClick={() => setPage(Math.min(totalPages, page + 1))}
-                disabled={page === totalPages}
-                aria-label="หน้าถัดไป"
-              >
-                {'>'}
-              </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .map((p, idx, arr) => {
+                    const showEllipsis = idx > 0 && p - arr[idx - 1] > 1;
+                    return (
+                      <React.Fragment key={p}>
+                        {showEllipsis && <span className="text-slate-500 text-xs px-1">...</span>}
+                        <button
+                          className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
+                            page === p 
+                              ? 'bg-indigo-600 text-white' 
+                              : 'text-slate-400 hover:bg-slate-800'
+                          }`}
+                          onClick={() => setPage(p)}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    )
+                  })
+                }
+
+                <button
+                  className="px-3 py-1.5 rounded-lg border border-slate-800 text-slate-200 hover:bg-slate-800 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setPage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                >
+                  ถัดไป
+                </button>
+              </div>
             </div>
           )}
         </>
@@ -668,8 +684,8 @@ export default function AdminOrdersPage() {
           animation: fadeIn 0.2s ease-out;
         }
         .modal-content {
-          background: linear-gradient(135deg, rgba(30, 30, 50, 0.96) 0%, rgba(20, 20, 35, 0.96) 100%); /* ทึบ 96% โทนชาร์โคลน้ำเงินเข้ม */
-          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: #0d0c0f;
+          border: 1px solid rgba(255, 255, 255, 0.08);
           backdrop-filter: blur(20px);      /* เบลอเนื้อหากล่อง 20px */
           -webkit-backdrop-filter: blur(20px);
           border-radius: 1rem;

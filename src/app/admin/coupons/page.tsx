@@ -12,6 +12,7 @@ import {
 import { adminGet } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
 import { useToast } from '@/context/ToastContext'
+import { SkeletonAdminCouponGrid } from '@/components/Skeleton'
 
 const CheckIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -115,9 +116,7 @@ export default function AdminCouponsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="admin-loading">
-          <div className="spinner" style={{ width: 32, height: 32, border: '2px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        </div>
+        <SkeletonAdminCouponGrid />
       ) : filteredCoupons.length === 0 ? (
         <div className="section-card" style={{ textAlign: 'center', padding: '3rem 1.5rem', borderStyle: 'dashed' }}>
           <p style={{ color: 'var(--muted-foreground)', marginTop: '0.75rem', fontSize: '0.875rem' }}>ไม่มีข้อมูลคูปองส่วนลดในระบบ</p>
@@ -156,11 +155,15 @@ export default function AdminCouponsPage() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span className="discount-badge" style={{
                       padding: '0.2rem 0.5rem', borderRadius: '0.25rem', fontSize: '0.75rem', fontWeight: 700,
-                      background: coupon.discountType === 'PERCENTAGE' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)',
-                      color: coupon.discountType === 'PERCENTAGE' ? '#60a5fa' : '#facc15',
-                      border: `1px solid ${coupon.discountType === 'PERCENTAGE' ? 'rgba(59,130,246,0.2)' : 'rgba(234,179,8,0.2)'}`,
+                      background: coupon.discountType === 'PERCENTAGE' ? 'rgba(59,130,246,0.15)' : coupon.discountType === 'COIN' ? 'rgba(168,85,247,0.15)' : 'rgba(234,179,8,0.15)',
+                      color: coupon.discountType === 'PERCENTAGE' ? '#60a5fa' : coupon.discountType === 'COIN' ? '#c084fc' : '#facc15',
+                      border: `1px solid ${coupon.discountType === 'PERCENTAGE' ? 'rgba(59,130,246,0.2)' : coupon.discountType === 'COIN' ? 'rgba(168,85,247,0.2)' : 'rgba(234,179,8,0.2)'}`,
                     }}>
-                      ลด {coupon.discountType === 'PERCENTAGE' ? `${coupon.discountValue}%` : `฿${coupon.discountValue}`}
+                      {coupon.discountType === 'PERCENTAGE' 
+                        ? `ลด ${coupon.discountValue}%` 
+                        : coupon.discountType === 'COIN' 
+                          ? `แจก +${coupon.discountValue.toLocaleString()} Coin` 
+                          : `ลด ฿${coupon.discountValue.toLocaleString()}`}
                     </span>
                     
                     <span className="status-pill" style={{
@@ -176,8 +179,8 @@ export default function AdminCouponsPage() {
                   </div>
 
                   <div className="limits-list">
-                    {coupon.minSpend > 0 && <div>• ขั้นต่ำ <strong>฿{coupon.minSpend.toLocaleString()}</strong></div>}
-                    {coupon.maxDiscount && <div>• ลดสูงสุด <strong>฿{coupon.maxDiscount.toLocaleString()}</strong></div>}
+                    {coupon.discountType !== 'COIN' && coupon.minSpend > 0 && <div>• ขั้นต่ำ <strong>฿{coupon.minSpend.toLocaleString()}</strong></div>}
+                    {coupon.discountType === 'PERCENTAGE' && coupon.maxDiscount && <div>• ลดสูงสุด <strong>฿{coupon.maxDiscount.toLocaleString()}</strong></div>}
                     {coupon.endDate && (
                       <div>• หมดอายุ <strong>{new Date(coupon.endDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</strong></div>
                     )}
@@ -209,7 +212,9 @@ export default function AdminCouponsPage() {
                       {coupon.usages.map((use) => (
                         <div key={use.id} className="usage-item">
                           <span className="player-name">{use.minecraftName}</span>
-                          <span className="used-amount">-฿{use.discountedAmt.toLocaleString()}</span>
+                          <span className="used-amount">
+                            {coupon.discountType === 'COIN' ? `+${use.discountedAmt.toLocaleString()} Coin` : `-฿${use.discountedAmt.toLocaleString()}`}
+                          </span>
                         </div>
                       ))}
                     </div>

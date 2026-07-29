@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       where: { minecraftName, status: { in: statusFilter } },
       select: {
         id: true, orderId: true, minecraftName: true, items: true, total: true,
-        status: true, createdAt: true, updatedAt: true,
+        status: true, createdAt: true, updatedAt: true, isTopUp: true,
         payment: { select: { id: true, paymentId: true, status: true } }
       },
       orderBy: { createdAt: 'desc' },

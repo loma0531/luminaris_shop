@@ -16,6 +16,7 @@ model User {
   minecraftName String   @unique
   lastLogin     DateTime @default(now())
   totalSpent    Float    @default(0.0)
+  coins         Float    @default(0.0)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
@@ -25,7 +26,6 @@ model AdminUser {
   email           String   @unique
   passwordHash    String
   twoFactorSecret String?  // สำหรับ Google Authenticator TOTP Secret
-  tokenHash       String?  // เก็บไว้รองรับระบบเก่า
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -107,6 +107,7 @@ model Order {
   payment         Payment?    @relation(fields: [paymentId], references: [id])
   isDelivered     Boolean     @default(false)
   deliveryAttempts Int        @default(0)
+  isTopUp         Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
   commandQueue    CommandQueue[]
@@ -137,6 +138,8 @@ model Payment {
   status                 PaymentStatus @default(PENDING)
   verifiedAt             DateTime?
   order                  Order?
+  isTopUp                Boolean       @default(false)
+  coinsEarned            Float?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 
@@ -207,8 +210,8 @@ enum QueueStatus {
 model Coupon {
   id            String        @id @default(auto()) @map("_id") @db.ObjectId
   code          String        @unique // รหัสคูปอง เช่น WELCOME10, BONUS50
-  discountType  String        // ประเภทส่วนลด: "PERCENTAGE" (%) หรือ "FIXED" (฿)
-  discountValue Float         // มูลค่าส่วนลด (เช่น 10.0 หรือ 50.0)
+  discountType  String        // ประเภทส่วนลด: "PERCENTAGE" (%), "FIXED" (฿) หรือ "COIN" (Coin)
+  discountValue Float         // มูลค่าส่วนลด หรือ จำนวน Coin ที่ได้รับ
   maxDiscount   Float?        // ยอดส่วนลดสูงสุด (สำหรับคูปองลดเป็น %)
   minSpend      Float         @default(0.0) // ยอดชำระขั้นต่ำที่จะใช้งานได้
   maxUses       Int?          // จำกัดจำนวนครั้งการใช้รวมทั้งหมด (ถ้ามี)
@@ -227,10 +230,38 @@ model CouponUsage {
   couponId      String   @db.ObjectId
   coupon        Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
   minecraftName String   // อิงตามชื่อ Minecraft ของผู้ใช้ที่ใช้งาน
-  orderId       String   @db.ObjectId // อ้างอิงรหัสคำสั่งซื้อที่ใช้
-  discountedAmt Float    // ยอดเงินส่วนลดที่ผู้เล่นได้รับในการใช้ครั้งนี้
+  orderId       String?  @db.ObjectId // อ้างอิงรหัสคำสั่งซื้อที่ใช้ (optional สำหรับการแลก Coin)
+  discountedAmt Float    // ยอดเงินส่วนลดหรือมูลค่า Coin ที่ผู้เล่นได้รับในการใช้ครั้งนี้
   usedAt        DateTime @default(now())
 
   @@index([couponId])
   @@index([minecraftName])
+}
+
+model CoinTransaction {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  minecraftName String
+  amount        Float    // เหรียญที่ได้รับ (+) หรือใช้ไป (-)
+  type          String   // "TOPUP", "PURCHASE", "ADMIN_ADD", "ADMIN_REMOVE"
+  description   String?
+  createdAt     DateTime @default(now())
+
+  @@index([minecraftName])
+  @@index([createdAt(sort: Desc)])
+}
+
+model CoinPromotion {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String    // ชื่อโปรโมชั่น เช่น "โปรฉลองเปิดเซิร์ฟ คูณ 2"
+  description   String?
+  promoType     String    // "MULTIPLIER" (คูณเหรียญ) หรือ "BONUS_CASH" (แถมเพิ่มเมื่อเติมครบยอด)
+  value         Float     // ค่าโบนัส เช่น 2 (สำหรับคูณ 2) หรือ 20 (สำหรับแถม 20)
+  minSpend      Float     @default(0.0) // ยอดเติมขั้นต่ำ (เฉพาะ BONUS_CASH)
+  isActive      Boolean   @default(true)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([isActive])
 }

@@ -80,9 +80,6 @@ export async function POST(request: NextRequest) {
         // Log replay attempt แยกจาก wrong password
         logger.security.suspiciousActivity(`TOTP replay attempt for admin: ${adminUser.email}`, ip)
       }
-    } else if (adminUser.tokenHash) {
-      // Fallback to legacy static token
-      isTokenValid = await bcrypt.compare(token, adminUser.tokenHash)
     }
 
     if (!isPasswordValid || !isTokenValid) {

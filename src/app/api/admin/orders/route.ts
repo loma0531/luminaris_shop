@@ -4,6 +4,7 @@ import { requireAdminAuth } from '@/lib/adminAuth'
 import { getNextSequence } from '@/lib/counter'
 import { logger, createTimer } from '@/lib/logger'
 import { z } from 'zod'
+import { verifyPlayerInDatabase } from '@/lib/mysql'
 
 // Zod Schema for Admin Manual Order
 const AdminOrderItemSchema = z.object({
@@ -48,6 +49,12 @@ export async function POST(request: NextRequest) {
 
     const { minecraftName, items, total, note } = validation.data
 
+    // ค้นหาชื่อจริงที่สะกดถูกต้องจาก MySQL (เพื่อทำ Case Normalization)
+    const playerCheck = await verifyPlayerInDatabase(minecraftName)
+    const officialMinecraftName = playerCheck.exists && playerCheck.playerData 
+      ? playerCheck.playerData.username 
+      : minecraftName
+
     // Verify total matches item sum
     const calculatedTotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
     if (Math.abs(calculatedTotal - total) > 1) {
@@ -74,7 +81,7 @@ export async function POST(request: NextRequest) {
     const payment = await prisma.payment.create({
       data: {
         paymentId: paymentSeqId,
-        minecraftName,
+        minecraftName: officialMinecraftName,
         amount: calculatedTotal,
         status: 'VERIFIED',
         paymentMethod: 'admin',
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest) {
     const order = await prisma.order.create({
       data: {
         orderId: orderSeqId,
-        minecraftName,
+        minecraftName: officialMinecraftName,
         total: calculatedTotal,
         status: 'COMPLETED',
         paymentId: payment.id,
@@ -97,9 +104,9 @@ export async function POST(request: NextRequest) {
 
     // Update User totalSpent (upsert in case user doesn't exist yet)
     await prisma.user.upsert({
-      where: { minecraftName },
+      where: { minecraftName: officialMinecraftName },
       update: { totalSpent: { increment: calculatedTotal } },
-      create: { minecraftName, totalSpent: calculatedTotal },
+      create: { minecraftName: officialMinecraftName, totalSpent: calculatedTotal },
     })
 
     // Update product sold counts
@@ -116,14 +123,14 @@ export async function POST(request: NextRequest) {
       logger.warn('Failed to update some product sold counts for admin order', 500)
     }
 
-    logger.info(`Admin created manual order #${orderSeqId} for ${minecraftName} (${calculatedTotal}฿)${note ? ` - Note: ${note}` : ''}`, 201, timer())
+    logger.info(`Admin created manual order #${orderSeqId} for ${officialMinecraftName} (${calculatedTotal}฿)${note ? ` - Note: ${note}` : ''}`, 201, timer())
 
     return NextResponse.json({
       success: true,
       orderId: order.orderId,
       paymentId: payment.paymentId,
       total: calculatedTotal,
-      minecraftName,
+      minecraftName: officialMinecraftName,
       status: 'COMPLETED',
       note: note || null,
     }, { status: 201 })

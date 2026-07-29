@@ -13,6 +13,7 @@ import { adminDelete, adminPost, adminPut, adminGet } from '@/lib/adminFetch'
 import { logger } from '@/lib/logger'
 
 import { useToast } from '@/context/ToastContext'
+import { SkeletonAdminTable } from '@/components/Skeleton'
 import ConfirmModal from '@/components/ConfirmModal'
 
 interface Category {
@@ -155,9 +156,7 @@ export default function AdminCategoriesPage() {
       </div>
 
       {loading ? (
-        <div className="empty-state">
-          <div className="spinner" />
-        </div>
+        <SkeletonAdminTable cols={[25, 45, 15, 15]} />
       ) : filteredCategories.length === 0 ? (
         <div className="empty-state">
           <FolderIcon size={48} className="mb-4 opacity-50" />

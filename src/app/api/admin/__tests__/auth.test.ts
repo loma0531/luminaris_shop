@@ -36,6 +36,11 @@ vi.mock('@/lib/redis', () => {
   }
 })
 
+// Mock TOTP
+vi.mock('@/lib/totp', () => ({
+  verifyTOTPWithReplayProtection: vi.fn().mockResolvedValue({ valid: true })
+}))
+
 // Mock env to avoid Zod validation issues
 vi.mock('@/lib/env', () => ({
   env: {
@@ -86,7 +91,7 @@ describe('Admin Authentication API', () => {
         id: 'admin-1',
         email: 'test@admin.com',
         passwordHash: 'hash',
-        tokenHash: 'hash'
+        twoFactorSecret: 'secret'
       })
       ;(bcrypt.compare as Mock).mockResolvedValue(false)
 
@@ -107,7 +112,7 @@ describe('Admin Authentication API', () => {
         id: 'admin-1',
         email: 'test@admin.com',
         passwordHash: 'hash',
-        tokenHash: 'hash'
+        twoFactorSecret: 'secret'
       })
       ;(bcrypt.compare as Mock).mockResolvedValue(true)
 

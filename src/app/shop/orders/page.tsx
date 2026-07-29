@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 
 import { useRouter } from 'next/navigation'
+import { SkeletonOrdersPage } from '@/components/Skeleton'
 import {
   CreditCardIcon,
   ClockIcon,
@@ -15,6 +16,7 @@ import {
   LinkIcon,
   QrCodeIcon,
   GiftIcon,
+  WalletIcon,
 } from '@/components/Icons'
 import { useToast } from '@/context/ToastContext'
 import ConfirmModal from '@/components/ConfirmModal'
@@ -23,12 +25,12 @@ import { useShop } from '../layout'
 import { ORDER_CONFIG } from '@/lib/orderConfig'
 import { getShopConfig } from '@/lib/config'
 import { logger } from '@/lib/logger'
-import { usePendingOrders } from '@/lib/swr-hooks'
+import { usePendingOrders, useShopInit } from '@/lib/swr-hooks'
 import StripePaymentForm from '@/components/StripePaymentForm'
 import PromptPayForm from '@/components/PromptPayForm'
 import './orders.css'
 
-type PaymentMethod = 'stripe' | 'promptpay' | 'truewallet'
+type PaymentMethod = 'stripe' | 'promptpay' | 'truewallet' | 'coin'
 
 interface OrderItem {
   productId: string
@@ -49,6 +51,7 @@ interface Order {
   total: number
   status: string
   createdAt: string
+  isTopUp?: boolean
   payment?: PaymentInfo
 }
 
@@ -70,6 +73,9 @@ export default function OrdersPage() {
   const { success, error: toastError } = useToast()
   const { updatePendingCount } = useShop()
   const hasLoadedStripe = useRef(false)
+  
+  // Fetch shop data including coins using SWR
+  const { data: shopData } = useShopInit(user?.minecraftName || null)
   
   // Confirm Modal State
   const [showConfirm, setShowConfirm] = useState(false)
@@ -207,6 +213,41 @@ export default function OrdersPage() {
     return () => clearInterval(pollInterval)
   }, [pendingOrder, step, success, updatePendingCount, mutatePendingOrders])
 
+  const handleCoinPayment = async () => {
+    if (!user || !pendingOrder || !pendingOrder.payment) return
+
+    setUploading(true)
+
+    try {
+      const res = await apiFetch('/api/checkout/coins/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: pendingOrder.orderId,
+          paymentId: pendingOrder.payment.paymentId,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        toastError(data.error || 'เกิดข้อผิดพลาดในการหักเหรียญ Coin')
+        setUploading(false)
+        return
+      }
+
+      // Success
+      success('ชำระเงินด้วย Coin สำเร็จ! ไอเทมถูกส่งไปยังตัวละครแล้ว')
+      setStep('success')
+      updatePendingCount()
+    } catch (err) {
+      logger.error(`Error with Coin payment: ${err}`)
+      toastError('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleStripeSuccess = () => {
     success('ชำระเงินสำเร็จ! ไอเทมถูกส่งไปยังตัวละครแล้ว')
     setStep('success')
@@ -287,29 +328,7 @@ export default function OrdersPage() {
 
   // Loading skeleton
   if (loading) {
-    return (
-      <div className="checkout-page">
-        {/* <div className="checkout-header">
-          <CreditCardIcon size={24} />
-          <h1>รายการรอชำระเงิน</h1>
-        </div> */}
-        <div className="skeleton w-full h-[48px] rounded-xl mb-6" />
-        <div className="checkout-skeleton">
-          <div className="checkout-panel">
-            <div className="skeleton w-[100px] h-3 mb-4 rounded" />
-            <div className="skeleton w-[180px] h-5 mb-3 rounded" />
-            <div className="skeleton w-full h-12 mb-2 rounded-lg" />
-            <div className="skeleton w-full h-12 mb-4 rounded-lg" />
-            <div className="skeleton w-full h-8 rounded" />
-          </div>
-          <div className="checkout-panel">
-            <div className="skeleton w-[120px] h-3 mb-4 rounded" />
-            <div className="skeleton w-full h-20 mb-3 rounded-xl" />
-            <div className="skeleton w-full h-20 rounded-xl" />
-          </div>
-        </div>
-      </div>
-    )
+    return <SkeletonOrdersPage />
   }
 
   // Success state
@@ -428,6 +447,27 @@ export default function OrdersPage() {
         <div className="checkout-panel payment-panel">
           <div className="panel-label">ช่องทางชำระเงิน</div>
 
+          {/* เมื่อหมดเวลาชำระเงิน */}
+          {isExpired && (
+            <div className="stripe-section animate-scale-in" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+              <div style={{ marginBottom: '1.5rem', color: 'var(--muted-foreground)' }}>
+                <ClockIcon size={48} style={{ margin: '0 auto 1rem', opacity: 0.5, color: '#ef4444' }} />
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '0.5rem', color: '#f87171' }}>หมดเวลาชำระเงิน</h3>
+                <p>คำสั่งซื้อนี้หมดเวลาชำระเงินแล้ว</p>
+                <p style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>กรุณากดยกเลิกรายการสั่งซื้อเพื่อล้างข้อมูลและสามารถสั่งซื้อใหม่อีกครั้ง</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary w-full py-3 rounded-xl font-bold"
+                onClick={() => setShowConfirm(true)}
+                style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}
+              >
+                <TrashIcon size={16} className="inline mr-2" />
+                ยกเลิกรายการสั่งซื้อ
+              </button>
+            </div>
+          )}
+
           {/* Step 1: Method Selection */}
           {!isExpired && !paymentMethod && (() => {
             const shopConfig = getShopConfig()
@@ -471,6 +511,36 @@ export default function OrdersPage() {
                       </div>
                     </button>
                   )}
+
+                  {/* ชำระด้วย Coin สะสม */}
+                  {!pendingOrder.isTopUp && (() => {
+                    const userCoins = shopData?.coins || 0
+                    const isCoinDisabled = userCoins < pendingOrder.total
+                    
+                    return (
+                      <button
+                        className={`method-card ${isCoinDisabled ? 'disabled opacity-50' : ''}`}
+                        onClick={() => setPaymentMethod('coin')}
+                        type="button"
+                      >
+                        <div className="method-logo">
+                          <WalletIcon size={20} className="text-primary" />
+                        </div>
+                        <div className="method-info" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                          <h3>ชำระด้วย Coin สะสม</h3>
+                          <p>ยอดของคุณ: {userCoins.toLocaleString()} Coin (ใช้ {pendingOrder.total.toLocaleString()} Coin)</p>
+                          {isCoinDisabled && (
+                            <span className="text-danger flex items-center gap-1 text-[0.7rem] mt-1" style={{ color: '#ef4444' }}>
+                              ยอด Coin ไม่เพียงพอ (ขาดอีก {(pendingOrder.total - userCoins).toLocaleString()} Coin)
+                            </span>
+                          )}
+                        </div>
+                        <div className="method-radio">
+                          <div className="method-radio-dot" />
+                        </div>
+                      </button>
+                    )
+                  })()}
 
                   {enabledPayments.truewallet?.enabled && (() => {
                     const twMinAmount = enabledPayments.truewallet.minAmount || 10
@@ -582,6 +652,84 @@ export default function OrdersPage() {
               </button>
             </div>
           )}
+
+          {/* Step 2b: Coin Payment */}
+          {!isExpired && !pendingOrder.isTopUp && paymentMethod === 'coin' && (() => {
+            const userCoins = shopData?.coins || 0
+            const isCoinDisabled = userCoins < pendingOrder.total
+
+            if (isCoinDisabled) {
+              return (
+                <div className="stripe-section animate-scale-in">
+                  <button
+                    onClick={() => setPaymentMethod(null)}
+                    className="back-link"
+                  >
+                    ← เปลี่ยนวิธีชำระเงิน
+                  </button>
+                  <div className="alert-box error" style={{ padding: '1rem', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '0.5rem', color: '#f87171', display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '1rem' }}>
+                    <span>ยอด Coin สะสมของคุณไม่เพียงพอสำหรับการชำระเงิน กรุณาเติม Coin ก่อน</span>
+                  </div>
+                  <Link href="/shop/coins" className="btn btn-primary mt-4 w-full text-center py-2.5 rounded-xl flex items-center justify-center gap-2 font-semibold">
+                    <WalletIcon size={16} />
+                    ไปหน้าเติม Coin
+                  </Link>
+                </div>
+              )
+            }
+
+            return (
+              <div className="stripe-section animate-scale-in">
+                <button
+                  onClick={() => setPaymentMethod(null)}
+                  className="back-link"
+                >
+                  ← เปลี่ยนวิธีชำระเงิน
+                </button>
+
+                <div className="tw-amount-display" style={{ background: 'rgba(var(--primary-rgb), 0.1)' }}>
+                  <div className="tw-amount-label">ยอดที่ต้องชำระ (Coin)</div>
+                  <div className="tw-amount-value" style={{ color: 'var(--primary)' }}>{pendingOrder.total.toLocaleString()} Coin</div>
+                </div>
+
+                <div className="mt-4 bg-muted/40 p-4 rounded-xl border border-border/30 text-sm flex flex-col gap-2">
+                  <p><b>รายละเอียดการชำระเงิน:</b></p>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>ยอดเหรียญของคุณตอนนี้:</span>
+                    <span className="font-semibold">{userCoins.toLocaleString()} Coin</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>ยอดเหรียญหลังการชำระเงิน:</span>
+                    <span className="font-semibold text-success">{(userCoins - pendingOrder.total).toLocaleString()} Coin</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary w-full mt-6 py-3 rounded-xl font-bold"
+                  onClick={handleCoinPayment}
+                  disabled={uploading}
+                >
+                  {uploading ? (
+                    <>
+                      <div className="spinner w-4 h-4 mr-2" />
+                      กำลังประมวลผลการชำระเงิน...
+                    </>
+                  ) : (
+                    `ยืนยันจ่ายด้วย Coin (${pendingOrder.total} Coin)`
+                  )}
+                </button>
+
+                <button
+                  className="cancel-btn"
+                  onClick={() => setShowConfirm(true)}
+                >
+                  <TrashIcon size={15} />
+                  ยกเลิกรายการ
+                </button>
+              </div>
+            )
+          })()}
 
           {/* Step 2b: TrueWallet */}
           {!isExpired && paymentMethod === 'truewallet' && (() => {

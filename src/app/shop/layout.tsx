@@ -130,6 +130,7 @@ function ShopSidebar({
   
   const accountItems = [
     { href: '/shop/profile', label: 'โปรไฟล์', Icon: UserIcon, badge: null, badgeColor: undefined },
+    { href: '/shop/coins', label: 'เติม Coin', Icon: WalletIcon, badge: null, badgeColor: undefined },
     { href: '/shop/stats', label: 'สถิติการเติมเงิน', Icon: WalletIcon, badge: null, badgeColor: undefined },
   ]
   
@@ -466,7 +467,8 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
     setUser(null)
     setCartCountOverride(null)
     mutateShopData() // Clear SWR cache
-    router.push('/')
+    setShowLogoutConfirm(false)
+    router.push('/shop')
   }
 
   const handleLoginSuccess = (loggedInUser: { id: string; minecraftName: string }) => {
@@ -527,32 +529,119 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
           
           <div className="shop-top-header-right flex items-center gap-3">
             <button 
-              className="btn btn-sm btn-icon"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '34px',
+                height: '34px',
+                background: 'var(--navbar-btn-bg)',
+                border: '1px solid var(--navbar-btn-border)',
+                borderRadius: '10px',
+                backdropFilter: 'blur(16px) saturate(1.5)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.5)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,var(--glass-inset)), 0 2px 8px rgba(0,0,0,calc(var(--shadow-opacity)*0.5))',
+                cursor: 'pointer',
+                transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
+                color: 'var(--foreground)',
+                flexShrink: 0,
+              }}
               onClick={toggleTheme}
               title={theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}
               aria-label={theme === 'dark' ? 'เปลี่ยนเป็นโหมดสว่าง' : 'เปลี่ยนเป็นโหมดมืด'}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--navbar-btn-hover)'
+                ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLButtonElement).style.background = 'var(--navbar-btn-bg)'
+                ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'
+              }}
             >
-              {theme === 'dark' ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+              {theme === 'dark' ? <SunIcon size={15} /> : <MoonIcon size={15} />}
             </button>
             {user ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {/* Profile pill */}
                 <Link href="/shop/profile" className="shop-header-profile">
                   <Image
-                     src={`https://mc-heads.net/avatar/${getSkinName(user.minecraftName)}/24`}
-                     alt="Head"
-                     width={24}
-                     height={24}
-                     className="rounded"
+                    src={`https://mc-heads.net/avatar/${getSkinName(user.minecraftName)}/24`}
+                    alt="Head"
+                    width={22}
+                    height={22}
+                    className="rounded"
                   />
                   <span>{user.minecraftName}</span>
                 </Link>
-                <button 
-                  className="btn btn-sm"
+
+                {/* Coin pill */}
+                <Link
+                  href="/shop/coins"
+                  title="เติม Coin"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    height: '34px',
+                    padding: '0 0.875rem',
+                    background: 'var(--navbar-btn-bg)',
+                    border: '1px solid var(--navbar-btn-border)',
+                    borderRadius: '10px',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    color: 'hsl(var(--primary))',
+                    backdropFilter: 'blur(16px) saturate(1.5)',
+                    WebkitBackdropFilter: 'blur(16px) saturate(1.5)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,var(--glass-inset)), 0 2px 8px rgba(0,0,0,calc(var(--shadow-opacity)*0.5))',
+                    transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = 'var(--navbar-btn-hover)'
+                    ;(e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = 'var(--navbar-btn-bg)'
+                    ;(e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)'
+                  }}
+                >
+                  <WalletIcon size={13} className="text-primary" />
+                  <span>{(shopData?.coins || 0).toLocaleString()} Coin</span>
+                </Link>
+
+                {/* Logout button */}
+                <button
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '34px',
+                    height: '34px',
+                    background: 'var(--navbar-btn-bg)',
+                    border: '1px solid var(--navbar-btn-border)',
+                    borderRadius: '10px',
+                    backdropFilter: 'blur(16px) saturate(1.5)',
+                    WebkitBackdropFilter: 'blur(16px) saturate(1.5)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,var(--glass-inset)), 0 2px 8px rgba(0,0,0,calc(var(--shadow-opacity)*0.5))',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.16,1,0.3,1)',
+                    color: 'var(--foreground)',
+                    flexShrink: 0,
+                  }}
                   onClick={() => setShowLogoutConfirm(true)}
                   title="ออกจากระบบ"
                   aria-label="ออกจากระบบ"
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'var(--navbar-btn-hover)'
+                    ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'var(--navbar-btn-bg)'
+                    ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'
+                  }}
                 >
-                  <LogoutIcon size={16} />
+                  <LogoutIcon size={15} />
                 </button>
               </div>
             ) : (

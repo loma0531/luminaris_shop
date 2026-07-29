@@ -123,7 +123,7 @@ const MAX_BODY_SIZE = 1 * 1024 * 1024 // 1MB
 
 // Content Security Policy - restrictive for API, relaxed for pages
 const CSP_API = "default-src 'none'; frame-ancestors 'none'"
-const CSP_PAGE = "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc-heads.net https://crafatar.com https://texture.geysermc.org https://*.stripe.com; font-src 'self'; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'"
+const CSP_PAGE = "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mc-heads.net https://crafatar.com https://texture.geysermc.org https://*.stripe.com; font-src 'self'; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'"
 
 
 

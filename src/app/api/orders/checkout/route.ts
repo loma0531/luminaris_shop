@@ -114,6 +114,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'คูปองไม่ถูกต้องหรือหมดอายุการใช้งานแล้ว' }, { status: 400 })
       }
 
+      if (coupon.discountType === 'COIN') {
+        return NextResponse.json({ error: 'คูปองนี้ใช้สำหรับแลก Coin เท่านั้น' }, { status: 400 })
+      }
+
       const now = new Date()
       if (coupon.startDate && now < new Date(coupon.startDate)) {
         return NextResponse.json({ error: 'คูปองนี้ยังไม่ถึงระยะเวลาเริ่มใช้งาน' }, { status: 400 })

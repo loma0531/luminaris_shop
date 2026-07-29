@@ -147,6 +147,11 @@ export async function setCachedStats<T>(stats: T): Promise<void> {
   await cache.set(CACHE_KEYS.STATS, stats, CACHE_TTL.STATS)
 }
 
+export async function invalidateStatsCache(): Promise<void> {
+  const cache = getCache()
+  await cache.del(CACHE_KEYS.STATS)
+}
+
 // =========================================
 // Cart Caching (Per-User)
 // =========================================

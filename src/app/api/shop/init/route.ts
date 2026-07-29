@@ -56,9 +56,58 @@ export async function GET(request: NextRequest) {
         orderBy: { sortOrder: 'asc' }
       })
     }),
+
+    // 3. Coin Settings & Promotions
+    Promise.all([
+      prisma.settings.findMany({
+        where: {
+          key: { in: ['coin_rate'] }
+        }
+      }),
+      prisma.coinPromotion.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { startDate: null, endDate: null },
+            { startDate: { lte: new Date() }, endDate: null },
+            { startDate: null, endDate: { gte: new Date() } },
+            { startDate: { lte: new Date() }, endDate: { gte: new Date() } }
+          ]
+        }
+      })
+    ]).then(([settings, activePromos]) => {
+      const map = new Map(settings.map(s => [s.key, s.value]))
+      const coinRate = parseFloat(map.get('coin_rate') || '1.0')
+      
+      const multiplierPromo = activePromos.find(p => p.promoType === 'MULTIPLIER')
+      const bonusPromo = activePromos.find(p => p.promoType === 'BONUS_CASH')
+      
+      const promoDouble = multiplierPromo ? multiplierPromo.value === 2 : false
+      const promoBonusThreshold = bonusPromo ? bonusPromo.minSpend : 0.0
+      const promoBonusAmount = bonusPromo ? bonusPromo.value : 0.0
+
+      return {
+        coinConfig: {
+          coinRate,
+          promoDouble,
+          promoBonusThreshold,
+          promoBonusAmount,
+        },
+        activePromotions: activePromos.map(p => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          promoType: p.promoType,
+          value: p.value,
+          minSpend: p.minSpend,
+          startDate: p.startDate ? p.startDate.toISOString() : null,
+          endDate: p.endDate ? p.endDate.toISOString() : null,
+        }))
+      }
+    })
   ]
 
-  // 3. User Specific Data (if logged in)
+  // 4. User Specific Data (if logged in)
   if (minecraftName && isValidMinecraftName(minecraftName)) {
     promises.push(
       // Cart (Read from Redis first, fallback to MongoDB)
@@ -88,20 +137,43 @@ export async function GET(request: NextRequest) {
         }
       })
     )
+
+    promises.push(
+      // User Coins
+      prisma.user.findUnique({
+        where: { minecraftName },
+        select: { coins: true }
+      }).then(u => u?.coins || 0.0)
+    )
   }
 
   try {
     // Await all data
     const results = await Promise.all(promises)
     
-    // Generate hash for change detection (based on products + categories)
+    // Generate hash for change detection (based on products + categories + user info)
     const products = results[0] || []
     const categories = results[1] || []
+    
+    const coinData = results[2] || { 
+      coinConfig: { coinRate: 1.0, promoDouble: false, promoBonusThreshold: 0.0, promoBonusAmount: 0.0 }, 
+      activePromotions: [] 
+    }
+    const coinConfig = coinData.coinConfig
+    const activePromotions = coinData.activePromotions
+    
+    const userCoins = minecraftName ? (results[5] || 0.0) : 0.0
+    const cartItemsCount = minecraftName ? (results[3] ? results[3].length : 0) : 0
+
     const hashSource = JSON.stringify({
       pCount: products.length,
       pIds: products.slice(0, 10).map((p: any) => p.id),
       cCount: categories.length,
       cIds: categories.map((c: any) => c.id),
+      coinConfig,
+      activePromotionsCount: activePromotions.length,
+      userCoins,
+      cartItemsCount
     })
     const serverHash = simpleHash(hashSource)
     
@@ -120,13 +192,15 @@ export async function GET(request: NextRequest) {
     const response: any = {
       products: products,
       categories: categories,
+      coinConfig: coinConfig,
+      activePromotions: activePromotions,
       timestamp: Date.now(),
       hash: serverHash, // Include hash for client-side caching
     }
 
     if (minecraftName) {
       // Process cart items to include product details
-       const cartItems = results[2] || []
+      const cartItems = results[3] || []
       const productMap = new Map(products.map((p: any) => [p.id, p]))
       
       response.cart = cartItems
@@ -155,14 +229,15 @@ export async function GET(request: NextRequest) {
         })
         .filter((item: any) => item !== null)
 
-      response.pendingOrders = results[3] || 0
+      response.pendingOrders = results[4] || 0
+      response.coins = results[5] || 0.0
     }
 
     const duration = Date.now() - start
     
     return NextResponse.json(response, { 
       headers: {
-        ...CACHE_HEADERS.SHORT, // Cache this response for short time
+        ...(minecraftName ? CACHE_HEADERS.NONE : CACHE_HEADERS.SHORT),
         'ETag': `"${serverHash}"`,
         'X-Response-Time': `${duration}ms`
       }

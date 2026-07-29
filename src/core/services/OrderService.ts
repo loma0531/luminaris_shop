@@ -11,6 +11,7 @@ import { getNextSequence } from '@/lib/counter'
 import { logger, createTimer } from '@/lib/logger'
 import { FulfillmentService, type OrderItemForDelivery } from './FulfillmentService'
 import { sendPurchaseLog } from '@/lib/webhook'
+import { invalidateStatsCache } from '@/lib/redis'
 
 export interface CreateOrderInput {
   minecraftName: string
@@ -190,14 +191,38 @@ export class OrderService {
         where: { orderId },
         data: { status: 'COMPLETED' },
       })
-      await tx.user.upsert({
-        where: { minecraftName: order.minecraftName },
-        update: { totalSpent: { increment: order.total } },
-        create: {
-          minecraftName: order.minecraftName,
-          totalSpent: order.total,
-        },
-      })
+      if (order.isTopUp) {
+        await tx.user.upsert({
+          where: { minecraftName: order.minecraftName },
+          update: {
+            totalSpent: { increment: order.total },
+            coins: { increment: payment.coinsEarned || 0.0 }
+          },
+          create: {
+            minecraftName: order.minecraftName,
+            totalSpent: order.total,
+            coins: payment.coinsEarned || 0.0
+          },
+        })
+
+        await tx.coinTransaction.create({
+          data: {
+            minecraftName: order.minecraftName,
+            amount: payment.coinsEarned || 0.0,
+            type: 'TOPUP',
+            description: `เติมเงินสะสมเหรียญด้วย Order #${orderId} ผ่านช่องทาง ${paymentMethod}`,
+          }
+        })
+      } else {
+        await tx.user.upsert({
+          where: { minecraftName: order.minecraftName },
+          update: { totalSpent: { increment: order.total } },
+          create: {
+            minecraftName: order.minecraftName,
+            totalSpent: order.total,
+          },
+        })
+      }
     })
 
     logger.payment.statusChanged(paymentId, 'PENDING', 'VERIFIED')
@@ -216,15 +241,17 @@ export class OrderService {
 
     // อัปเดต soldCount (ไม่ critical — ถ้า fail ก็ไม่เป็นไร)
     try {
-      await prisma.$transaction(
-        (order.items as { productId: string; quantity: number }[]).map(
-          (item) =>
-            prisma.product.update({
-              where: { id: item.productId },
-              data: { soldCount: { increment: item.quantity } },
-            })
+      if (!order.isTopUp) {
+        await prisma.$transaction(
+          (order.items as { productId: string; quantity: number }[]).map(
+            (item) =>
+              prisma.product.update({
+                where: { id: item.productId },
+                data: { soldCount: { increment: item.quantity } },
+              })
+          )
         )
-      )
+      }
     } catch {
       logger.warn('Failed to update some product sold counts', 500)
     }
@@ -247,6 +274,22 @@ export class OrderService {
       status: 'SUCCESS',
       paymentMethod: paymentMethod as 'truewallet',
     }).catch(() => {})
+
+    invalidateStatsCache().catch(() => {})
+
+    if (order.isTopUp) {
+      return {
+        orderCompleted: true,
+        fulfillment: {
+          success: true,
+          totalCommands: 0,
+          successCount: 0,
+          failCount: 0,
+          status: 'SUCCESS',
+          message: 'Top-up coin completed successfully',
+        }
+      }
+    }
 
     // ส่งของผ่าน RCON
     const fulfillment = await FulfillmentService.fulfillOrder(

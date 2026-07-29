@@ -355,3 +355,78 @@ export async function sendTruewalletLog(data: TruewalletLogData): Promise<boolea
     return false
   }
 }
+
+interface CoinTransactionLogData {
+  minecraftName: string
+  amount: number
+  type: 'ADMIN_ADD' | 'ADMIN_REMOVE'
+  description?: string
+  newBalance: number
+}
+
+/**
+ * Send an admin coin transaction log to Discord webhook
+ */
+export async function sendCoinTransactionLog(data: CoinTransactionLogData): Promise<boolean> {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
+  
+  if (!webhookUrl) {
+    logger.warn('Discord webhook URL not configured, skipping admin coin transaction log', 200)
+    return false
+  }
+
+  try {
+    const isAdd = data.type === 'ADMIN_ADD'
+    const embed: DiscordEmbed = {
+      title: isAdd ? '🪙 แอดมินเพิ่มเหรียญ (Gift Coin)' : '🪙 แอดมินหักเหรียญ (Deduct Coin)',
+      color: isAdd ? 0xffd700 : 0xff4500, // Gold for add, RedOrange for remove
+      fields: [
+        {
+          name: '👤 ผู้เล่น',
+          value: `\`${data.minecraftName}\``,
+          inline: true,
+        },
+        {
+          name: isAdd ? '📥 จำนวนที่เพิ่ม' : '📤 จำนวนที่หัก',
+          value: `**${isAdd ? '+' : ''}${data.amount.toLocaleString()} Coin**`,
+          inline: true,
+        },
+        {
+          name: '💳 ยอดคงเหลือใหม่',
+          value: `**${data.newBalance.toLocaleString()} Coin**`,
+          inline: true,
+        },
+        {
+          name: '📝 รายละเอียด / เหตุผล',
+          value: data.description || (isAdd ? 'แอดมินเสกเหรียญให้' : 'แอดมินหักเหรียญ'),
+          inline: false,
+        },
+      ],
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: 'Luminaris Admin Logs',
+      },
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'Luminaris Admin - Coins',
+        embeds: [embed],
+      }),
+    })
+
+    if (!response.ok) {
+      logger.warn(`Discord webhook failed for admin coin log: ${response.status} ${response.statusText}`, response.status)
+      return false
+    }
+
+    logger.info(`Discord admin coin transaction log sent for ${data.minecraftName}`, 200)
+    return true
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error(`Discord webhook coin log error: ${errorMessage}`, 500)
+    return false
+  }
+}
