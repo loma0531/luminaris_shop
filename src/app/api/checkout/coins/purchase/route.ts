@@ -64,8 +64,13 @@ export async function POST(request: NextRequest) {
     // 3. ตรวจสอบยอด Coin ในฐานข้อมูลแบบ Atomic ใน Transaction
     try {
       await prisma.$transaction(async (tx) => {
-        const userObj = await tx.user.findUnique({
-          where: { minecraftName: order.minecraftName }
+        const userObj = await tx.user.findFirst({
+          where: {
+            minecraftName: {
+              equals: order.minecraftName,
+              mode: 'insensitive'
+            }
+          }
         })
 
         if (!userObj || userObj.coins < order.total) {
@@ -74,7 +79,7 @@ export async function POST(request: NextRequest) {
 
         // หักเหรียญ Coin
         await tx.user.update({
-          where: { minecraftName: order.minecraftName },
+          where: { id: userObj.id },
           data: { coins: { decrement: order.total } }
         })
 

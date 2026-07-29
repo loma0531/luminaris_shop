@@ -157,17 +157,35 @@ export class PaymentService {
           verifiedAt: new Date(),
         },
       })
-      await tx.user.upsert({
-        where: { minecraftName: payment.minecraftName },
-        update: { coins: { increment: coinsEarned } },
-        create: {
-          minecraftName: payment.minecraftName,
-          coins: coinsEarned,
-        },
+      // ค้นหาผู้เล่นแบบ Case-Insensitive ในฐานข้อมูลร้านค้าก่อน
+      const existingUser = await tx.user.findFirst({
+        where: {
+          minecraftName: {
+            equals: payment.minecraftName,
+            mode: 'insensitive'
+          }
+        }
       })
+
+      const targetMinecraftName = existingUser ? existingUser.minecraftName : payment.minecraftName
+
+      if (existingUser) {
+        await tx.user.update({
+          where: { id: existingUser.id },
+          data: { coins: { increment: coinsEarned } }
+        })
+      } else {
+        await tx.user.create({
+          data: {
+            minecraftName: targetMinecraftName,
+            coins: coinsEarned,
+          }
+        })
+      }
+
       await tx.coinTransaction.create({
         data: {
-          minecraftName: payment.minecraftName,
+          minecraftName: targetMinecraftName,
           amount: coinsEarned,
           type: 'TOPUP',
           description: `เติมเงินผ่าน Stripe ${payment.amount} บาท รับ ${coinsEarned} Coin`,

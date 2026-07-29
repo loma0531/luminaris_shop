@@ -120,7 +120,11 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       user = await prisma.user.create({
-        data: { minecraftName: officialMinecraftName },
+        data: { 
+          minecraftName: officialMinecraftName,
+          coins: 0.0,
+          totalSpent: 0.0
+        },
         select: { id: true, minecraftName: true, coins: true, createdAt: true },
       })
       logger.auth.userCreated(officialMinecraftName, timer())

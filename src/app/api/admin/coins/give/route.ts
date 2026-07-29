@@ -29,11 +29,17 @@ export async function POST(request: NextRequest) {
       ? playerCheck.playerData.username 
       : minecraftName
 
-    // ค้นหายอดเหรียญปัจจุบันของผู้เล่นโดยใช้ชื่อที่สะกดอย่างเป็นทางการ
-    const user = await prisma.user.findUnique({
-      where: { minecraftName: officialMinecraftName }
+    // ค้นหายอดเหรียญปัจจุบันของผู้เล่นโดยใช้ชื่อที่สะกดอย่างเป็นทางการแบบ Case-Insensitive
+    const user = await prisma.user.findFirst({
+      where: {
+        minecraftName: {
+          equals: officialMinecraftName,
+          mode: 'insensitive'
+        }
+      }
     })
 
+    const targetMinecraftName = user ? user.minecraftName : officialMinecraftName
     const currentCoins = user?.coins || 0.0
     if (currentCoins + amount < 0) {
       return NextResponse.json({ error: `ยอดเหรียญสะสมของผู้เล่นมีไม่เพียงพอที่จะหักออก (มีอยู่: ${currentCoins} Coin, ต้องการหัก: ${Math.abs(amount)} Coin)` }, { status: 400 })
@@ -43,10 +49,10 @@ export async function POST(request: NextRequest) {
 
     await prisma.$transaction(async (tx) => {
       await tx.user.upsert({
-        where: { minecraftName: officialMinecraftName },
+        where: { minecraftName: targetMinecraftName },
         update: { coins: { increment: amount } },
         create: {
-          minecraftName: officialMinecraftName,
+          minecraftName: targetMinecraftName,
           coins: amount >= 0 ? amount : 0,
         }
       })

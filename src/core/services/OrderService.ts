@@ -191,37 +191,60 @@ export class OrderService {
         where: { orderId },
         data: { status: 'COMPLETED' },
       })
+      // ค้นหาผู้เล่นแบบ Case-Insensitive ในฐานข้อมูลร้านค้าก่อน
+      const existingUser = await tx.user.findFirst({
+        where: {
+          minecraftName: {
+            equals: order.minecraftName,
+            mode: 'insensitive'
+          }
+        }
+      })
+
+      const targetMinecraftName = existingUser ? existingUser.minecraftName : order.minecraftName
+
       if (order.isTopUp) {
-        await tx.user.upsert({
-          where: { minecraftName: order.minecraftName },
-          update: {
-            totalSpent: { increment: order.total },
-            coins: { increment: payment.coinsEarned || 0.0 }
-          },
-          create: {
-            minecraftName: order.minecraftName,
-            totalSpent: order.total,
-            coins: payment.coinsEarned || 0.0
-          },
-        })
+        if (existingUser) {
+          await tx.user.update({
+            where: { id: existingUser.id },
+            data: {
+              totalSpent: { increment: order.total },
+              coins: { increment: payment.coinsEarned || 0.0 }
+            }
+          })
+        } else {
+          await tx.user.create({
+            data: {
+              minecraftName: targetMinecraftName,
+              totalSpent: order.total,
+              coins: payment.coinsEarned || 0.0
+            }
+          })
+        }
 
         await tx.coinTransaction.create({
           data: {
-            minecraftName: order.minecraftName,
+            minecraftName: targetMinecraftName,
             amount: payment.coinsEarned || 0.0,
             type: 'TOPUP',
             description: `เติมเงินสะสมเหรียญด้วย Order #${orderId} ผ่านช่องทาง ${paymentMethod}`,
           }
         })
       } else {
-        await tx.user.upsert({
-          where: { minecraftName: order.minecraftName },
-          update: { totalSpent: { increment: order.total } },
-          create: {
-            minecraftName: order.minecraftName,
-            totalSpent: order.total,
-          },
-        })
+        if (existingUser) {
+          await tx.user.update({
+            where: { id: existingUser.id },
+            data: { totalSpent: { increment: order.total } }
+          })
+        } else {
+          await tx.user.create({
+            data: {
+              minecraftName: targetMinecraftName,
+              totalSpent: order.total,
+              coins: 0.0
+            }
+          })
+        }
       }
     })
 

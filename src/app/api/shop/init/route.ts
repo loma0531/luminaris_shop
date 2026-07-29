@@ -140,8 +140,13 @@ export async function GET(request: NextRequest) {
 
     promises.push(
       // User Coins
-      prisma.user.findUnique({
-        where: { minecraftName },
+      prisma.user.findFirst({
+        where: {
+          minecraftName: {
+            equals: minecraftName,
+            mode: 'insensitive'
+          }
+        },
         select: { coins: true }
       }).then(u => u?.coins || 0.0)
     )

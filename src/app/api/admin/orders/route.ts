@@ -102,12 +102,30 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Update User totalSpent (upsert in case user doesn't exist yet)
-    await prisma.user.upsert({
-      where: { minecraftName: officialMinecraftName },
-      update: { totalSpent: { increment: calculatedTotal } },
-      create: { minecraftName: officialMinecraftName, totalSpent: calculatedTotal },
+    // Update User totalSpent (upsert in case user doesn't exist yet)แบบ Case-Insensitive
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        minecraftName: {
+          equals: officialMinecraftName,
+          mode: 'insensitive'
+        }
+      }
     })
+
+    if (existingUser) {
+      await prisma.user.update({
+        where: { id: existingUser.id },
+        data: { totalSpent: { increment: calculatedTotal } },
+      })
+    } else {
+      await prisma.user.create({
+        data: { 
+          minecraftName: officialMinecraftName, 
+          totalSpent: calculatedTotal,
+          coins: 0.0
+        },
+      })
+    }
 
     // Update product sold counts
     try {
