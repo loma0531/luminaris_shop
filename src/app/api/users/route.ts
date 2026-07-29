@@ -103,13 +103,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authMeResult.error || 'รหัสผ่านเซิร์ฟเวอร์ไม่ถูกต้อง' }, { status: 401 })
     }
 
-    // Use officialName from AuthMe (handles Case Normalization)
-    const officialMinecraftName = authMeResult.officialName || minecraftName
-
-    let user = await prisma.user.findUnique({
-      where: { minecraftName: officialMinecraftName },
+    // 1. ค้นหาผู้เล่นในระบบแบบ Case-Insensitive ก่อน
+    let user = await prisma.user.findFirst({
+      where: {
+        minecraftName: {
+          equals: minecraftName,
+          mode: 'insensitive'
+        }
+      },
       select: { id: true, minecraftName: true, coins: true, createdAt: true },
     })
+
+    // กำหนดชื่อทางการ: ถ้ามีใน DB แล้วใช้ตาม DB (ถ้ามีข้อมูลตรงก็ดำเนินการตามนั้น)
+    // ถ้าไม่มี ใช้ตามที่ผู้ใช้กรอกเข้ามา (ผู้เล่นใส่ยังไงก็เชื่อไปก่อน)
+    const officialMinecraftName = user ? user.minecraftName : minecraftName
 
     if (!user) {
       user = await prisma.user.create({
@@ -119,7 +126,7 @@ export async function POST(request: NextRequest) {
       logger.auth.userCreated(officialMinecraftName, timer())
     } else {
       await prisma.user.update({
-        where: { minecraftName: officialMinecraftName },
+        where: { id: user.id },
         data: { lastLogin: new Date() }
       })
       logger.auth.userLogin(officialMinecraftName, timer())
@@ -128,7 +135,7 @@ export async function POST(request: NextRequest) {
     // Generate shop session token
     const shopToken = await generateShopToken(officialMinecraftName)
 
-    return NextResponse.json({ ...user, shopToken })
+    return NextResponse.json({ ...user, minecraftName: officialMinecraftName, shopToken })
   } catch {
     logger.system.error('Failed to process user login')
     return NextResponse.json({ error: 'Failed to process login' }, { status: 500 })
