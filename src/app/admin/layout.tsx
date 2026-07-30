@@ -275,7 +275,7 @@ function AdminContent({ children }: AdminLayoutProps) {
           <div className="admin-top-header-left">
             <button 
               className="btn admin-menu-btn"
-              onClick={() => setMobileMenuOpen(true)}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="เปิดเมนูแผงควบคุม"
             >
               <MenuIcon size={20} />

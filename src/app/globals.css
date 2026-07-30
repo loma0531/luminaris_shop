@@ -815,7 +815,7 @@ html[data-theme="light"] .toast-card {
 /* Product Card Grid */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 1rem;
 }
 
@@ -1453,6 +1453,15 @@ html[data-theme="light"] .toast-card {
   z-index: 40;
 }
 
+@media (max-width: 640px) {
+  .category-filter-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
 .filter-label {
   display: flex;
   align-items: center;
@@ -1465,6 +1474,12 @@ html[data-theme="light"] .toast-card {
 .custom-dropdown {
   position: relative;
   min-width: 220px;
+}
+
+@media (max-width: 640px) {
+  .custom-dropdown {
+    min-width: 100%;
+  }
 }
 
 .dropdown-trigger {
@@ -1847,12 +1862,13 @@ html[data-theme="light"] .login-modal {
   z-index: 50;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
+  overflow-y: auto;
 }
 
 .shop-sidebar-close {
   display: none;
   position: absolute;
-  top: 1rem;
+  top: 1.35rem; /* Adjusted from 1rem to align with logo text */
   right: 1rem;
   padding: 0.5rem;
   background: transparent;
@@ -2023,6 +2039,7 @@ html[data-theme="light"] .login-modal {
   .shop-sidebar {
     left: -280px;
     transition: left 0.3s ease;
+    z-index: 1010; /* Ensure sidebar is drawn above top navbar */
   }
 
   .shop-sidebar.open {
@@ -2039,6 +2056,10 @@ html[data-theme="light"] .login-modal {
 
   .shop-sidebar-close {
     display: block;
+  }
+
+  .mobile-menu-overlay {
+    z-index: 1000; /* Ensure overlay is drawn above top navbar but below sidebar */
   }
 
   .shop-main {

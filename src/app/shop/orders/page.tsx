@@ -79,6 +79,7 @@ export default function OrdersPage() {
   
   // Confirm Modal State
   const [showConfirm, setShowConfirm] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
 
   // Load user from localStorage
   useEffect(() => {
@@ -252,6 +253,37 @@ export default function OrdersPage() {
     success('ชำระเงินสำเร็จ! ไอเทมถูกส่งไปยังตัวละครแล้ว')
     setStep('success')
     updatePendingCount()
+  }
+
+  const handleVerifyStripePayment = async () => {
+    if (!pendingOrder || !pendingOrder.payment || isVerifying) return
+
+    setIsVerifying(true)
+    try {
+      const res = await apiFetch('/api/checkout/stripe/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: pendingOrder.orderId,
+          paymentId: pendingOrder.payment.paymentId,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.success) {
+        success(data.message || 'ชำระเงินสำเร็จ! ไอเทม/เหรียญถูกจัดส่งแล้ว')
+        setStep('success')
+        updatePendingCount()
+        mutatePendingOrders()
+      } else {
+        toastError(data.message || data.error || 'ตรวจสอบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')
+      }
+    } catch (err) {
+      logger.error(`Error verifying Stripe payment: ${err}`)
+      toastError('เกิดข้อผิดพลาดในการตรวจสอบสถานะชำระเงิน')
+    } finally {
+      setIsVerifying(false)
+    }
   }
 
   const handleTruewalletPayment = async () => {
@@ -609,6 +641,24 @@ export default function OrdersPage() {
               />
 
               <button
+                className="verify-btn"
+                onClick={handleVerifyStripePayment}
+                disabled={isVerifying}
+              >
+                {isVerifying ? (
+                  <>
+                    <div className="verify-spinner" />
+                    กำลังตรวจสอบสถานะ...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon size={16} />
+                    ฉันชำระเงินแล้ว ตรวจสอบสถานะ
+                  </>
+                )}
+              </button>
+
+              <button
                 className="cancel-btn"
                 onClick={() => setShowConfirm(true)}
               >
@@ -630,12 +680,32 @@ export default function OrdersPage() {
 
               <div className="stripe-embed">
                 {clientSecret ? (
-                  <StripePaymentForm
-                    clientSecret={clientSecret}
-                    amount={pendingOrder.total}
-                    onSuccess={handleStripeSuccess}
-                    onError={(msg) => toastError(msg)}
-                  />
+                  <>
+                    <StripePaymentForm
+                      clientSecret={clientSecret}
+                      amount={pendingOrder.total}
+                      onSuccess={handleStripeSuccess}
+                      onError={(msg) => toastError(msg)}
+                    />
+
+                    <button
+                      className="verify-btn"
+                      onClick={handleVerifyStripePayment}
+                      disabled={isVerifying}
+                    >
+                      {isVerifying ? (
+                        <>
+                          <div className="verify-spinner" />
+                          กำลังตรวจสอบสถานะ...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon size={16} />
+                          ฉันชำระเงินแล้ว ตรวจสอบสถานะ
+                        </>
+                      )}
+                    </button>
+                  </>
                 ) : (
                   <div className="stripe-loading-state">
                     <div className="spinner-ring" />

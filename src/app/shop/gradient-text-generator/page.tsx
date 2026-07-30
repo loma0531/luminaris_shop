@@ -396,7 +396,7 @@ export default function GradientGeneratorPage() {
     { key: 'underline', label: 'U', className: 'underline' },
     { key: 'strikethrough', label: 'S', className: 'line-through' },
   ];  return (
-    <div className="min-h-screen bg-transparent text-foreground w-full py-4 md:py-6" style={{ fontFamily: "var(--font-primary)" }}>
+    <div className="w-full bg-transparent text-foreground py-4 md:py-6" style={{ fontFamily: "var(--font-primary)" }}>
       {/* Maximum width container roughly matching the design proportions */}
       <div className="max-w-[1392px] mx-auto px-4 md:px-8 space-y-6">
         
@@ -615,7 +615,7 @@ export default function GradientGeneratorPage() {
             {/* Java Edition Preview Segment */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2 text-foreground">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-wide flex items-center gap-2 text-foreground">
                   Java Edition Preview
                 </h2>
                 {/* Custom Font Selector for Java Preview */}
@@ -682,7 +682,7 @@ export default function GradientGeneratorPage() {
             {/* Bedrock Edition Preview Segment */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-wide flex items-center gap-2 text-foreground">
+                <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-wide flex items-center gap-2 text-foreground">
                   Bedrock Edition Preview
                 </h2>
                 {/* Custom Font Selector for Bedrock Preview */}

@@ -1079,6 +1079,12 @@ export default function CartPage() {
             grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
           }
         }
+        @media (max-width: 1023px) {
+          .custom-recommend-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 0.75rem !important;
+          }
+        }
       `}</style>
     </div>
   )

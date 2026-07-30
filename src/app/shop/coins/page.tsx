@@ -187,7 +187,7 @@ export default function ShopCoinsPage() {
       )}
 
       {/* ── Main Grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
         {/* ฝั่งซ้าย: เลือกยอดเติมเงิน */}
         <div
@@ -199,7 +199,7 @@ export default function ShopCoinsPage() {
           </div>
 
           {/* Preset Buttons */}
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5" role="group" aria-label="ยอดเติมเงินสำเร็จรูป">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2.5" role="group" aria-label="ยอดเติมเงินสำเร็จรูป">
             {TOPUP_PRESETS.map((val) => {
               const isSelected = amount === val && !customAmount
               return (
@@ -346,7 +346,7 @@ export default function ShopCoinsPage() {
 
       {/* ── Coupon Redeem Card ── */}
       <div
-        className="card flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-5 shadow-lg relative overflow-hidden"
+        className="card flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 p-5 shadow-lg relative overflow-hidden"
         style={{
           animation: 'fadeInUp 0.4s 0.24s ease both',
           borderColor: 'rgba(168, 85, 247, 0.25)',
@@ -367,8 +367,8 @@ export default function ShopCoinsPage() {
           </div>
         </div>
 
-        <form onSubmit={handleRedeemCoupon} className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64">
+        <form onSubmit={handleRedeemCoupon} className="flex items-center gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-64">
             <input
               type="text"
               className="input text-sm uppercase tracking-wider font-mono font-bold w-full pr-3"

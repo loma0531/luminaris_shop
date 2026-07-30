@@ -8,6 +8,7 @@ import {
   PackageIcon, 
   TagIcon,
   CheckIcon,
+  SearchIcon,
 } from '@/components/Icons'
 import { apiFetch } from '@/lib/apiFetch'
 import { useToast } from '@/context/ToastContext'
@@ -61,6 +62,7 @@ export default function ShopPage() {
 
   
   const [selectedCategory, setSelectedCategory] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [cart, setCart] = useState<CartItem[]>([])
   const { warning: toastWarning, success: toastSuccess, error: toastError } = useToast()
   
@@ -107,9 +109,11 @@ export default function ShopPage() {
     }
   }
 
-  const filteredProducts = selectedCategory
-    ? products.filter((p) => p.category?.id === selectedCategory)
-    : products
+  const filteredProducts = products.filter((p) => {
+    const matchCategory = !selectedCategory || p.category?.id === selectedCategory
+    const matchSearch = !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchCategory && matchSearch
+  })
 
   // Use refs to avoid stale closures in debounce
   const userRef = useRef(user)
@@ -342,63 +346,77 @@ export default function ShopPage() {
         สินค้าทั้งหมด
       </h1>
 
-      {/* Custom Category Filter Dropdown */}
-      <div className="category-filter-wrapper animate-fade-in-left delay-100">
-        <div className="filter-label">
-          <TagIcon size={18} />
-          <span>หมวดหมู่:</span>
-        </div>
-        
-        <div className="custom-dropdown" ref={dropdownRef}>
-          <button 
-            className={`dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            aria-haspopup="listbox"
-            aria-expanded={isDropdownOpen}
-            aria-label="เลือกหมวดหมู่สินค้า"
-          >
-            <span>
-              {selectedCategory 
-                ? categories.find(c => c.id === selectedCategory)?.name || 'เลือกหมวดหมู่' 
-                : 'ทุกหมวดหมู่'}
-            </span>
-            <div className="dropdown-arrow">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </button>
+      {/* Custom Category Filter & Search Box */}
+      <div className="category-filter-wrapper animate-fade-in-left delay-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+        <div className="flex items-center gap-3.5 flex-wrap w-full sm:w-auto">
+          <div className="filter-label">
+            <TagIcon size={18} />
+            <span>หมวดหมู่:</span>
+          </div>
           
-          <div className={`dropdown-menu ${isDropdownOpen ? 'open' : ''}`} role="listbox">
-            <button
-              className={`dropdown-item ${!selectedCategory ? 'selected' : ''}`}
-              role="option"
-              aria-selected={!selectedCategory}
-              onClick={() => {
-                setSelectedCategory('')
-                setIsDropdownOpen(false)
-              }}
+          <div className="custom-dropdown" ref={dropdownRef}>
+            <button 
+              className={`dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              aria-haspopup="listbox"
+              aria-expanded={isDropdownOpen}
+              aria-label="เลือกหมวดหมู่สินค้า"
             >
-              <span>ทุกหมวดหมู่</span>
-              <div className="item-check"><CheckIcon size={14} /></div>
+              <span>
+                {selectedCategory 
+                  ? categories.find(c => c.id === selectedCategory)?.name || 'เลือกหมวดหมู่' 
+                  : 'ทุกหมวดหมู่'}
+              </span>
+              <div className="dropdown-arrow">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
             </button>
             
-            {categories.map((cat) => (
+            <div className={`dropdown-menu ${isDropdownOpen ? 'open' : ''}`} role="listbox">
               <button
-                key={cat.id}
-                className={`dropdown-item ${selectedCategory === cat.id ? 'selected' : ''}`}
+                className={`dropdown-item ${!selectedCategory ? 'selected' : ''}`}
                 role="option"
-                aria-selected={selectedCategory === cat.id}
+                aria-selected={!selectedCategory}
                 onClick={() => {
-                  setSelectedCategory(cat.id)
+                  setSelectedCategory('')
                   setIsDropdownOpen(false)
                 }}
               >
-                <span>{cat.name}</span>
+                <span>ทุกหมวดหมู่</span>
                 <div className="item-check"><CheckIcon size={14} /></div>
               </button>
-            ))}
+              
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  className={`dropdown-item ${selectedCategory === cat.id ? 'selected' : ''}`}
+                  role="option"
+                  aria-selected={selectedCategory === cat.id}
+                  onClick={() => {
+                    setSelectedCategory(cat.id)
+                    setIsDropdownOpen(false)
+                  }}
+                >
+                  <span>{cat.name}</span>
+                  <div className="item-check"><CheckIcon size={14} /></div>
+                </button>
+              ))}
+            </div>
           </div>
+        </div>
+
+        {/* Search Input Box */}
+        <div className="search-box flex-1 w-full sm:max-w-[300px] min-w-[200px]">
+          <span className="search-icon"><SearchIcon size={16} /></span>
+          <input
+            type="text"
+            className="input text-sm"
+            placeholder="ค้นหาชื่อสินค้า..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
       </div>
 
@@ -412,7 +430,7 @@ export default function ShopPage() {
       ) : filteredProducts.length === 0 ? (
         <div className="empty-state animate-scale-in">
           <PackageIcon size={48} className="mb-4 opacity-50" />
-          <p>ยังไม่มีสินค้าในหมวดหมู่นี้</p>
+          <p>{searchQuery ? 'ไม่พบสินค้าที่ตรงกับการค้นหาของคุณ' : 'ยังไม่มีสินค้าในหมวดหมู่นี้'}</p>
         </div>
       ) : (
         <div className="product-grid">

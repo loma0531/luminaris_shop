@@ -20,6 +20,7 @@ import {
   PaletteIcon,
   SunIcon,
   MoonIcon,
+  CloseIcon,
 } from '@/components/Icons'
 import { useShopInit } from '@/lib/swr-hooks'
 import type { Product, Category } from '@/lib/swr-hooks'
@@ -73,6 +74,17 @@ function getSkinName(minecraftName: string): string {
   return minecraftName
 }
 
+// Helper to format coins compactly on mobile
+function formatCoinsCompact(val: number): string {
+  if (val >= 1000000) {
+    return (val / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+  }
+  if (val >= 1000) {
+    return (val / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+  }
+  return val.toString()
+}
+
 // Chevron Icon for collapsible
 const ChevronIcon = ({ size = 16, expanded }: { size?: number; expanded: boolean }) => (
   <svg 
@@ -95,11 +107,23 @@ function ShopSidebar({
   pendingOrderCount,
   mobileOpen,
   onCloseMobile,
+  user,
+  coins,
+  theme,
+  onToggleTheme,
+  onLogout,
+  onLogin,
 }: { 
   cartCount: number
   pendingOrderCount: number
   mobileOpen: boolean
   onCloseMobile: () => void
+  user: User | null
+  coins: number
+  theme: 'dark' | 'light'
+  onToggleTheme: () => void
+  onLogout: () => void
+  onLogin: () => void
 }) {
   const pathname = usePathname()
   const [shopExpanded, setShopExpanded] = useState(true)
@@ -190,6 +214,15 @@ function ShopSidebar({
 
       {/* Sidebar */}
       <aside className={`shop-sidebar ${mobileOpen ? 'open' : ''}`}>
+        {/* Mobile Close Button */}
+        <button 
+          className="shop-sidebar-close"
+          onClick={onCloseMobile}
+          aria-label="ปิดเมนูนำทาง"
+        >
+          <CloseIcon size={18} />
+        </button>
+
         {/* Logo */}
         <div className="shop-sidebar-logo">
           <Image 
@@ -235,34 +268,36 @@ function ShopSidebar({
           </div>
 
           {/* Orders Section */}
-          <div className="sidebar-section">
-            <button 
-              className="sidebar-section-header"
-              onClick={() => setOrdersExpanded(!ordersExpanded)}
-              aria-expanded={ordersExpanded}
-              aria-controls="sidebar-orders-content"
-            >
-              <div className="sidebar-section-title">
-                <PackageIcon size={14} />
-                <span>รายการของฉัน</span>
-              </div>
-              <ChevronIcon expanded={ordersExpanded} />
-            </button>
-            {ordersExpanded && (
-              <div id="sidebar-orders-content" className="sidebar-section-content">
-                {orderItems.map((item) => (
-                  <PrefetchLink
-                    key={item.href}
-                    href={item.href}
-                    label={item.label}
-                    Icon={item.Icon}
-                    badge={item.badge}
-                    badgeColor={item.badgeColor}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          {user && (
+            <div className="sidebar-section">
+              <button 
+                className="sidebar-section-header"
+                onClick={() => setOrdersExpanded(!ordersExpanded)}
+                aria-expanded={ordersExpanded}
+                aria-controls="sidebar-orders-content"
+              >
+                <div className="sidebar-section-title">
+                  <PackageIcon size={14} />
+                  <span>รายการของฉัน</span>
+                </div>
+                <ChevronIcon expanded={ordersExpanded} />
+              </button>
+              {ordersExpanded && (
+                <div id="sidebar-orders-content" className="sidebar-section-content">
+                  {orderItems.map((item) => (
+                    <PrefetchLink
+                      key={item.href}
+                      href={item.href}
+                      label={item.label}
+                      Icon={item.Icon}
+                      badge={item.badge}
+                      badgeColor={item.badgeColor}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Account Section */}
           <div className="sidebar-section">
@@ -325,6 +360,80 @@ function ShopSidebar({
           </div>
         </nav>
 
+        {/* Mobile only User & Actions Section */}
+        <div className="sidebar-mobile-actions border-t border-border mt-auto pt-4">
+          {user ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 px-2">
+                <Image
+                  src={`https://mc-heads.net/avatar/${getSkinName(user.minecraftName)}/24`}
+                  alt="Head"
+                  width={24}
+                  height={24}
+                  className="rounded"
+                />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-bold truncate text-foreground">{user.minecraftName}</span>
+                  <span className="text-[10px] text-primary font-semibold">{coins.toLocaleString()} Coin</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  className="btn btn-sm flex-1 flex items-center justify-center gap-1.5"
+                  onClick={onToggleTheme}
+                  style={{
+                    background: 'var(--navbar-btn-bg)',
+                    border: '1px solid var(--navbar-btn-border)',
+                    borderRadius: '8px',
+                    color: 'var(--foreground)',
+                    fontSize: '0.75rem',
+                    height: '32px',
+                  }}
+                >
+                  {theme === 'dark' ? <SunIcon size={12} /> : <MoonIcon size={12} />}
+                  <span>{theme === 'dark' ? 'สว่าง' : 'มืด'}</span>
+                </button>
+                <button 
+                  className="btn btn-sm btn-destructive flex-1 flex items-center justify-center gap-1.5"
+                  onClick={onLogout}
+                  style={{
+                    fontSize: '0.75rem',
+                    height: '32px',
+                  }}
+                >
+                  <LogoutIcon size={12} />
+                  <span>ออกระบบ</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button 
+                className="btn btn-primary btn-sm w-full flex items-center justify-center gap-1.5" 
+                onClick={onLogin}
+              >
+                <UserIcon size={13} />
+                เข้าสู่ระบบ
+              </button>
+              <button 
+                className="btn btn-sm flex items-center justify-center gap-1.5 w-full"
+                onClick={onToggleTheme}
+                style={{
+                  background: 'var(--navbar-btn-bg)',
+                  border: '1px solid var(--navbar-btn-border)',
+                  borderRadius: '8px',
+                  color: 'var(--foreground)',
+                  fontSize: '0.75rem',
+                  height: '32px',
+                }}
+              >
+                {theme === 'dark' ? <SunIcon size={12} /> : <MoonIcon size={12} />}
+                <span>{theme === 'dark' ? 'โหมดสว่าง' : 'โหมดมืด'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         <style jsx>{`
           .sidebar-section {
             margin-bottom: 0.25rem;
@@ -361,6 +470,17 @@ function ShopSidebar({
             flex-direction: column;
             gap: 0.125rem;
             padding-left: 0.5rem;
+          }
+
+          .sidebar-mobile-actions {
+            display: none;
+          }
+
+          @media (max-width: 768px) {
+            .sidebar-mobile-actions {
+              display: flex;
+              flex-direction: column;
+            }
           }
         `}</style>
       </aside>
@@ -510,7 +630,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
           <div className="shop-top-header-left">
             <button 
               className="btn shop-menu-btn"
-              onClick={() => setMobileMenuOpen(true)}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="เปิดเมนูนำทาง"
             >
               <MenuIcon size={20} />
@@ -529,8 +649,8 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
           
           <div className="shop-top-header-right flex items-center gap-3">
             <button 
+              className="hidden md:flex"
               style={{
-                display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: '34px',
@@ -571,7 +691,7 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
                     height={22}
                     className="rounded"
                   />
-                  <span>{user.minecraftName}</span>
+                  <span className="hidden md:inline">{user.minecraftName}</span>
                 </Link>
 
                 {/* Coin pill */}
@@ -607,13 +727,14 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
                   }}
                 >
                   <WalletIcon size={13} className="text-primary" />
-                  <span>{(shopData?.coins || 0).toLocaleString()} Coin</span>
+                  <span className="hidden md:inline">{(shopData?.coins || 0).toLocaleString()} Coin</span>
+                  <span className="inline md:hidden">{formatCoinsCompact(shopData?.coins || 0)}</span>
                 </Link>
 
                 {/* Logout button */}
                 <button
+                  className="hidden md:flex"
                   style={{
-                    display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     width: '34px',
@@ -658,6 +779,18 @@ export default function ShopLayout({ children }: { children: ReactNode }) {
           pendingOrderCount={pendingOrderCount}
           mobileOpen={mobileMenuOpen}
           onCloseMobile={() => setMobileMenuOpen(false)}
+          user={user}
+          coins={shopData?.coins || 0}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          onLogout={() => {
+            setMobileMenuOpen(false)
+            setShowLogoutConfirm(true)
+          }}
+          onLogin={() => {
+            setMobileMenuOpen(false)
+            setShowLoginModal(true)
+          }}
         />
 
         <main className="shop-main">

@@ -72,7 +72,7 @@ export class PaymentService {
 
   /**
    * จัดการ Stripe Webhook Event
-   * เรียก OrderService.completeOrder() เมื่อจ่ายเงินสำเร็จ หรือ completeTopUp() ถ้าเป็นการเติม Coin
+   * เรียก OrderService.completeOrder() เมื่อจ่ายเงินสำเร็จ
    */
   static async handleStripeWebhook(event: {
     type: string
@@ -82,18 +82,8 @@ export class PaymentService {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object
         const paymentId = Number(paymentIntent.metadata.paymentId)
-        const isTopUp = paymentIntent.metadata.isTopUp === 'true'
-
-        if (isTopUp) {
-          if (!paymentId) {
-            logger.error(`Stripe webhook top-up missing paymentId metadata`, 400)
-            return
-          }
-          await PaymentService.completeTopUp(paymentId, paymentIntent.id)
-          break
-        }
-
         const orderId = Number(paymentIntent.metadata.orderId)
+
         if (!orderId || !paymentId) {
           logger.error(
             `Stripe webhook missing metadata: ${JSON.stringify(paymentIntent.metadata)}`,
@@ -103,11 +93,11 @@ export class PaymentService {
         }
 
         logger.info(
-          `Stripe payment succeeded: ${paymentIntent.id} → Order #${orderId}`,
+          `Stripe payment succeeded: ${paymentIntent.id} → Order #${orderId} (isTopUp: ${paymentIntent.metadata.isTopUp})`,
           200
         )
 
-        // เรียก OrderService จัดการต่อ (อัปเดตสถานะ + ส่งของ)
+        // เรียก OrderService จัดการต่อ (อัปเดตสถานะ + ส่งของ หรือเพิ่ม Coin)
         await OrderService.completeOrder(
           orderId,
           paymentId,
@@ -132,79 +122,5 @@ export class PaymentService {
       default:
         logger.debug(`Unhandled Stripe event: ${event.type}`, 200)
     }
-  }
-
-  /**
-   * ยืนยันการเติมเงินสะสม Coin สำเร็จ (Stripe)
-   */
-  static async completeTopUp(
-    paymentId: number,
-    paymentRef: string
-  ): Promise<void> {
-    const payment = await prisma.payment.findUnique({ where: { paymentId } })
-    if (!payment) throw new Error(`Payment #${paymentId} not found`)
-    if (payment.status === 'VERIFIED') return // Idempotency
-
-    const coinsEarned = payment.coinsEarned || 0.0
-
-    await prisma.$transaction(async (tx) => {
-      await tx.payment.update({
-        where: { paymentId },
-        data: {
-          status: 'VERIFIED',
-          paymentMethod: 'stripe',
-          stripePaymentIntentId: paymentRef,
-          verifiedAt: new Date(),
-        },
-      })
-      // ค้นหาผู้เล่นแบบ Case-Insensitive ในฐานข้อมูลร้านค้าก่อน
-      const existingUser = await tx.user.findFirst({
-        where: {
-          minecraftName: {
-            equals: payment.minecraftName,
-            mode: 'insensitive'
-          }
-        }
-      })
-
-      const targetMinecraftName = existingUser ? existingUser.minecraftName : payment.minecraftName
-
-      if (existingUser) {
-        await tx.user.update({
-          where: { id: existingUser.id },
-          data: { coins: { increment: coinsEarned } }
-        })
-      } else {
-        await tx.user.create({
-          data: {
-            minecraftName: targetMinecraftName,
-            coins: coinsEarned,
-          }
-        })
-      }
-
-      await tx.coinTransaction.create({
-        data: {
-          minecraftName: targetMinecraftName,
-          amount: coinsEarned,
-          type: 'TOPUP',
-          description: `เติมเงินผ่าน Stripe ${payment.amount} บาท รับ ${coinsEarned} Coin`,
-        },
-      })
-    })
-
-    logger.info(`Stripe TopUp completed: ${paymentRef} for ${payment.minecraftName} (${payment.amount}฿ → ${coinsEarned} Coins)`)
-    
-    // ส่ง Log ไป Discord
-    const { sendPurchaseLog } = await import('@/lib/webhook')
-    sendPurchaseLog({
-      orderId: 0,
-      minecraftName: payment.minecraftName,
-      amount: payment.amount,
-      items: [{ name: `เติมเงินสะสม Coin (ได้รับ ${coinsEarned} Coin)`, quantity: 1, price: payment.amount }],
-      transRef: paymentRef,
-      status: 'SUCCESS',
-      paymentMethod: 'stripe' as any,
-    }).catch(() => {})
   }
 }
