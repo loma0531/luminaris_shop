@@ -45,6 +45,10 @@ export async function GET(request: NextRequest) {
     filterPayments = await prisma.payment.findMany({
       where: { 
         status: 'VERIFIED',
+        OR: [
+          { paymentMethod: { isSet: false } },
+          { paymentMethod: { not: 'coin' } }
+        ],
         createdAt: { gte: startDate }
       },
       select: {

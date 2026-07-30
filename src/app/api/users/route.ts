@@ -61,7 +61,13 @@ export async function GET(request: NextRequest) {
       by: ['minecraftName'],
       where: { 
         minecraftName: { in: minecraftNames },
-        status: 'COMPLETED' 
+        status: 'COMPLETED',
+        payment: {
+          OR: [
+            { paymentMethod: { isSet: false } },
+            { paymentMethod: { not: 'coin' } }
+          ]
+        }
       },
       _sum: { total: true },
     })

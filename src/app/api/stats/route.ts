@@ -25,7 +25,13 @@ export async function GET() {
     const [totalStats, leaderboardData, recentTransactions] = await Promise.all([
       // Get total amount and count in one query
       prisma.payment.aggregate({
-        where: { status: 'VERIFIED' },
+        where: {
+          status: 'VERIFIED',
+          OR: [
+            { paymentMethod: { isSet: false } },
+            { paymentMethod: { not: 'coin' } }
+          ]
+        },
         _sum: { amount: true },
         _count: true
       }),
@@ -33,7 +39,13 @@ export async function GET() {
       // Get top 10 users by total spent using groupBy
       prisma.payment.groupBy({
         by: ['minecraftName'],
-        where: { status: 'VERIFIED' },
+        where: {
+          status: 'VERIFIED',
+          OR: [
+            { paymentMethod: { isSet: false } },
+            { paymentMethod: { not: 'coin' } }
+          ]
+        },
         _sum: { amount: true },
         _count: true,
         orderBy: { _sum: { amount: 'desc' } },
@@ -42,7 +54,13 @@ export async function GET() {
       
       // Get recent 10 transactions
       prisma.payment.findMany({
-        where: { status: 'VERIFIED' },
+        where: {
+          status: 'VERIFIED',
+          OR: [
+            { paymentMethod: { isSet: false } },
+            { paymentMethod: { not: 'coin' } }
+          ]
+        },
         select: {
           minecraftName: true,
           amount: true,

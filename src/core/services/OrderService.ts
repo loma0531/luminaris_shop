@@ -231,16 +231,19 @@ export class OrderService {
           }
         })
       } else {
+        const isCoinPayment = paymentMethod === 'coin'
         if (existingUser) {
           await tx.user.update({
             where: { id: existingUser.id },
-            data: { totalSpent: { increment: order.total } }
+            data: {
+              totalSpent: isCoinPayment ? undefined : { increment: order.total }
+            }
           })
         } else {
           await tx.user.create({
             data: {
               minecraftName: targetMinecraftName,
-              totalSpent: order.total,
+              totalSpent: isCoinPayment ? 0.0 : order.total,
               coins: 0.0
             }
           })

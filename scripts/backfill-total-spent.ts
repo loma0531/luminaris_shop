@@ -14,10 +14,18 @@ const prisma = new PrismaClient()
 async function backfillTotalSpent() {
   console.log('🔄 เริ่มอัปเดต totalSpent สำหรับ User ทั้งหมด...\n')
 
-  // ดึงยอดรวมจาก Order ที่ COMPLETED แยกตาม minecraftName
+  // ดึงยอดรวมจาก Order ที่ COMPLETED แยกตาม minecraftName โดยไม่รวมยอดที่จ่ายด้วย Coin
   const spentByUser = await prisma.order.groupBy({
     by: ['minecraftName'],
-    where: { status: 'COMPLETED' },
+    where: { 
+      status: 'COMPLETED',
+      payment: {
+        OR: [
+          { paymentMethod: { isSet: false } },
+          { paymentMethod: { not: 'coin' } }
+        ]
+      }
+    },
     _sum: { total: true },
   })
 
